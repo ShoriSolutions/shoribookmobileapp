@@ -1,0 +1,212 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../routing/route_paths.dart';
+import '../application/customer_register_controller.dart';
+
+class CustomerRegisterScreen extends ConsumerStatefulWidget {
+  const CustomerRegisterScreen({super.key});
+
+  @override
+  ConsumerState<CustomerRegisterScreen> createState() =>
+      _CustomerRegisterScreenState();
+}
+
+class _CustomerRegisterScreenState
+    extends ConsumerState<CustomerRegisterScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _fullName = TextEditingController();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
+  bool _obscurePassword = true;
+  String? _checkEmailMessage;
+
+  @override
+  void dispose() {
+    _fullName.dispose();
+    _email.dispose();
+    _password.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    final result = await ref
+        .read(customerRegisterControllerProvider.notifier)
+        .signUp(
+          fullName: _fullName.text.trim(),
+          email: _email.text.trim(),
+          password: _password.text,
+        );
+    if (result == null || !mounted) return; // error already surfaced via the AsyncValue
+    if (!result.sessionActive) {
+      setState(() {
+        _checkEmailMessage =
+            'Check your email to confirm your account, then log in.';
+      });
+      return;
+    }
+    // A session was returned immediately (no email confirmation
+    // required) — navigate ourselves rather than relying on the
+    // redirect logic, which deliberately doesn't force a redirect away
+    // from this route (it can be pushed from deep inside the booking
+    // wizard via login's "create an account" link, and a redirect-
+    // triggered `go()` would destroy that screen's state). See the
+    // comment in app_router.dart's customer-mode branch.
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(RoutePaths.splash);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final registerState = ref.watch(customerRegisterControllerProvider);
+    final isLoading = registerState.isLoading;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Create your account')),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+            child: _checkEmailMessage != null
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('✉️', style: TextStyle(fontSize: 32)),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Check your email',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _checkEmailMessage!,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium
+                            ?.copyWith(color: AppColors.muted),
+                      ),
+                      const SizedBox(height: 20),
+                      TextButton(
+                        onPressed: () => context.pop(),
+                        child: const Text('Back'),
+                      ),
+                    ],
+                  )
+                : Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Join BetterBooking',
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Discover and book independent pros near you.',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+                        ),
+                        const SizedBox(height: 24),
+                        TextFormField(
+                          controller: _fullName,
+                          decoration: const InputDecoration(
+                            labelText: 'Full name',
+                          ),
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Enter your name'
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _email,
+                          keyboardType: TextInputType.emailAddress,
+                          decoration: const InputDecoration(
+                            labelText: 'Email address',
+                          ),
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Enter your email'
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _password,
+                          obscureText: _obscurePassword,
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            hintText: 'Min. 8 characters',
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: AppColors.muted,
+                              ),
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
+                            ),
+                          ),
+                          validator: (v) => (v == null || v.length < 8)
+                              ? 'Password must be at least 8 characters'
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _confirm,
+                          obscureText: _obscurePassword,
+                          decoration: const InputDecoration(
+                            labelText: 'Confirm password',
+                          ),
+                          validator: (v) => v != _password.text
+                              ? 'Passwords do not match'
+                              : null,
+                        ),
+                        if (registerState.hasError) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            registerState.error.toString(),
+                            style: const TextStyle(color: AppColors.danger),
+                          ),
+                        ],
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: isLoading ? null : _submit,
+                            child: isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text('Create account'),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Center(
+                          child: TextButton(
+                            onPressed: () => context.go('/login'),
+                            child: const Text('Already have an account? Log in'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}

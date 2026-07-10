@@ -1,0 +1,375 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../features/app_mode/application/app_mode_provider.dart';
+import '../features/app_mode/presentation/unsupported_role_screen.dart';
+import '../features/appointments/presentation/appointment_detail_screen.dart';
+import '../features/auth/application/auth_providers.dart';
+import '../features/auth/presentation/customer_register_screen.dart';
+import '../features/auth/presentation/forgot_password_screen.dart';
+import '../features/auth/presentation/login_screen.dart';
+import '../features/auth/presentation/set_password_screen.dart';
+import '../features/auth/presentation/splash_screen.dart';
+import '../features/booking/presentation/booking_flow_screen.dart';
+import '../features/booking_link/presentation/booking_link_screen.dart';
+import '../features/business_context/application/active_business_provider.dart';
+import '../features/business_context/presentation/no_business_screen.dart';
+import '../features/calendar/presentation/calendar_screen.dart';
+import '../features/clients/presentation/client_detail_screen.dart';
+import '../features/clients/presentation/client_form_screen.dart';
+import '../features/clients/presentation/clients_list_screen.dart';
+import '../features/customer_booking/presentation/booking_wizard_screen.dart';
+import '../features/customer_profile/presentation/customer_profile_screen.dart';
+import '../features/dashboard/presentation/dashboard_screen.dart';
+import '../features/deposits/presentation/deposits_list_screen.dart';
+import '../features/favorites/presentation/favorites_screen.dart';
+import '../features/marketplace/presentation/business_profile_screen.dart';
+import '../features/marketplace/presentation/discover_screen.dart';
+import '../features/more/presentation/more_screen.dart';
+import '../features/my_bookings/presentation/booking_detail_screen.dart';
+import '../features/my_bookings/presentation/my_bookings_screen.dart';
+import '../features/reports/presentation/reports_screen.dart';
+import '../features/services/presentation/service_form_screen.dart';
+import '../features/services/presentation/services_list_screen.dart';
+import '../features/settings/presentation/settings_screen.dart';
+import '../features/staff/presentation/invite_staff_screen.dart';
+import '../features/staff/presentation/staff_detail_screen.dart';
+import '../features/staff/presentation/staff_list_screen.dart';
+import 'route_paths.dart';
+import 'shell/bottom_nav_shell.dart';
+import 'shell/nav_items.dart';
+
+const _preAuthRoutes = {
+  RoutePaths.login,
+  RoutePaths.forgotPassword,
+  RoutePaths.setPassword,
+  RoutePaths.customerRegister,
+};
+
+/// True for any route that belongs to the customer/marketplace shell,
+/// including its public (no-login-required) browsing surface.
+bool _isCustomerModePath(String path) {
+  return path == RoutePaths.discover ||
+      path.startsWith('${RoutePaths.discover}/') ||
+      path == RoutePaths.bookings ||
+      path.startsWith('${RoutePaths.bookings}/') ||
+      path == RoutePaths.favorites ||
+      path.startsWith('${RoutePaths.favorites}/') ||
+      path == RoutePaths.account ||
+      path.startsWith('${RoutePaths.account}/') ||
+      path.startsWith('/business/') ||
+      path.startsWith('/book/');
+}
+
+/// True for any route that belongs to the Business Owner/Staff shell.
+bool _isOwnerModePath(String path) {
+  return path == RoutePaths.home ||
+      path == RoutePaths.calendar ||
+      path.startsWith(RoutePaths.clients) ||
+      path.startsWith(RoutePaths.services) ||
+      path == RoutePaths.more ||
+      path.startsWith('/appointments/') ||
+      path == RoutePaths.bookingNew ||
+      path.startsWith(RoutePaths.staff) ||
+      path == RoutePaths.deposits ||
+      path == RoutePaths.bookingLink ||
+      path == RoutePaths.reports ||
+      path == RoutePaths.settings ||
+      path == RoutePaths.noBusiness;
+}
+
+final routerProvider = Provider<GoRouter>((ref) {
+  final refreshNotifier = GoRouterRefreshNotifier(ref);
+
+  return GoRouter(
+    initialLocation: RoutePaths.splash,
+    refreshListenable: refreshNotifier,
+    redirect: (context, state) {
+      final authStatus = ref.read(authStatusProvider);
+      final loc = state.matchedLocation;
+
+      if (authStatus == AuthStatus.unknown) {
+        return loc == RoutePaths.splash ? null : RoutePaths.splash;
+      }
+
+      if (authStatus == AuthStatus.unauthenticated) {
+        if (_preAuthRoutes.contains(loc)) return null;
+        if (_isCustomerModePath(loc)) return null;
+        // Browsing-first default: an unauthenticated session's home is the
+        // marketplace, not a login wall — booking still requires login,
+        // enforced inline by the wizard's "Confirm" step, not here.
+        return RoutePaths.discover;
+      }
+
+      // authenticated — resolve which mode this account uses before
+      // deciding anything else.
+      final profileAsync = ref.read(myProfileProvider);
+      if (profileAsync.isLoading) {
+        return (loc == RoutePaths.splash || loc == RoutePaths.setPassword)
+            ? null
+            : RoutePaths.splash;
+      }
+
+      final appMode = ref.read(appModeProvider);
+
+      if (appMode == null || appMode == AppMode.unsupported) {
+        return loc == RoutePaths.unsupportedRole
+            ? null
+            : RoutePaths.unsupportedRole;
+      }
+
+      if (appMode == AppMode.businessOwner) {
+        if (loc == RoutePaths.login ||
+            loc == RoutePaths.forgotPassword ||
+            loc == RoutePaths.customerRegister) {
+          return RoutePaths.home;
+        }
+        final membershipAsync = ref.read(activeMembershipProvider);
+        if (membershipAsync.isLoading) {
+          return (loc == RoutePaths.splash || loc == RoutePaths.setPassword)
+              ? null
+              : RoutePaths.splash;
+        }
+        final membership = membershipAsync.valueOrNull;
+        if (membership == null) {
+          return loc == RoutePaths.noBusiness ? null : RoutePaths.noBusiness;
+        }
+        if (loc == RoutePaths.splash ||
+            loc == RoutePaths.noBusiness ||
+            loc == RoutePaths.setPassword) {
+          return RoutePaths.home;
+        }
+        if (_isCustomerModePath(loc)) {
+          return RoutePaths.home;
+        }
+        return null;
+      }
+
+      // appMode == AppMode.customer
+      //
+      // Deliberately NOT forcing a redirect away from login/register here
+      // (unlike the businessOwner branch above): those routes can be
+      // reached via a push from deep inside the booking wizard ("sign in
+      // to book"), and a redirect-triggered `go()` replaces the whole
+      // navigation stack, which would destroy the wizard screen — and its
+      // in-progress state — sitting underneath. Those two screens instead
+      // navigate themselves after a successful auth transition (pop back
+      // to whatever pushed them, or go(splash) as a fallback when they
+      // were the root route) — see login_screen.dart / customer_register_
+      // screen.dart. splash/noBusiness/setPassword/unsupportedRole are
+      // never reached via a mid-flow push, so forcing those is safe.
+      if (loc == RoutePaths.splash ||
+          loc == RoutePaths.noBusiness ||
+          loc == RoutePaths.setPassword ||
+          loc == RoutePaths.unsupportedRole) {
+        return RoutePaths.discover;
+      }
+      if (_isOwnerModePath(loc)) {
+        return RoutePaths.discover;
+      }
+      return null;
+    },
+    routes: [
+      GoRoute(path: RoutePaths.splash, builder: (c, s) => const SplashScreen()),
+      GoRoute(path: RoutePaths.login, builder: (c, s) => const LoginScreen()),
+      GoRoute(
+        path: RoutePaths.forgotPassword,
+        builder: (c, s) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.setPassword,
+        builder: (c, s) => const SetPasswordScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.customerRegister,
+        builder: (c, s) => const CustomerRegisterScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.noBusiness,
+        builder: (c, s) => const NoBusinessScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.unsupportedRole,
+        builder: (c, s) => const UnsupportedRoleScreen(),
+      ),
+
+      // ── Business Owner/Staff shell ──────────────────────────────────────
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            BottomNavShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.home,
+                builder: (c, s) => const DashboardScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.calendar,
+                builder: (c, s) => const CalendarScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.clients,
+                builder: (c, s) => const ClientsListScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    builder: (c, s) => const ClientFormScreen(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    builder: (c, s) =>
+                        ClientDetailScreen(clientId: s.pathParameters['id']!),
+                  ),
+                  GoRoute(
+                    path: ':id/edit',
+                    builder: (c, s) => ClientFormScreen(
+                      clientId: s.pathParameters['id'],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.services,
+                builder: (c, s) => const ServicesListScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    builder: (c, s) => const ServiceFormScreen(),
+                  ),
+                  GoRoute(
+                    path: ':id/edit',
+                    builder: (c, s) =>
+                        ServiceFormScreen(serviceId: s.pathParameters['id']),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(path: RoutePaths.more, builder: (c, s) => const MoreScreen()),
+            ],
+          ),
+        ],
+      ),
+
+      GoRoute(
+        path: '/appointments/:id',
+        builder: (c, s) =>
+            AppointmentDetailScreen(appointmentId: s.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: RoutePaths.bookingNew,
+        builder: (c, s) => const BookingFlowScreen(),
+      ),
+      GoRoute(path: RoutePaths.staff, builder: (c, s) => const StaffListScreen()),
+      GoRoute(
+        path: RoutePaths.staffInvite,
+        builder: (c, s) => const InviteStaffScreen(),
+      ),
+      GoRoute(
+        path: '/staff/:id',
+        builder: (c, s) => StaffDetailScreen(staffId: s.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: RoutePaths.deposits,
+        builder: (c, s) => const DepositsListScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.bookingLink,
+        builder: (c, s) => const BookingLinkScreen(),
+      ),
+      GoRoute(path: RoutePaths.reports, builder: (c, s) => const ReportsScreen()),
+      GoRoute(
+        path: RoutePaths.settings,
+        builder: (c, s) => const SettingsScreen(),
+      ),
+
+      // ── Customer/marketplace top-level routes ───────────────────────────
+      GoRoute(
+        path: '/business/:slug',
+        builder: (c, s) =>
+            BusinessProfileScreen(slug: s.pathParameters['slug']!),
+      ),
+      GoRoute(
+        path: '/book/:slug',
+        builder: (c, s) => BookingWizardScreen(slug: s.pathParameters['slug']!),
+      ),
+
+      // ── Customer/marketplace shell ───────────────────────────────────────
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) => BottomNavShell(
+          navigationShell: navigationShell,
+          items: customerBottomNavItems,
+        ),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.discover,
+                builder: (c, s) => const DiscoverScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.bookings,
+                builder: (c, s) => const MyBookingsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (c, s) =>
+                        BookingDetailScreen(bookingId: s.pathParameters['id']!),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.favorites,
+                builder: (c, s) => const FavoritesScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.account,
+                builder: (c, s) => const CustomerProfileScreen(),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  );
+});
+
+/// Bridges Riverpod state (auth status, profile/app-mode, and active
+/// membership) to GoRouter's refreshListenable, so a redirect
+/// re-evaluation fires whenever any of them change — no extra bridge
+/// package needed.
+class GoRouterRefreshNotifier extends ChangeNotifier {
+  GoRouterRefreshNotifier(Ref ref) {
+    ref.listen(authStatusProvider, (_, __) => notifyListeners());
+    ref.listen(myProfileProvider, (_, __) => notifyListeners());
+    ref.listen(activeMembershipProvider, (_, __) => notifyListeners());
+  }
+}
