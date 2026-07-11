@@ -42,6 +42,7 @@ import '../features/settings/presentation/settings_screen.dart';
 import '../features/staff/presentation/invite_staff_screen.dart';
 import '../features/staff/presentation/staff_detail_screen.dart';
 import '../features/staff/presentation/staff_list_screen.dart';
+import '../features/support/presentation/support_screen.dart';
 import 'route_paths.dart';
 import 'shell/bottom_nav_shell.dart';
 import 'shell/nav_items.dart';
@@ -377,6 +378,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.settings,
         builder: (c, s) => const SettingsScreen(),
+      ),
+      // Neutral route — reachable from both the business "More" menu and
+      // the customer profile, so it is intentionally not added to the
+      // owner/customer mode-path lists.
+      GoRoute(
+        path: RoutePaths.support,
+        builder: (c, s) => const SupportScreen(),
       ),
 
       // ── Customer/marketplace top-level routes ───────────────────────────

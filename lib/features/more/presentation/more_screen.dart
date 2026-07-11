@@ -17,6 +17,7 @@ class MoreScreen extends ConsumerWidget {
     'Profile & Marketplace': RoutePaths.profileMarketplace,
     'Booking Link': RoutePaths.bookingLink,
     'Settings': RoutePaths.settings,
+    'Help & Support': RoutePaths.support,
   };
 
   @override

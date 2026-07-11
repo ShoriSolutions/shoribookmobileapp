@@ -2,12 +2,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../models/business.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
+import '../../support/support_content.dart';
 import '../application/business_profile_controller.dart';
 
 /// Full editable business profile: logo + marketplace cover, contact
@@ -80,6 +82,26 @@ class _BusinessProfileEditScreenState
   bool _isLocked(Business b) {
     final until = b.nameCategoryLockedUntil;
     return until != null && DateTime.now().isBefore(until);
+  }
+
+  Future<void> _appealLock(Business b) async {
+    final until = b.nameCategoryLockedUntil != null
+        ? DateFormat('MMM d, y').format(b.nameCategoryLockedUntil!.toLocal())
+        : 'the lock date';
+    final uri = Uri(
+      scheme: 'mailto',
+      path: SupportContent.supportEmail,
+      query: 'subject=${Uri.encodeComponent('Name/category change appeal — ${b.name}')}'
+          '&body=${Uri.encodeComponent('I\'d like to change my business name or category before the 90-day lock ends (currently locked until $until).\n\nBusiness: ${b.name}\nReason for the early change:\n')}',
+    );
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      showAppSnackBar(
+        context,
+        message: 'No email app found. Reach us at ${SupportContent.supportEmail}',
+        isError: true,
+      );
+    }
   }
 
   Future<void> _pickImage(bool isCover) async {
@@ -226,17 +248,68 @@ class _BusinessProfileEditScreenState
                           ? (v) => setState(() => _category = v)
                           : null,
                     ),
-                    if (locked)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          '🔒 Name & category are locked until '
-                          '${DateFormat('MMM d, y').format(business.nameCategoryLockedUntil!.toLocal())} '
-                          '(you can change them once every 90 days).',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.muted),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: locked
+                              ? AppColors.parchment
+                              : AppColors.sageLight,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  locked
+                                      ? Icons.lock_outline
+                                      : Icons.info_outline,
+                                  size: 18,
+                                  color: AppColors.sageDark,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    locked
+                                        ? 'Your business name and category are '
+                                            'locked until '
+                                            '${DateFormat('MMM d, y').format(business.nameCategoryLockedUntil!.toLocal())}. '
+                                            'They can only be changed once '
+                                            'every 90 days.'
+                                        : 'Heads up: your business name and '
+                                            'category can only be changed once '
+                                            'every 90 days. Changing either now '
+                                            'locks both until '
+                                            '${DateFormat('MMM d, y').format(DateTime.now().add(const Duration(days: 90)))}.',
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(color: AppColors.sageDark),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (locked)
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: () => _appealLock(business),
+                                  style: TextButton.styleFrom(
+                                    padding:
+                                        const EdgeInsets.symmetric(horizontal: 8),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: const Text('Appeal this lock'),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
+                    ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _description,

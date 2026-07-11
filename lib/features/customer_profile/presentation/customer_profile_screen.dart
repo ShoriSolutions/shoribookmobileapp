@@ -78,6 +78,15 @@ class CustomerProfileScreen extends ConsumerWidget {
               const SizedBox(height: 20),
               Card(
                 child: ListTile(
+                  leading: const Icon(Icons.help_outline, color: AppColors.sage),
+                  title: const Text('Help & Support'),
+                  trailing: const Icon(Icons.chevron_right, color: AppColors.muted),
+                  onTap: () => context.push(RoutePaths.support),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: ListTile(
                   leading: const Icon(Icons.logout, color: AppColors.danger),
                   title: const Text('Sign out'),
                   onTap: () async {

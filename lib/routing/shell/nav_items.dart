@@ -34,6 +34,7 @@ const moreMenuItems = [
   NavItem(label: 'Profile & Marketplace', icon: '❖', minRole: BusinessRole.admin),
   NavItem(label: 'Booking Link', icon: '⎘'),
   NavItem(label: 'Settings', icon: '⊕'),
+  NavItem(label: 'Help & Support', icon: '☂'),
 ];
 
 /// Customer/marketplace mode's bottom tab bar — no role concept applies

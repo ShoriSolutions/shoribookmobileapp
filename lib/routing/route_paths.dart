@@ -32,6 +32,7 @@ class RoutePaths {
   static const availability = '/availability';
   static const profileMarketplace = '/profile-marketplace';
   static const editBusinessProfile = '/business-profile';
+  static const support = '/support';
   static const settings = '/settings';
 
   static String clientDetail(String id) => '/clients/$id';
