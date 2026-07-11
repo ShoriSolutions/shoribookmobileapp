@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
 
-/// Shown when an authenticated user has no ACTIVE business membership —
-/// either they haven't finished the web app's business-creation wizard
-/// yet, or their staff invite is still pending. Business creation is a
-/// larger onboarding flow that stays on the web app for this MVP.
+/// Shown when an authenticated entrepreneur has no ACTIVE business
+/// membership — either they just signed up and haven't created their
+/// business yet, or their staff invite is still pending. Offers in-app
+/// business creation as the primary action.
 class NoBusinessScreen extends ConsumerWidget {
   const NoBusinessScreen({super.key});
 
@@ -17,35 +19,44 @@ class NoBusinessScreen extends ConsumerWidget {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('🏪', style: TextStyle(fontSize: 40)),
-                const SizedBox(height: 16),
-                Text(
-                  'No business found',
-                  style: Theme.of(context).textTheme.titleLarge,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "We couldn't find an active business for your account. "
-                  "If you were just invited, check your email for the invite "
-                  "link. If you're setting up a new business, finish that on "
-                  "the BetterBooking website first — it'll show up here "
-                  "automatically once it's ready.",
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                OutlinedButton(
-                  onPressed: () =>
-                      ref.read(authRepositoryProvider).signOut(),
-                  child: const Text('Sign out'),
-                ),
-              ],
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('🏪', style: TextStyle(fontSize: 40)),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No business yet',
+                    style: Theme.of(context).textTheme.titleLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Create your business to start taking bookings and "
+                    "managing your schedule. If you were invited to an "
+                    "existing business instead, check your email for the "
+                    "invite link.",
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: AppColors.muted),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => context.push(RoutePaths.createBusiness),
+                      child: const Text('Create a business'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () => ref.read(authRepositoryProvider).signOut(),
+                    child: const Text('Sign out'),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

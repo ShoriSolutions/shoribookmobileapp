@@ -38,6 +38,10 @@ class AppException implements Exception {
       return 'That time slot is no longer available.';
     }
     if (e.code == 'PGRST116') return 'Record not found.';
+    if (e.code == 'PGRST202') {
+      return 'This feature isn\'t set up on the server yet. '
+          'The latest database migration may still need to be applied.';
+    }
     return e.message;
   }
 

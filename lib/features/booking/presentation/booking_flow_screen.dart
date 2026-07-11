@@ -427,7 +427,7 @@ class _PriceDepositSection extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            initialValue: state.depositStatus,
+            initialValue: state.depositStatus == 'PAID' ? 'PAID' : 'PENDING',
             decoration: const InputDecoration(labelText: 'Deposit status'),
             items: const [
               DropdownMenuItem(value: 'PENDING', child: Text('Pending')),

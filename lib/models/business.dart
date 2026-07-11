@@ -18,6 +18,10 @@ class Business {
   final String? facebookUrl;
   final String? tiktokUrl;
   final bool bookingEnabled;
+  final bool isPublished;
+  final bool isMarketplaceListed;
+  final bool featuredRequested;
+  final DateTime? nameCategoryLockedUntil;
   final String status;
   final List<String> badges;
   final DateTime createdAt;
@@ -43,6 +47,10 @@ class Business {
     this.facebookUrl,
     this.tiktokUrl,
     required this.bookingEnabled,
+    this.isPublished = true,
+    this.isMarketplaceListed = true,
+    this.featuredRequested = false,
+    this.nameCategoryLockedUntil,
     required this.status,
     required this.badges,
     required this.createdAt,
@@ -69,6 +77,12 @@ class Business {
     facebookUrl: json['facebook_url'] as String?,
     tiktokUrl: json['tiktok_url'] as String?,
     bookingEnabled: json['booking_enabled'] as bool? ?? true,
+    isPublished: json['is_published'] as bool? ?? true,
+    isMarketplaceListed: json['is_marketplace_listed'] as bool? ?? true,
+    featuredRequested: json['featured_requested'] as bool? ?? false,
+    nameCategoryLockedUntil: json['name_category_locked_until'] == null
+        ? null
+        : DateTime.parse(json['name_category_locked_until'] as String),
     status: json['status'] as String? ?? 'accepting_bookings',
     badges:
         (json['badges'] as List<dynamic>?)?.map((e) => e as String).toList() ??
@@ -97,6 +111,10 @@ class Business {
     'facebook_url': facebookUrl,
     'tiktok_url': tiktokUrl,
     'booking_enabled': bookingEnabled,
+    'is_published': isPublished,
+    'is_marketplace_listed': isMarketplaceListed,
+    'featured_requested': featuredRequested,
+    'name_category_locked_until': nameCategoryLockedUntil?.toIso8601String(),
     'status': status,
     'badges': badges,
     'created_at': createdAt.toIso8601String(),

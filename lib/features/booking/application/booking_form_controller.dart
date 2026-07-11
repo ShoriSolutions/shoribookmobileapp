@@ -71,8 +71,20 @@ class BookingFormController extends Notifier<BookingFormState> {
   void setTime(TimeOfDay time) => state = state.copyWith(time: time);
   void setDuration(int minutes) => state = state.copyWith(durationMinutes: minutes);
   void setPrice(double price) => state = state.copyWith(price: price);
-  void setDepositRequired(bool value) =>
-      state = state.copyWith(depositRequired: value);
+  void setDepositRequired(bool value) {
+    // Keep depositStatus consistent with the toggle: turning deposits on
+    // must move it off 'NOT_REQUIRED' (the deposit-status dropdown only
+    // lists PENDING/PAID, so leaving it NOT_REQUIRED crashes that
+    // DropdownButton); turning them off resets it.
+    state = state.copyWith(
+      depositRequired: value,
+      depositStatus: value
+          ? (state.depositStatus == 'NOT_REQUIRED'
+              ? 'PENDING'
+              : state.depositStatus)
+          : 'NOT_REQUIRED',
+    );
+  }
   void setDepositAmount(double? amount) =>
       state = state.copyWith(depositAmount: amount, clearDepositAmount: amount == null);
   void setDepositStatus(String status) =>

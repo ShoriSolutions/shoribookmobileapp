@@ -7,7 +7,10 @@ class RoutePaths {
   static const forgotPassword = '/forgot-password';
   static const setPassword = '/set-password';
   static const noBusiness = '/no-business';
-  static const customerRegister = '/register';
+  static const createBusiness = '/create-business';
+  static const register = '/register'; // account-type chooser
+  static const customerRegister = '/register/customer';
+  static const businessRegister = '/register/business';
   static const unsupportedRole = '/unsupported-role';
 
   // Business Owner/Staff mode
@@ -26,6 +29,9 @@ class RoutePaths {
   static const deposits = '/deposits';
   static const bookingLink = '/booking-link';
   static const reports = '/reports';
+  static const availability = '/availability';
+  static const profileMarketplace = '/profile-marketplace';
+  static const editBusinessProfile = '/business-profile';
   static const settings = '/settings';
 
   static String clientDetail(String id) => '/clients/$id';

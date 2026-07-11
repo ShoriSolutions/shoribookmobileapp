@@ -30,6 +30,8 @@ const moreMenuItems = [
   NavItem(label: 'Staff', icon: '◈', minRole: BusinessRole.admin),
   NavItem(label: 'Deposits', icon: '◇', minRole: BusinessRole.admin),
   NavItem(label: 'Reports', icon: '↗', minRole: BusinessRole.admin),
+  NavItem(label: 'Availability', icon: '◷', minRole: BusinessRole.admin),
+  NavItem(label: 'Profile & Marketplace', icon: '❖', minRole: BusinessRole.admin),
   NavItem(label: 'Booking Link', icon: '⎘'),
   NavItem(label: 'Settings', icon: '⊕'),
 ];

@@ -1,19 +1,25 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/app_mode/application/app_mode_provider.dart';
 import '../features/app_mode/presentation/unsupported_role_screen.dart';
 import '../features/appointments/presentation/appointment_detail_screen.dart';
+import '../features/availability/presentation/availability_screen.dart';
+import '../features/profile_marketplace/presentation/business_profile_edit_screen.dart';
+import '../features/profile_marketplace/presentation/profile_marketplace_screen.dart';
 import '../features/auth/application/auth_providers.dart';
+import '../features/auth/presentation/business_register_screen.dart';
 import '../features/auth/presentation/customer_register_screen.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
+import '../features/auth/presentation/register_choose_screen.dart';
 import '../features/auth/presentation/set_password_screen.dart';
 import '../features/auth/presentation/splash_screen.dart';
 import '../features/booking/presentation/booking_flow_screen.dart';
 import '../features/booking_link/presentation/booking_link_screen.dart';
 import '../features/business_context/application/active_business_provider.dart';
+import '../features/business_context/presentation/create_business_screen.dart';
 import '../features/business_context/presentation/no_business_screen.dart';
 import '../features/calendar/presentation/calendar_screen.dart';
 import '../features/clients/presentation/client_detail_screen.dart';
@@ -44,7 +50,9 @@ const _preAuthRoutes = {
   RoutePaths.login,
   RoutePaths.forgotPassword,
   RoutePaths.setPassword,
+  RoutePaths.register,
   RoutePaths.customerRegister,
+  RoutePaths.businessRegister,
 };
 
 /// True for any route that belongs to the customer/marketplace shell,
@@ -75,8 +83,41 @@ bool _isOwnerModePath(String path) {
       path == RoutePaths.deposits ||
       path == RoutePaths.bookingLink ||
       path == RoutePaths.reports ||
+      path == RoutePaths.availability ||
+      path == RoutePaths.profileMarketplace ||
+      path == RoutePaths.editBusinessProfile ||
       path == RoutePaths.settings ||
-      path == RoutePaths.noBusiness;
+      path == RoutePaths.noBusiness ||
+      path == RoutePaths.createBusiness;
+}
+
+/// Cross-fade page transition, used for the auth screens (login ↔
+/// register sections) so moving between them eases instead of snapping.
+/// Works for both push (fade the new screen in over the old) and go
+/// (cross-fade when the stack is replaced).
+CustomTransitionPage<void> _fadePage(GoRouterState state, Widget child) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    transitionDuration: const Duration(milliseconds: 340),
+    reverseTransitionDuration: const Duration(milliseconds: 280),
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final fade = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+      // A whisper of scale adds depth without a directional slide, which
+      // keeps the animated header feeling continuous across screens.
+      return FadeTransition(
+        opacity: fade,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.985, end: 1.0).animate(fade),
+          child: child,
+        ),
+      );
+    },
+  );
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -122,22 +163,34 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (appMode == AppMode.businessOwner) {
         if (loc == RoutePaths.login ||
             loc == RoutePaths.forgotPassword ||
-            loc == RoutePaths.customerRegister) {
+            loc == RoutePaths.register ||
+            loc == RoutePaths.customerRegister ||
+            loc == RoutePaths.businessRegister) {
           return RoutePaths.home;
         }
         final membershipAsync = ref.read(activeMembershipProvider);
         if (membershipAsync.isLoading) {
-          return (loc == RoutePaths.splash || loc == RoutePaths.setPassword)
+          // Tolerate no-business/create-business while the membership
+          // re-resolves (e.g. right after creating one) so we don't flash
+          // back to splash mid-flow.
+          return (loc == RoutePaths.splash ||
+                  loc == RoutePaths.setPassword ||
+                  loc == RoutePaths.noBusiness ||
+                  loc == RoutePaths.createBusiness)
               ? null
               : RoutePaths.splash;
         }
         final membership = membershipAsync.valueOrNull;
         if (membership == null) {
-          return loc == RoutePaths.noBusiness ? null : RoutePaths.noBusiness;
+          return (loc == RoutePaths.noBusiness ||
+                  loc == RoutePaths.createBusiness)
+              ? null
+              : RoutePaths.noBusiness;
         }
         if (loc == RoutePaths.splash ||
             loc == RoutePaths.noBusiness ||
-            loc == RoutePaths.setPassword) {
+            loc == RoutePaths.setPassword ||
+            loc == RoutePaths.createBusiness) {
           return RoutePaths.home;
         }
         if (_isCustomerModePath(loc)) {
@@ -172,22 +225,37 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: RoutePaths.splash, builder: (c, s) => const SplashScreen()),
-      GoRoute(path: RoutePaths.login, builder: (c, s) => const LoginScreen()),
+      GoRoute(
+        path: RoutePaths.login,
+        pageBuilder: (c, s) => _fadePage(s, const LoginScreen()),
+      ),
       GoRoute(
         path: RoutePaths.forgotPassword,
-        builder: (c, s) => const ForgotPasswordScreen(),
+        pageBuilder: (c, s) => _fadePage(s, const ForgotPasswordScreen()),
       ),
       GoRoute(
         path: RoutePaths.setPassword,
         builder: (c, s) => const SetPasswordScreen(),
       ),
       GoRoute(
+        path: RoutePaths.register,
+        pageBuilder: (c, s) => _fadePage(s, const RegisterChooseScreen()),
+      ),
+      GoRoute(
         path: RoutePaths.customerRegister,
-        builder: (c, s) => const CustomerRegisterScreen(),
+        pageBuilder: (c, s) => _fadePage(s, const CustomerRegisterScreen()),
+      ),
+      GoRoute(
+        path: RoutePaths.businessRegister,
+        pageBuilder: (c, s) => _fadePage(s, const BusinessRegisterScreen()),
       ),
       GoRoute(
         path: RoutePaths.noBusiness,
         builder: (c, s) => const NoBusinessScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.createBusiness,
+        builder: (c, s) => const CreateBusinessScreen(),
       ),
       GoRoute(
         path: RoutePaths.unsupportedRole,
@@ -294,6 +362,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (c, s) => const BookingLinkScreen(),
       ),
       GoRoute(path: RoutePaths.reports, builder: (c, s) => const ReportsScreen()),
+      GoRoute(
+        path: RoutePaths.availability,
+        builder: (c, s) => const AvailabilityScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.profileMarketplace,
+        builder: (c, s) => const ProfileMarketplaceScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.editBusinessProfile,
+        builder: (c, s) => const BusinessProfileEditScreen(),
+      ),
       GoRoute(
         path: RoutePaths.settings,
         builder: (c, s) => const SettingsScreen(),

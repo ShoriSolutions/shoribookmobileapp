@@ -47,6 +47,68 @@ class AuthRepository {
     }
   }
 
+  /// Business (entrepreneur) self-registration. Mirrors signUpCustomer
+  /// but with role: 'entrepreneur' — the value the profiles-creation
+  /// trigger reads to set profiles.role. The business itself can't be
+  /// created here: with email confirmation on there's no session yet, so
+  /// the name/category are stashed in the signup metadata and drained by
+  /// register_business() on first login (see AuthRepository.registerBusiness
+  /// and the 20260711000000 migration). Returns true if a session was
+  /// returned immediately (autoconfirm on), false if confirmation is
+  /// required first.
+  Future<bool> signUpBusiness({
+    required String email,
+    required String password,
+    required String fullName,
+    required String businessName,
+    required String category,
+  }) async {
+    try {
+      final response = await _client.auth.signUp(
+        email: email,
+        password: password,
+        data: {
+          'full_name': fullName,
+          'role': 'entrepreneur',
+          'pending_business_name': businessName,
+          'pending_business_category': category,
+        },
+      );
+      return response.session != null;
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
+  /// Creates the caller's business + OWNER membership. SECURITY DEFINER
+  /// RPC — idempotent and a cheap no-op for anyone who isn't a brand-new
+  /// entrepreneur, so it's safe to call on every login. Pass [name] /
+  /// [category] for the in-app "create business" form; omit them to have
+  /// the RPC use the details captured in signup metadata. Returns the
+  /// RPC's result map (its 'status' is 'created' only when a business was
+  /// actually made, 'exists' if the owner already had one).
+  Future<Map<String, dynamic>?> registerBusiness({
+    String? name,
+    String? category,
+  }) async {
+    try {
+      final params = <String, dynamic>{};
+      if (name != null && name.trim().isNotEmpty) {
+        params['p_name'] = name.trim();
+      }
+      if (category != null && category.trim().isNotEmpty) {
+        params['p_category'] = category.trim();
+      }
+      final result = await _client.rpc(
+        'register_business',
+        params: params.isEmpty ? null : params,
+      );
+      return (result as Map?)?.cast<String, dynamic>();
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   Future<void> signOut() async {
     try {
       await _client.auth.signOut();

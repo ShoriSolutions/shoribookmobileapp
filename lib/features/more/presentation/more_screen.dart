@@ -13,6 +13,8 @@ class MoreScreen extends ConsumerWidget {
     'Staff': RoutePaths.staff,
     'Deposits': RoutePaths.deposits,
     'Reports': RoutePaths.reports,
+    'Availability': RoutePaths.availability,
+    'Profile & Marketplace': RoutePaths.profileMarketplace,
     'Booking Link': RoutePaths.bookingLink,
     'Settings': RoutePaths.settings,
   };

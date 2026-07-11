@@ -2,31 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../models/business.dart';
 import '../../../routing/route_paths.dart';
-import '../application/customer_register_controller.dart';
+import '../application/business_register_controller.dart';
 import 'widgets/auth_wave_header.dart';
 
-class CustomerRegisterScreen extends ConsumerStatefulWidget {
-  const CustomerRegisterScreen({super.key});
+class BusinessRegisterScreen extends ConsumerStatefulWidget {
+  const BusinessRegisterScreen({super.key});
 
   @override
-  ConsumerState<CustomerRegisterScreen> createState() =>
-      _CustomerRegisterScreenState();
+  ConsumerState<BusinessRegisterScreen> createState() =>
+      _BusinessRegisterScreenState();
 }
 
-class _CustomerRegisterScreenState
-    extends ConsumerState<CustomerRegisterScreen> {
+class _BusinessRegisterScreenState
+    extends ConsumerState<BusinessRegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _fullName = TextEditingController();
+  final _businessName = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
+  String? _category;
   bool _obscurePassword = true;
   String? _checkEmailMessage;
 
   @override
   void dispose() {
     _fullName.dispose();
+    _businessName.dispose();
     _email.dispose();
     _password.dispose();
     _confirm.dispose();
@@ -36,27 +40,26 @@ class _CustomerRegisterScreenState
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     final result = await ref
-        .read(customerRegisterControllerProvider.notifier)
+        .read(businessRegisterControllerProvider.notifier)
         .signUp(
           fullName: _fullName.text.trim(),
+          businessName: _businessName.text.trim(),
+          category: _category ?? 'other',
           email: _email.text.trim(),
           password: _password.text,
         );
-    if (result == null || !mounted) return; // error already surfaced via the AsyncValue
+    if (result == null || !mounted) return; // error surfaced via AsyncValue
     if (!result.sessionActive) {
       setState(() {
         _checkEmailMessage =
-            'Check your email to confirm your account, then log in.';
+            'Check your email to confirm your account. Your business will be '
+            'set up automatically the first time you log in.';
       });
       return;
     }
-    // A session was returned immediately (no email confirmation
-    // required) — navigate ourselves rather than relying on the
-    // redirect logic, which deliberately doesn't force a redirect away
-    // from this route (it can be pushed from deep inside the booking
-    // wizard via login's "create an account" link, and a redirect-
-    // triggered `go()` would destroy that screen's state). See the
-    // comment in app_router.dart's customer-mode branch.
+    // Session live immediately (autoconfirm) — the business was created
+    // in the controller; let the router redirect route us to the business
+    // home once the membership resolves.
     if (context.canPop()) {
       context.pop();
     } else {
@@ -66,14 +69,14 @@ class _CustomerRegisterScreenState
 
   @override
   Widget build(BuildContext context) {
-    final registerState = ref.watch(customerRegisterControllerProvider);
+    final registerState = ref.watch(businessRegisterControllerProvider);
     final isLoading = registerState.isLoading;
 
     return Scaffold(
       body: Column(
         children: [
           AuthWaveHeader(
-            height: 140,
+            height: 130,
             showBack: true,
             onBack: () => context.canPop()
                 ? context.pop()
@@ -115,21 +118,45 @@ class _CustomerRegisterScreenState
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Join BetterBooking',
+            'Grow your business',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 4),
           Text(
-            'Discover and book independent pros near you.',
+            'Take online bookings and manage your schedule, clients and staff '
+            'in one place.',
             style: Theme.of(context).textTheme.bodyMedium
                 ?.copyWith(color: AppColors.muted),
           ),
           const SizedBox(height: 24),
           TextFormField(
             controller: _fullName,
-            decoration: const InputDecoration(labelText: 'Full name'),
+            decoration: const InputDecoration(labelText: 'Your name'),
             validator: (v) =>
                 (v == null || v.trim().isEmpty) ? 'Enter your name' : null,
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _businessName,
+            decoration: const InputDecoration(labelText: 'Business name'),
+            validator: (v) => (v == null || v.trim().isEmpty)
+                ? 'Enter your business name'
+                : null,
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            initialValue: _category,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Category'),
+            items: [
+              for (final c in BusinessCategory.all)
+                DropdownMenuItem(
+                  value: c.value,
+                  child: Text('${c.emoji}  ${c.label}'),
+                ),
+            ],
+            onChanged: (v) => setState(() => _category = v),
+            validator: (v) => v == null ? 'Choose a category' : null,
           ),
           const SizedBox(height: 16),
           TextFormField(
@@ -190,7 +217,7 @@ class _CustomerRegisterScreenState
                         color: Colors.white,
                       ),
                     )
-                  : const Text('Create account'),
+                  : const Text('Create business account'),
             ),
           ),
           const SizedBox(height: 16),
@@ -229,7 +256,7 @@ class _CheckEmailView extends StatelessWidget {
         const SizedBox(height: 20),
         TextButton(
           onPressed: () => context.go(RoutePaths.login),
-          child: const Text('Back to log in'),
+          child: const Text('Go to log in'),
         ),
       ],
     );
