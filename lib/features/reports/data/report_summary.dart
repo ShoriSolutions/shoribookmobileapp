@@ -9,6 +9,7 @@ class ReportSummary {
   final double depositsCollected;
   final int pendingDepositsCount;
   final List<({String date, int count})> appointmentsByDay;
+  final List<({String date, double revenue})> revenueByDay;
   final Map<String, int> statusBreakdown;
   final Map<String, int> bookingSourceBreakdown;
   final List<({String serviceId, String name, int count})> topServices;
@@ -24,6 +25,7 @@ class ReportSummary {
     required this.depositsCollected,
     required this.pendingDepositsCount,
     required this.appointmentsByDay,
+    required this.revenueByDay,
     required this.statusBreakdown,
     required this.bookingSourceBreakdown,
     required this.topServices,
@@ -45,6 +47,15 @@ class ReportSummary {
               (e) => (
                 date: e['date'] as String,
                 count: e['count'] as int,
+              ),
+            )
+            .toList(),
+    revenueByDay:
+        (json['revenue_by_day'] as List<dynamic>? ?? [])
+            .map(
+              (e) => (
+                date: e['date'] as String,
+                revenue: (e['revenue'] as num?)?.toDouble() ?? 0,
               ),
             )
             .toList(),

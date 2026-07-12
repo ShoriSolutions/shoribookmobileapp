@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -7,11 +8,11 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/timezone_offsets.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_retry_view.dart';
+import '../../../models/business.dart';
 import '../../../routing/route_paths.dart';
 import '../../appointments/presentation/widgets/appointment_card.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
-import 'package:flutter/services.dart';
 import '../application/dashboard_controller.dart';
 import '../data/dashboard_stats.dart';
 
@@ -28,89 +29,67 @@ class DashboardScreen extends ConsumerWidget {
     final timezone = business.timezone;
 
     return Scaffold(
-      appBar: AppBar(title: Text(business.name)),
-      body: RefreshIndicator(
-        onRefresh: () => ref.refresh(dashboardDataProvider.future),
-        child: dataAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, st) => ListView(
-            children: [
-              const SizedBox(height: 80),
-              ErrorRetryView(
-                message: 'Could not load your dashboard.',
-                onRetry: () => ref.invalidate(dashboardDataProvider),
-              ),
-            ],
-          ),
-          data: (data) => ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Today's report",
-                          style: Theme.of(context).textTheme.titleMedium,
+      body: SafeArea(
+        bottom: false,
+        child: RefreshIndicator(
+          onRefresh: () => ref.refresh(dashboardDataProvider.future),
+          child: dataAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, st) => ListView(
+              children: [
+                const SizedBox(height: 80),
+                ErrorRetryView(
+                  message: 'Could not load your dashboard.',
+                  onRetry: () => ref.invalidate(dashboardDataProvider),
+                ),
+              ],
+            ),
+            data: (data) => ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _HeroHeader(
+                  business: business,
+                  stats: data.stats,
+                  timezone: timezone,
+                  canViewReports:
+                      can(membership.role, Permission.viewReports),
+                ),
+                const SizedBox(height: 16),
+                _StatCards(stats: data.stats),
+                const SizedBox(height: 20),
+                _QuickActions(
+                  canManage: can(membership.role, Permission.manageClients) ||
+                      membership.role.value == 'STAFF',
+                  canViewClients: canViewClientContact(membership.role),
+                  slug: business.slug,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  "Today's appointments",
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 10),
+                if (data.todayAppointments.isEmpty)
+                  const EmptyState(
+                    icon: '📅',
+                    title: 'Nothing on the books today',
+                    message: 'New bookings will show up here as they come in.',
+                  )
+                else
+                  ...data.todayAppointments.map(
+                    (a) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: AppointmentCard(
+                        appointment: a,
+                        timezone: timezone,
+                        onTap: () => context.push(
+                          RoutePaths.appointmentDetailPath(a.id),
                         ),
-                        Text(
-                          DateFormat('EEEE, MMM d').format(
-                            utcToBusinessLocal(
-                              DateTime.now().toUtc(),
-                              timezone,
-                            ),
-                          ),
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.muted),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (can(membership.role, Permission.viewReports))
-                    TextButton(
-                      onPressed: () => context.push(RoutePaths.reports),
-                      child: const Text('Monthly reports →'),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _StatsGrid(stats: data.stats, currency: business.currency),
-              const SizedBox(height: 20),
-              _QuickActions(
-                canManage: can(membership.role, Permission.manageClients) ||
-                    membership.role.value == 'STAFF',
-                canViewClients: canViewClientContact(membership.role),
-                slug: business.slug,
-              ),
-              const SizedBox(height: 20),
-              Text(
-                "Today's appointments",
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 10),
-              if (data.todayAppointments.isEmpty)
-                const EmptyState(
-                  icon: '📅',
-                  title: 'Nothing on the books today',
-                  message: 'New bookings will show up here as they come in.',
-                )
-              else
-                ...data.todayAppointments.map(
-                  (a) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: AppointmentCard(
-                      appointment: a,
-                      timezone: timezone,
-                      onTap: () => context.push(
-                        RoutePaths.appointmentDetailPath(a.id),
                       ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -118,25 +97,160 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
-class _StatsGrid extends StatelessWidget {
+class _HeroHeader extends StatelessWidget {
+  final Business business;
   final DashboardStats stats;
-  final String currency;
+  final String timezone;
+  final bool canViewReports;
 
-  const _StatsGrid({required this.stats, required this.currency});
+  const _HeroHeader({
+    required this.business,
+    required this.stats,
+    required this.timezone,
+    required this.canViewReports,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final tiles = [
-      ('Bookings today', '${stats.bookingsToday}', AppColors.sage),
-      ('Completed today', '${stats.completedToday}', AppColors.ink),
-      (
-        'Revenue today',
-        formatCurrency(stats.revenueToday, currency),
-        AppColors.sageDark,
+    final now = utcToBusinessLocal(DateTime.now().toUtc(), timezone);
+    final greeting = now.hour < 12
+        ? 'Good morning'
+        : now.hour < 17
+            ? 'Good afternoon'
+            : 'Good evening';
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.sageDark, AppColors.sage],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.sageDark.withValues(alpha: 0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      ('No-shows today', '${stats.noShowsToday}', AppColors.danger),
-      ('Cancelled today', '${stats.cancelledToday}', AppColors.terracotta),
-      ('Pending deposits', '${stats.pendingDepositsCount}', AppColors.terracotta),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      greeting,
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      business.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              if (canViewReports)
+                TextButton(
+                  onPressed: () => context.push(RoutePaths.reports),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Colors.white.withValues(alpha: 0.18),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                  ),
+                  child: const Text('Reports'),
+                ),
+            ],
+          ),
+          Text(
+            DateFormat('EEEE, MMM d').format(now),
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+          const SizedBox(height: 22),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Revenue today',
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      formatCurrency(stats.revenueToday, business.currency),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${stats.bookingsToday}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const Text(
+                    'bookings',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCards extends StatelessWidget {
+  final DashboardStats stats;
+
+  const _StatCards({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      (Icons.check_circle_outline, 'Completed', '${stats.completedToday}',
+          AppColors.sage),
+      (Icons.person_off_outlined, 'No-shows', '${stats.noShowsToday}',
+          AppColors.danger),
+      (Icons.cancel_outlined, 'Cancelled', '${stats.cancelledToday}',
+          AppColors.terracotta),
+      (Icons.account_balance_wallet_outlined, 'Pending deposits',
+          '${stats.pendingDepositsCount}', AppColors.sageDark),
     ];
 
     return GridView.count(
@@ -145,31 +259,46 @@ class _StatsGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 10,
       crossAxisSpacing: 10,
-      childAspectRatio: 1.6,
+      childAspectRatio: 2.5,
       children: [
-        for (final t in tiles)
+        for (final it in items)
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+              padding: const EdgeInsets.all(12),
+              child: Row(
                 children: [
-                  Text(
-                    t.$1,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    t.$2,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: t.$3,
-                      fontWeight: FontWeight.w700,
+                  Container(
+                    width: 38,
+                    height: 38,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: it.$4.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    child: Icon(it.$1, size: 20, color: it.$4),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          it.$3,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          it.$2,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.muted),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

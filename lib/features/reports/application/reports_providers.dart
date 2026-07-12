@@ -8,7 +8,15 @@ final reportsRepositoryProvider = Provider<ReportsRepository>((ref) {
   return ReportsRepository(ref.watch(supabaseClientProvider));
 });
 
-enum ReportRange { week, month }
+enum ReportRange {
+  week('Week'),
+  month('Month'),
+  quarter('Quarter'),
+  year('Year');
+
+  final String label;
+  const ReportRange(this.label);
+}
 
 final reportRangeProvider = StateProvider<ReportRange>((ref) => ReportRange.month);
 
@@ -23,12 +31,20 @@ final reportSummaryProvider = FutureProvider.autoDispose<ReportSummary>((
   final now = DateTime.now();
   final DateTime start;
   final DateTime end;
-  if (range == ReportRange.week) {
-    start = now.subtract(Duration(days: now.weekday % 7));
-    end = start.add(const Duration(days: 6));
-  } else {
-    start = DateTime(now.year, now.month, 1);
-    end = DateTime(now.year, now.month + 1, 0);
+  switch (range) {
+    case ReportRange.week:
+      start = now.subtract(Duration(days: now.weekday % 7));
+      end = start.add(const Duration(days: 6));
+    case ReportRange.month:
+      start = DateTime(now.year, now.month, 1);
+      end = DateTime(now.year, now.month + 1, 0);
+    case ReportRange.quarter:
+      final firstMonthOfQuarter = now.month - ((now.month - 1) % 3);
+      start = DateTime(now.year, firstMonthOfQuarter, 1);
+      end = DateTime(now.year, firstMonthOfQuarter + 3, 0);
+    case ReportRange.year:
+      start = DateTime(now.year, 1, 1);
+      end = DateTime(now.year, 12, 31);
   }
 
   return ref

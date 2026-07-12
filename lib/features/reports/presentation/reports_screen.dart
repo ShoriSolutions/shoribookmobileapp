@@ -23,15 +23,18 @@ class ReportsScreen extends ConsumerWidget {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: SegmentedButton<ReportRange>(
-              segments: const [
-                ButtonSegment(value: ReportRange.week, label: Text('This week')),
-                ButtonSegment(value: ReportRange.month, label: Text('This month')),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Wrap(
+              spacing: 8,
+              children: [
+                for (final r in ReportRange.values)
+                  ChoiceChip(
+                    label: Text(r.label),
+                    selected: range == r,
+                    onSelected: (_) =>
+                        ref.read(reportRangeProvider.notifier).state = r,
+                  ),
               ],
-              selected: {range},
-              onSelectionChanged: (s) =>
-                  ref.read(reportRangeProvider.notifier).state = s.first,
             ),
           ),
           Expanded(
@@ -64,7 +67,23 @@ class ReportsScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  if (summary.appointmentsByDay.isNotEmpty) ...[
+                  if (summary.revenueByDay.isNotEmpty) ...[
+                    Text(
+                      'Revenue trend',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 180,
+                      child: _RevenueLineChart(
+                        summary: summary,
+                        currency: currency,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                  if (summary.appointmentsByDay.isNotEmpty &&
+                      summary.appointmentsByDay.length <= 31) ...[
                     Text(
                       'Bookings by day',
                       style: Theme.of(context).textTheme.titleMedium,
@@ -136,6 +155,106 @@ class _Tile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _RevenueLineChart extends StatelessWidget {
+  final ReportSummary summary;
+  final String? currency;
+
+  const _RevenueLineChart({required this.summary, required this.currency});
+
+  @override
+  Widget build(BuildContext context) {
+    final data = summary.revenueByDay;
+    final spots = [
+      for (int i = 0; i < data.length; i++)
+        FlSpot(i.toDouble(), data[i].revenue),
+    ];
+    final maxRevenue = data
+        .map((d) => d.revenue)
+        .fold<double>(0, (a, b) => a > b ? a : b);
+    // Show ~4 date labels across the range.
+    final labelStep = (data.length / 4).ceil().clamp(1, data.length);
+
+    return LineChart(
+      LineChartData(
+        minY: 0,
+        maxY: maxRevenue <= 0 ? 1 : maxRevenue * 1.2,
+        gridData: const FlGridData(show: false),
+        borderData: FlBorderData(show: false),
+        titlesData: FlTitlesData(
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          leftTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 22,
+              interval: labelStep.toDouble(),
+              getTitlesWidget: (value, meta) {
+                final i = value.round();
+                if (i < 0 || i >= data.length) {
+                  return const SizedBox.shrink();
+                }
+                final parts = data[i].date.split('-');
+                if (parts.length < 3) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    '${parts[1]}/${parts[2]}',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        lineTouchData: LineTouchData(
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipItems: (touched) => touched.map((s) {
+              final i = s.x.round();
+              final dateStr =
+                  (i >= 0 && i < data.length) ? data[i].date : '';
+              return LineTooltipItem(
+                '$dateStr\n${formatCurrency(s.y, currency)}',
+                const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            color: AppColors.sageDark,
+            barWidth: 2,
+            dotData: const FlDotData(show: false),
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.sage.withValues(alpha: 0.25),
+                  AppColors.sage.withValues(alpha: 0.0),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
