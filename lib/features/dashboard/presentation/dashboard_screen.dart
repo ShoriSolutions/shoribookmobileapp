@@ -11,6 +11,7 @@ import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/business.dart';
 import '../../../routing/route_paths.dart';
 import '../../appointments/presentation/widgets/appointment_card.dart';
+import '../../booking_link/presentation/booking_share_sheet.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
 import '../application/dashboard_controller.dart';
@@ -30,7 +31,7 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push(RoutePaths.bookingLink),
+        onPressed: () => showBookingShareSheet(context, business),
         backgroundColor: AppColors.sage,
         foregroundColor: Colors.white,
         tooltip: 'Share booking link',
