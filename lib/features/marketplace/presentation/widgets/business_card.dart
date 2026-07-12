@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/location_service.dart';
 import '../../../../models/business.dart';
 import '../../../../routing/route_paths.dart';
 
@@ -12,7 +13,16 @@ class BusinessCard extends StatelessWidget {
   final Business business;
   final Widget? favoriteButton;
 
-  const BusinessCard({super.key, required this.business, this.favoriteButton});
+  /// Straight-line distance to the customer, in metres, when "Near me"
+  /// is on. Shown as a small label; null hides it.
+  final double? distanceMeters;
+
+  const BusinessCard({
+    super.key,
+    required this.business,
+    this.favoriteButton,
+    this.distanceMeters,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +64,8 @@ class BusinessCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     [
+                      if (distanceMeters != null)
+                        '📍 ${formatDistance(distanceMeters!)}',
                       business.category?.replaceAll('_', ' '),
                       business.address,
                     ].where((s) => s != null && s.isNotEmpty).join(' · '),

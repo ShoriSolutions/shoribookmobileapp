@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import '../../../core/errors/app_exception.dart';
+import '../../../core/utils/location_service.dart';
+import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/business.dart';
@@ -17,6 +21,7 @@ class DiscoverScreen extends ConsumerStatefulWidget {
 
 class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   final _searchController = TextEditingController();
+  bool _locating = false;
 
   @override
   void dispose() {
@@ -24,10 +29,34 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     super.dispose();
   }
 
+  Future<void> _toggleNearMe() async {
+    // Already on? Turn it off.
+    if (ref.read(customerLocationProvider) != null) {
+      ref.read(customerLocationProvider.notifier).state = null;
+      return;
+    }
+    setState(() => _locating = true);
+    try {
+      final loc = await getCurrentLocation();
+      ref.read(customerLocationProvider.notifier).state = loc;
+    } catch (e) {
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          message: AppException.from(e).message,
+          isError: true,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final resultsAsync = ref.watch(searchResultsProvider);
     final selectedCategory = ref.watch(selectedCategoryProvider);
+    final location = ref.watch(customerLocationProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -53,6 +82,13 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
+                CategoryChip(
+                  label: _locating ? 'Locating…' : 'Near me',
+                  emoji: '📍',
+                  selected: location != null,
+                  onTap: _locating ? () {} : _toggleNearMe,
+                ),
+                const SizedBox(width: 8),
                 CategoryChip(
                   label: 'All',
                   emoji: '✦',
@@ -104,6 +140,29 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                       ],
                     );
                   }
+                  final distances = <String, double>{};
+                  var list = businesses;
+                  if (location != null) {
+                    for (final b in businesses) {
+                      if (b.latitude != null && b.longitude != null) {
+                        distances[b.id] = Geolocator.distanceBetween(
+                          location.lat,
+                          location.lng,
+                          b.latitude!,
+                          b.longitude!,
+                        );
+                      }
+                    }
+                    // Nearest first; businesses without coordinates go last.
+                    list = [...businesses]..sort((a, b) {
+                        final da = distances[a.id];
+                        final db = distances[b.id];
+                        if (da == null && db == null) return 0;
+                        if (da == null) return 1;
+                        if (db == null) return -1;
+                        return da.compareTo(db);
+                      });
+                  }
                   return GridView.builder(
                     padding: const EdgeInsets.all(16),
                     gridDelegate:
@@ -113,10 +172,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                       crossAxisSpacing: 12,
                       childAspectRatio: 0.78,
                     ),
-                    itemCount: businesses.length,
+                    itemCount: list.length,
                     itemBuilder: (context, i) => BusinessCard(
-                      business: businesses[i],
-                      favoriteButton: FavoriteButton(business: businesses[i]),
+                      business: list[i],
+                      favoriteButton: FavoriteButton(business: list[i]),
+                      distanceMeters: distances[list[i].id],
                     ),
                   );
                 },

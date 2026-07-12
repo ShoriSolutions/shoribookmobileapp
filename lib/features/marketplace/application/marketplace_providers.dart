@@ -13,6 +13,11 @@ final marketplaceRepositoryProvider = Provider<MarketplaceRepository>((ref) {
 final searchQueryProvider = StateProvider<String>((ref) => '');
 final selectedCategoryProvider = StateProvider<String?>((ref) => null);
 
+/// The customer's current location when "Near me" is on (null when off).
+/// Results are sorted by distance to this point.
+final customerLocationProvider =
+    StateProvider<({double lat, double lng})?>((ref) => null);
+
 /// Debounced so typing doesn't fire a query per keystroke.
 final searchResultsProvider = FutureProvider.autoDispose<List<Business>>((
   ref,
