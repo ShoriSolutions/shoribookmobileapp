@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_snackbar.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../../routing/route_paths.dart';
 import '../../../routing/shell/nav_items.dart';
+import '../../auth/application/auth_providers.dart';
 import '../../business_context/application/active_business_provider.dart';
 
 class MoreScreen extends ConsumerWidget {
@@ -15,8 +19,6 @@ class MoreScreen extends ConsumerWidget {
     'Reports': RoutePaths.reports,
     'Availability': RoutePaths.availability,
     'Profile & Marketplace': RoutePaths.profileMarketplace,
-    'Booking Link': RoutePaths.bookingLink,
-    'Settings': RoutePaths.settings,
     'Help & Support': RoutePaths.support,
   };
 
@@ -58,8 +60,37 @@ class MoreScreen extends ConsumerWidget {
                   onTap: () => context.push(_routes[item.label]!),
                 ),
               ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.logout, color: AppColors.danger),
+              title: const Text('Sign out'),
+              onTap: () => _signOut(context, ref),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _signOut(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Sign out?',
+      message: "You'll need to log in again to access your dashboard.",
+      confirmLabel: 'Sign out',
+    );
+    if (!confirmed) return;
+    try {
+      await ref.read(authRepositoryProvider).signOut();
+    } catch (e) {
+      if (context.mounted) {
+        showAppSnackBar(
+          context,
+          message: AppException.from(e).message,
+          isError: true,
+        );
+      }
+    }
   }
 }

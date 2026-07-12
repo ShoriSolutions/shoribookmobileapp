@@ -29,6 +29,13 @@ class DashboardScreen extends ConsumerWidget {
     final timezone = business.timezone;
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push(RoutePaths.bookingLink),
+        backgroundColor: AppColors.sage,
+        foregroundColor: Colors.white,
+        tooltip: 'Share booking link',
+        child: const Icon(Icons.share),
+      ),
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
