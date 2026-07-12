@@ -2,10 +2,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snackbar.dart';
+import '../../../core/widgets/osm_map.dart';
 import '../../../models/business.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
@@ -403,6 +405,25 @@ class _BusinessProfileEditScreenState
                       icon: const Icon(Icons.my_location),
                       label: const Text('Use my current location'),
                     ),
+                    const SizedBox(height: 10),
+                    if (canManage) ...[
+                      LocationPickerMap(
+                        selected: (_lat != null && _lng != null)
+                            ? LatLng(_lat!, _lng!)
+                            : null,
+                        onChanged: (p) => setState(() {
+                          _lat = p.latitude;
+                          _lng = p.longitude;
+                        }),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tap the map to drop or move your pin.',
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: AppColors.muted),
+                      ),
+                    ] else if (_lat != null && _lng != null)
+                      MapPreview(point: LatLng(_lat!, _lng!)),
 
                     // ── Socials ─────────────────────────────────────────
                     _section(context, 'Social links'),

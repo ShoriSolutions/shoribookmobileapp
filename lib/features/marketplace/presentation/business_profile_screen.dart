@@ -2,12 +2,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/timezone_offsets.dart';
 import '../../../core/widgets/error_retry_view.dart';
+import '../../../core/widgets/osm_map.dart';
 import '../../../models/availability_models.dart';
 import '../../../models/service.dart';
 import '../../../routing/route_paths.dart';
@@ -202,6 +204,13 @@ class BusinessProfileScreen extends ConsumerWidget {
                               if ((business.address ?? '').isNotEmpty)
                                 Text('📍 ${business.address}'),
                               if (hasCoords) ...[
+                                const SizedBox(height: 10),
+                                MapPreview(
+                                  point: LatLng(
+                                    business.latitude!,
+                                    business.longitude!,
+                                  ),
+                                ),
                                 const SizedBox(height: 10),
                                 SizedBox(
                                   width: double.infinity,
