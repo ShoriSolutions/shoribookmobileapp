@@ -19,7 +19,15 @@ import '../application/marketplace_providers.dart';
 class BusinessProfileScreen extends ConsumerWidget {
   final String slug;
 
-  const BusinessProfileScreen({super.key, required this.slug});
+  /// When true this is the owner previewing their own public page; the
+  /// "Book" action is disabled and a preview banner is shown.
+  final bool isPreview;
+
+  const BusinessProfileScreen({
+    super.key,
+    required this.slug,
+    this.isPreview = false,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -159,18 +167,35 @@ class BusinessProfileScreen extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 16),
+                      if (isPreview)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.sageLight,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            '👀 Preview — this is how your public profile looks '
+                            'to customers.',
+                            style: TextStyle(color: AppColors.sageDark),
+                          ),
+                        ),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: business.bookingEnabled
-                              ? () => context.push(
+                          onPressed: (isPreview || !business.bookingEnabled)
+                              ? null
+                              : () => context.push(
                                   RoutePaths.bookingWizard(business.slug),
-                                )
-                              : null,
+                                ),
                           child: Text(
-                            business.bookingEnabled
-                                ? '📅 Book an Appointment'
-                                : 'Not accepting bookings',
+                            isPreview
+                                ? 'Booking (disabled in preview)'
+                                : business.bookingEnabled
+                                    ? '📅 Book an Appointment'
+                                    : 'Not accepting bookings',
                           ),
                         ),
                       ),

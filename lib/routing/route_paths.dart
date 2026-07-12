@@ -48,6 +48,9 @@ class RoutePaths {
   static const account = '/account';
 
   static String businessProfile(String slug) => '/business/$slug';
+
+  /// Owner-only preview of their own public marketplace profile.
+  static String previewBusiness(String slug) => '/preview-business/$slug';
   static String bookingWizard(String slug) => '/book/$slug';
   static String bookingDetail(String id) => '/bookings/$id';
 }

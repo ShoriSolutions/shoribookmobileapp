@@ -87,6 +87,7 @@ bool _isOwnerModePath(String path) {
       path == RoutePaths.availability ||
       path == RoutePaths.profileMarketplace ||
       path == RoutePaths.editBusinessProfile ||
+      path.startsWith('/preview-business/') ||
       path == RoutePaths.settings ||
       path == RoutePaths.noBusiness ||
       path == RoutePaths.createBusiness;
@@ -394,6 +395,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/business/:slug',
         builder: (c, s) =>
             BusinessProfileScreen(slug: s.pathParameters['slug']!),
+      ),
+      GoRoute(
+        path: '/preview-business/:slug',
+        builder: (c, s) => BusinessProfileScreen(
+          slug: s.pathParameters['slug']!,
+          isPreview: true,
+        ),
       ),
       GoRoute(
         path: '/book/:slug',

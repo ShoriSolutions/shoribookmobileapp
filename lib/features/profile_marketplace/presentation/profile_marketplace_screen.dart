@@ -9,7 +9,6 @@ import '../../../core/widgets/app_snackbar.dart';
 import '../../../routing/route_paths.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
-import '../../marketplace/presentation/business_profile_screen.dart';
 import '../application/profile_marketplace_controller.dart';
 import 'widgets/share_booking_link_section.dart';
 
@@ -82,11 +81,8 @@ class ProfileMarketplaceScreen extends ConsumerWidget {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => BusinessProfileScreen(slug: business.slug),
-                ),
-              ),
+              onPressed: () =>
+                  context.push(RoutePaths.previewBusiness(business.slug)),
               icon: const Icon(Icons.visibility_outlined),
               label: const Text('Preview as customer'),
             ),
