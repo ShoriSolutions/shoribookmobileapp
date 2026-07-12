@@ -171,13 +171,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         }
         final membershipAsync = ref.read(activeMembershipProvider);
         if (membershipAsync.isLoading) {
-          // Tolerate no-business/create-business while the membership
-          // re-resolves (e.g. right after creating one) so we don't flash
-          // back to splash mid-flow.
+          // The membership provider re-resolves whenever it's invalidated
+          // (creating a business, saving profile changes, uploading a
+          // logo/cover, toggling visibility…). Keep the user on whatever
+          // business screen they're already on instead of bouncing to
+          // splash — only fall back to splash from the entry points where
+          // the destination genuinely isn't known yet.
           return (loc == RoutePaths.splash ||
                   loc == RoutePaths.setPassword ||
-                  loc == RoutePaths.noBusiness ||
-                  loc == RoutePaths.createBusiness)
+                  _isOwnerModePath(loc))
               ? null
               : RoutePaths.splash;
         }
