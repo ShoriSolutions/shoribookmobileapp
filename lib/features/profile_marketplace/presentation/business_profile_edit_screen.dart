@@ -40,6 +40,8 @@ class _BusinessProfileEditScreenState
   final _tags = TextEditingController();
   String? _category;
   bool _featuredRequested = false;
+  double? _lat;
+  double? _lng;
   bool _seeded = false;
 
   @override
@@ -63,6 +65,8 @@ class _BusinessProfileEditScreenState
     _tags.text = b.badges.join(', ');
     _category = b.category;
     _featuredRequested = b.featuredRequested;
+    _lat = b.latitude;
+    _lng = b.longitude;
     _seeded = true;
   }
 
@@ -82,6 +86,28 @@ class _BusinessProfileEditScreenState
   bool _isLocked(Business b) {
     final until = b.nameCategoryLockedUntil;
     return until != null && DateTime.now().isBefore(until);
+  }
+
+  Future<void> _useCurrentLocation() async {
+    try {
+      final loc = await ref
+          .read(businessProfileControllerProvider.notifier)
+          .currentLocation();
+      if (!mounted) return;
+      setState(() {
+        _lat = loc.lat;
+        _lng = loc.lng;
+      });
+      showAppSnackBar(context, message: 'Location captured');
+    } catch (e) {
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          message: AppException.from(e).message,
+          isError: true,
+        );
+      }
+    }
   }
 
   Future<void> _appealLock(Business b) async {
@@ -151,6 +177,8 @@ class _BusinessProfileEditScreenState
           googleMapsUrl: _nullIfEmpty(_googleMaps.text),
           badges: badges,
           featuredRequested: _featuredRequested,
+          latitude: _lat,
+          longitude: _lng,
         );
     if (!mounted) return;
     if (status == 'ok') {
@@ -329,6 +357,52 @@ class _BusinessProfileEditScreenState
                         keyboardType: TextInputType.emailAddress),
                     _field(_address, 'Address / area', canManage,
                         hint: 'Shown on your marketplace listing'),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Pin location',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Set your exact location so customers can see you on the '
+                      'map and get directions.',
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: AppColors.muted),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          _lat != null
+                              ? Icons.location_on
+                              : Icons.location_off_outlined,
+                          size: 18,
+                          color:
+                              _lat != null ? AppColors.sage : AppColors.muted,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _lat != null && _lng != null
+                                ? '${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)}'
+                                : 'Not set',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                        if (_lat != null && canManage)
+                          TextButton(
+                            onPressed: () =>
+                                setState(() => _lat = _lng = null),
+                            child: const Text('Clear'),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    OutlinedButton.icon(
+                      onPressed: canManage ? _useCurrentLocation : null,
+                      icon: const Icon(Icons.my_location),
+                      label: const Text('Use my current location'),
+                    ),
 
                     // ── Socials ─────────────────────────────────────────
                     _section(context, 'Social links'),

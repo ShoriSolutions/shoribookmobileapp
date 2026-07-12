@@ -6,6 +6,8 @@
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>BetterBooking needs access to your photos so you can set your business logo and cover image.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>BetterBooking uses your location so you can set your business's location for customers to find and get directions to.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

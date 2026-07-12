@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../business_context/application/active_business_provider.dart';
@@ -27,6 +28,8 @@ class BusinessProfileController extends AsyncNotifier<void> {
     String? googleMapsUrl,
     List<String>? badges,
     bool? featuredRequested,
+    double? latitude,
+    double? longitude,
   }) async {
     state = const AsyncLoading();
     try {
@@ -46,6 +49,8 @@ class BusinessProfileController extends AsyncNotifier<void> {
                 googleMapsUrl: googleMapsUrl,
                 badges: badges,
                 featuredRequested: featuredRequested,
+                latitude: latitude,
+                longitude: longitude,
               );
       ref.invalidate(activeMembershipProvider);
       state = const AsyncData(null);
@@ -53,6 +58,32 @@ class BusinessProfileController extends AsyncNotifier<void> {
     } catch (e, st) {
       state = AsyncError(AppException.from(e), st);
       return null;
+    }
+  }
+
+  /// Gets the device's current coordinates for "use my current location".
+  /// Handles permission + service checks; throws an AppException with a
+  /// friendly message the caller can show if anything is off.
+  Future<({double lat, double lng})> currentLocation() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        throw const AppException('Location services are turned off.');
+      }
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        throw const AppException(
+          'Location permission denied. Enable it in Settings to use your '
+          'current location.',
+        );
+      }
+      final pos = await Geolocator.getCurrentPosition();
+      return (lat: pos.latitude, lng: pos.longitude);
+    } catch (e) {
+      throw AppException.from(e);
     }
   }
 

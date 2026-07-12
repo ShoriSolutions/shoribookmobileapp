@@ -38,6 +38,8 @@ class BusinessProfileScreen extends ConsumerWidget {
           }
           final business = data.business;
           final isOpenNow = _computeIsOpenNow(data.hours, business.timezone);
+          final hasCoords =
+              business.latitude != null && business.longitude != null;
 
           return CustomScrollView(
             slivers: [
@@ -189,7 +191,8 @@ class BusinessProfileScreen extends ConsumerWidget {
                         _HoursSection(hours: data.hours),
                       ],
                       if ((business.address ?? '').isNotEmpty ||
-                          business.googleMapsUrl != null) ...[
+                          business.googleMapsUrl != null ||
+                          hasCoords) ...[
                         const SizedBox(height: 16),
                         _SectionCard(
                           title: 'Location',
@@ -198,6 +201,26 @@ class BusinessProfileScreen extends ConsumerWidget {
                             children: [
                               if ((business.address ?? '').isNotEmpty)
                                 Text('📍 ${business.address}'),
+                              if (hasCoords) ...[
+                                const SizedBox(height: 10),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => launchUrl(
+                                      Uri.parse(
+                                        'https://www.google.com/maps/dir/?api=1'
+                                        '&destination=${business.latitude},${business.longitude}',
+                                      ),
+                                      mode: LaunchMode.externalApplication,
+                                    ),
+                                    icon: const Icon(
+                                      Icons.directions,
+                                      color: Colors.white,
+                                    ),
+                                    label: const Text('Get directions'),
+                                  ),
+                                ),
+                              ],
                               if (business.googleMapsUrl != null) ...[
                                 const SizedBox(height: 8),
                                 TextButton(

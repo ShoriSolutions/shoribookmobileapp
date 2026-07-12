@@ -10,6 +10,8 @@ class Business {
   final String? phone;
   final String? email;
   final String? address;
+  final double? latitude;
+  final double? longitude;
   final String timezone;
   final String currency;
   final String? whatsappNumber;
@@ -39,6 +41,8 @@ class Business {
     this.phone,
     this.email,
     this.address,
+    this.latitude,
+    this.longitude,
     required this.timezone,
     required this.currency,
     this.whatsappNumber,
@@ -69,6 +73,8 @@ class Business {
     phone: json['phone'] as String?,
     email: json['email'] as String?,
     address: json['address'] as String?,
+    latitude: (json['latitude'] as num?)?.toDouble(),
+    longitude: (json['longitude'] as num?)?.toDouble(),
     timezone: json['timezone'] as String? ?? 'America/Barbados',
     currency: json['currency'] as String? ?? 'BBD',
     whatsappNumber: json['whatsapp_number'] as String?,
@@ -103,6 +109,8 @@ class Business {
     'phone': phone,
     'email': email,
     'address': address,
+    'latitude': latitude,
+    'longitude': longitude,
     'timezone': timezone,
     'currency': currency,
     'whatsapp_number': whatsappNumber,

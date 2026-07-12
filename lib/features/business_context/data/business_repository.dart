@@ -110,6 +110,8 @@ class BusinessRepository {
     String? googleMapsUrl,
     List<String>? badges,
     bool? featuredRequested,
+    double? latitude,
+    double? longitude,
   }) async {
     try {
       final result = await _client.rpc('update_business_profile', params: {
@@ -127,6 +129,8 @@ class BusinessRepository {
         'p_google_maps_url': googleMapsUrl,
         'p_badges': badges,
         'p_featured_requested': featuredRequested,
+        'p_latitude': latitude,
+        'p_longitude': longitude,
       });
       return (result as Map?)?.cast<String, dynamic>();
     } catch (e) {
