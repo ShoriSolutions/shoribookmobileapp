@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -38,11 +39,16 @@ class MoreScreen extends ConsumerWidget {
                 leading: CircleAvatar(
                   backgroundColor: AppColors.sageLight,
                   foregroundColor: AppColors.sageDark,
-                  child: Text(
-                    membership.business.name.isNotEmpty
-                        ? membership.business.name[0].toUpperCase()
-                        : '?',
-                  ),
+                  backgroundImage: membership.business.logoUrl != null
+                      ? CachedNetworkImageProvider(membership.business.logoUrl!)
+                      : null,
+                  child: membership.business.logoUrl == null
+                      ? Text(
+                          membership.business.name.isNotEmpty
+                              ? membership.business.name[0].toUpperCase()
+                              : '?',
+                        )
+                      : null,
                 ),
                 title: Text(membership.business.name),
                 subtitle: Text(membership.role.value),
