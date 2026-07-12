@@ -44,6 +44,7 @@ class _BusinessProfileEditScreenState
   bool _featuredRequested = false;
   double? _lat;
   double? _lng;
+  List<String> _gallery = const [];
   bool _seeded = false;
 
   @override
@@ -69,6 +70,7 @@ class _BusinessProfileEditScreenState
     _featuredRequested = b.featuredRequested;
     _lat = b.latitude;
     _lng = b.longitude;
+    _gallery = List.of(b.galleryUrls);
     _seeded = true;
   }
 
@@ -88,6 +90,41 @@ class _BusinessProfileEditScreenState
   bool _isLocked(Business b) {
     final until = b.nameCategoryLockedUntil;
     return until != null && DateTime.now().isBefore(until);
+  }
+
+  Future<void> _addGalleryPhoto() async {
+    final biz = ref.read(activeMembershipProvider).valueOrNull?.business;
+    if (biz == null) return;
+    if (_gallery.length >= 10) {
+      showAppSnackBar(context, message: 'You can add up to 10 photos.');
+      return;
+    }
+    final next = await ref
+        .read(businessProfileControllerProvider.notifier)
+        .addGalleryImage(businessId: biz.id, current: _gallery);
+    if (!mounted) return;
+    if (next != null) {
+      setState(() => _gallery = next);
+    } else {
+      final err = ref.read(businessProfileControllerProvider).error;
+      if (err != null) {
+        showAppSnackBar(
+          context,
+          message: AppException.from(err).message,
+          isError: true,
+        );
+      }
+    }
+  }
+
+  Future<void> _removeGalleryPhoto(String url) async {
+    final biz = ref.read(activeMembershipProvider).valueOrNull?.business;
+    if (biz == null) return;
+    final next = await ref
+        .read(businessProfileControllerProvider.notifier)
+        .removeGalleryImage(businessId: biz.id, current: _gallery, url: url);
+    if (!mounted) return;
+    if (next != null) setState(() => _gallery = next);
   }
 
   Future<void> _useCurrentLocation() async {
@@ -450,6 +487,84 @@ class _BusinessProfileEditScreenState
                           ? (v) => setState(() => _featuredRequested = v)
                           : null,
                     ),
+
+                    // ── Photos ──────────────────────────────────────────
+                    _section(context, 'Photos'),
+                    Text(
+                      'Add up to 10 photos of your work (${_gallery.length}/10).',
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: AppColors.muted),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final url in _gallery)
+                          Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: CachedNetworkImage(
+                                  imageUrl: url,
+                                  width: 84,
+                                  height: 84,
+                                  fit: BoxFit.cover,
+                                  errorWidget: (_, __, ___) => const SizedBox(
+                                    width: 84,
+                                    height: 84,
+                                    child: ColoredBox(
+                                      color: AppColors.parchment,
+                                      child: Icon(Icons.broken_image_outlined,
+                                          color: AppColors.muted),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (canManage)
+                                Positioned(
+                                  top: 2,
+                                  right: 2,
+                                  child: GestureDetector(
+                                    onTap: () => _removeGalleryPhoto(url),
+                                    child: const CircleAvatar(
+                                      radius: 11,
+                                      backgroundColor: Colors.black54,
+                                      child: Icon(Icons.close,
+                                          size: 14, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        if (canManage && _gallery.length < 10)
+                          GestureDetector(
+                            onTap: _addGalleryPhoto,
+                            child: Container(
+                              width: 84,
+                              height: 84,
+                              decoration: BoxDecoration(
+                                color: AppColors.sageLight,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.parchment),
+                              ),
+                              child: const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.add_a_photo_outlined,
+                                      color: AppColors.sageDark),
+                                  SizedBox(height: 4),
+                                  Text('Add',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.sageDark)),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+
                     const SizedBox(height: 20),
                     if (canManage)
                       SizedBox(

@@ -26,6 +26,7 @@ class Business {
   final DateTime? nameCategoryLockedUntil;
   final String status;
   final List<String> badges;
+  final List<String> galleryUrls;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -57,6 +58,7 @@ class Business {
     this.nameCategoryLockedUntil,
     required this.status,
     required this.badges,
+    this.galleryUrls = const [],
     required this.createdAt,
     required this.updatedAt,
   });
@@ -93,6 +95,11 @@ class Business {
     badges:
         (json['badges'] as List<dynamic>?)?.map((e) => e as String).toList() ??
         const [],
+    galleryUrls:
+        (json['gallery_urls'] as List<dynamic>?)
+            ?.map((e) => e as String)
+            .toList() ??
+        const [],
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),
   );
@@ -125,6 +132,7 @@ class Business {
     'name_category_locked_until': nameCategoryLockedUntil?.toIso8601String(),
     'status': status,
     'badges': badges,
+    'gallery_urls': galleryUrls,
     'created_at': createdAt.toIso8601String(),
     'updated_at': updatedAt.toIso8601String(),
   };

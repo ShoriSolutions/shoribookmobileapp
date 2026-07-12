@@ -87,6 +87,61 @@ class BusinessProfileController extends AsyncNotifier<void> {
     }
   }
 
+  /// Picks an image and adds it to the business photo gallery. Returns the
+  /// new gallery list, or null if cancelled/on error.
+  Future<List<String>?> addGalleryImage({
+    required String businessId,
+    required List<String> current,
+  }) async {
+    try {
+      final file = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 85,
+      );
+      if (file == null) return null;
+      state = const AsyncLoading();
+      final bytes = await file.readAsBytes();
+      final parts = file.name.split('.');
+      final ext = parts.length > 1 ? parts.last : 'jpg';
+      final next = await ref.read(businessRepositoryProvider).addGalleryImage(
+            businessId: businessId,
+            current: current,
+            bytes: bytes,
+            fileExtension: ext,
+          );
+      ref.invalidate(activeMembershipProvider);
+      state = const AsyncData(null);
+      return next;
+    } catch (e, st) {
+      state = AsyncError(AppException.from(e), st);
+      return null;
+    }
+  }
+
+  Future<List<String>?> removeGalleryImage({
+    required String businessId,
+    required List<String> current,
+    required String url,
+  }) async {
+    state = const AsyncLoading();
+    try {
+      final next =
+          await ref.read(businessRepositoryProvider).removeGalleryImage(
+                businessId: businessId,
+                current: current,
+                url: url,
+              );
+      ref.invalidate(activeMembershipProvider);
+      state = const AsyncData(null);
+      return next;
+    } catch (e, st) {
+      state = AsyncError(AppException.from(e), st);
+      return null;
+    }
+  }
+
   /// Picks an image from the gallery and uploads it as the logo or cover.
   /// Returns true on success, false if cancelled or on error.
   Future<bool> pickAndUploadImage({

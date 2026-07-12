@@ -173,6 +173,58 @@ class BusinessRepository {
     }
   }
 
+  /// Uploads one gallery image and appends its URL to gallery_urls.
+  /// Returns the new full list. Each file gets a unique name so no
+  /// cache-busting is needed.
+  Future<List<String>> addGalleryImage({
+    required String businessId,
+    required List<String> current,
+    required Uint8List bytes,
+    required String fileExtension,
+  }) async {
+    try {
+      final ext = fileExtension.toLowerCase() == 'png' ? 'png' : 'jpg';
+      final path =
+          '$businessId/gallery/${DateTime.now().millisecondsSinceEpoch}.$ext';
+      await _client.storage.from('business-images').uploadBinary(
+            path,
+            bytes,
+            fileOptions: FileOptions(
+              contentType: ext == 'png' ? 'image/png' : 'image/jpeg',
+            ),
+          );
+      final url =
+          _client.storage.from('business-images').getPublicUrl(path);
+      final next = [...current, url];
+      await _client.from('businesses').update({
+        'gallery_urls': next,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', businessId);
+      return next;
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
+  /// Removes a gallery URL from the business. Returns the new list. (The
+  /// stored file is left in the bucket; it's public and cheap.)
+  Future<List<String>> removeGalleryImage({
+    required String businessId,
+    required List<String> current,
+    required String url,
+  }) async {
+    try {
+      final next = current.where((u) => u != url).toList();
+      await _client.from('businesses').update({
+        'gallery_urls': next,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', businessId);
+      return next;
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   Future<String?> _findLinkedStaffProfileId({
     required String businessId,
     required String memberId,

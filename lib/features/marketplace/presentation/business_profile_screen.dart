@@ -181,6 +181,30 @@ class BusinessProfileScreen extends ConsumerWidget {
                           child: Text(business.description!),
                         ),
                       ],
+                      if (business.galleryUrls.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        _SectionCard(
+                          title: 'Photos',
+                          child: SizedBox(
+                            height: 120,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: business.galleryUrls.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(width: 8),
+                              itemBuilder: (c, i) => ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: CachedNetworkImage(
+                                  imageUrl: business.galleryUrls[i],
+                                  width: 120,
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                       if (data.services.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         _ServicesSection(
