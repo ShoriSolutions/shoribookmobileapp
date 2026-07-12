@@ -7,6 +7,8 @@ class DashboardStats {
   final int noShowsToday;
   final int cancelledToday;
   final int pendingDepositsCount;
+  final int staffOnDuty;
+  final int staffTotal;
 
   const DashboardStats({
     required this.bookingsToday,
@@ -15,6 +17,8 @@ class DashboardStats {
     required this.noShowsToday,
     required this.cancelledToday,
     required this.pendingDepositsCount,
+    required this.staffOnDuty,
+    required this.staffTotal,
   });
 
   static const zero = DashboardStats(
@@ -24,5 +28,7 @@ class DashboardStats {
     noShowsToday: 0,
     cancelledToday: 0,
     pendingDepositsCount: 0,
+    staffOnDuty: 0,
+    staffTotal: 0,
   );
 }

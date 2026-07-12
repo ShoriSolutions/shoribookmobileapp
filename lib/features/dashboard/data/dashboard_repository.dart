@@ -118,6 +118,40 @@ class DashboardRepository {
       }
       final pendingDepositRows = await pendingDepositQuery as List;
 
+      // Staff on duty right now = active/bookable staff whose availability
+      // window covers the current business-local time.
+      final localNow = utcToBusinessLocal(now, timezone);
+      final dow = localNow.weekday % 7; // 0=Sunday..6=Saturday
+      final nowMin = localNow.hour * 60 + localNow.minute;
+
+      final staffRows = await _client
+          .from('staff_profiles')
+          .select('id')
+          .eq('business_id', businessId)
+          .eq('is_active', true)
+          .eq('is_bookable', true) as List;
+      final staffIds =
+          staffRows.map((e) => (e as Map)['id'] as String).toList();
+      final staffTotal = staffIds.length;
+      var staffOnDuty = 0;
+      if (staffIds.isNotEmpty) {
+        final availRows = await _client
+            .from('staff_availability')
+            .select('staff_id, day_of_week, start_time, end_time, is_available')
+            .inFilter('staff_id', staffIds) as List;
+        final onDuty = <String>{};
+        for (final r in availRows) {
+          final m = r as Map<String, dynamic>;
+          if ((m['day_of_week'] as int?) != dow) continue;
+          if (m['is_available'] == false) continue;
+          final s = _toMin(m['start_time'] as String?);
+          final e = _toMin(m['end_time'] as String?);
+          if (s == null || e == null) continue;
+          if (nowMin >= s && nowMin < e) onDuty.add(m['staff_id'] as String);
+        }
+        staffOnDuty = onDuty.length;
+      }
+
       int bookingsToday = 0;
       int completedToday = 0;
       double revenueToday = 0;
@@ -145,9 +179,21 @@ class DashboardRepository {
         noShowsToday: noShowsToday,
         cancelledToday: cancelledToday,
         pendingDepositsCount: pendingDepositRows.length,
+        staffOnDuty: staffOnDuty,
+        staffTotal: staffTotal,
       );
     } catch (e) {
       throw AppException.from(e);
     }
+  }
+
+  int? _toMin(String? hhmmss) {
+    if (hhmmss == null) return null;
+    final parts = hhmmss.split(':');
+    if (parts.length < 2) return null;
+    final h = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    if (h == null || m == null) return null;
+    return h * 60 + m;
   }
 }

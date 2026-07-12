@@ -15,6 +15,7 @@ import '../../booking_link/presentation/booking_share_sheet.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
 import '../application/dashboard_controller.dart';
+import '../application/dashboard_prefs.dart';
 import '../data/dashboard_stats.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -62,8 +63,22 @@ class DashboardScreen extends ConsumerWidget {
                   canViewReports:
                       can(membership.role, Permission.viewReports),
                 ),
-                const SizedBox(height: 16),
-                _StatCards(stats: data.stats),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () =>
+                          _showCustomizeSheet(context),
+                      icon: const Icon(Icons.tune, size: 18),
+                      label: const Text('Customize'),
+                    ),
+                  ],
+                ),
+                _StatCards(
+                  stats: data.stats,
+                  enabled: ref.watch(dashboardStatsPrefsProvider),
+                ),
                 const SizedBox(height: 20),
                 _QuickActions(
                   canManage: can(membership.role, Permission.manageClients) ||
@@ -243,23 +258,102 @@ class _HeroHeader extends StatelessWidget {
   }
 }
 
+void _showCustomizeSheet(BuildContext context) {
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (ctx) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Consumer(
+          builder: (ctx, ref, _) {
+            final enabled = ref.watch(dashboardStatsPrefsProvider);
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Show on Home', style: Theme.of(ctx).textTheme.titleLarge),
+                const SizedBox(height: 4),
+                Text(
+                  'Choose which stats appear on your dashboard.',
+                  style: Theme.of(ctx).textTheme.bodySmall
+                      ?.copyWith(color: AppColors.muted),
+                ),
+                const SizedBox(height: 8),
+                for (final entry in dashboardStatCards.entries)
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(entry.value),
+                    value: enabled.contains(entry.key),
+                    onChanged: (v) => ref
+                        .read(dashboardStatsPrefsProvider.notifier)
+                        .setEnabled(entry.key, v),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+    ),
+  );
+}
+
 class _StatCards extends StatelessWidget {
   final DashboardStats stats;
+  final Set<String> enabled;
 
-  const _StatCards({required this.stats});
+  const _StatCards({required this.stats, required this.enabled});
 
   @override
   Widget build(BuildContext context) {
+    final defs = <String, (IconData, Color, String)>{
+      'completed': (
+        Icons.check_circle_outline,
+        AppColors.sage,
+        '${stats.completedToday}',
+      ),
+      'noShows': (
+        Icons.person_off_outlined,
+        AppColors.danger,
+        '${stats.noShowsToday}',
+      ),
+      'cancelled': (
+        Icons.cancel_outlined,
+        AppColors.terracotta,
+        '${stats.cancelledToday}',
+      ),
+      'pendingDeposits': (
+        Icons.account_balance_wallet_outlined,
+        AppColors.sageDark,
+        '${stats.pendingDepositsCount}',
+      ),
+      'staffOnDuty': (
+        Icons.badge_outlined,
+        AppColors.sage,
+        '${stats.staffOnDuty}/${stats.staffTotal}',
+      ),
+    };
     final items = [
-      (Icons.check_circle_outline, 'Completed', '${stats.completedToday}',
-          AppColors.sage),
-      (Icons.person_off_outlined, 'No-shows', '${stats.noShowsToday}',
-          AppColors.danger),
-      (Icons.cancel_outlined, 'Cancelled', '${stats.cancelledToday}',
-          AppColors.terracotta),
-      (Icons.account_balance_wallet_outlined, 'Pending deposits',
-          '${stats.pendingDepositsCount}', AppColors.sageDark),
+      for (final entry in dashboardStatCards.entries)
+        if (enabled.contains(entry.key))
+          (
+            defs[entry.key]!.$1,
+            entry.value,
+            defs[entry.key]!.$3,
+            defs[entry.key]!.$2,
+          ),
     ];
+
+    if (items.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'No stats selected. Tap Customize to choose what shows here.',
+          style: Theme.of(context).textTheme.bodySmall
+              ?.copyWith(color: AppColors.muted),
+        ),
+      );
+    }
 
     return GridView.count(
       crossAxisCount: 2,
