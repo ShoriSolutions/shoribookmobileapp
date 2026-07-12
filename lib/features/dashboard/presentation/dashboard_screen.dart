@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/timezone_offsets.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../routing/route_paths.dart';
@@ -43,6 +45,38 @@ class DashboardScreen extends ConsumerWidget {
           data: (data) => ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Today's report",
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        Text(
+                          DateFormat('EEEE, MMM d').format(
+                            utcToBusinessLocal(
+                              DateTime.now().toUtc(),
+                              timezone,
+                            ),
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (can(membership.role, Permission.viewReports))
+                    TextButton(
+                      onPressed: () => context.push(RoutePaths.reports),
+                      child: const Text('Monthly reports →'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
               _StatsGrid(stats: data.stats, currency: business.currency),
               const SizedBox(height: 20),
               _QuickActions(
@@ -93,15 +127,15 @@ class _StatsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tiles = [
-      ('Today', '${stats.bookingsToday}', AppColors.sage),
-      ('This week', '${stats.bookingsThisWeek}', AppColors.terracotta),
-      ('Completed (mo.)', '${stats.completedThisMonth}', AppColors.ink),
+      ('Bookings today', '${stats.bookingsToday}', AppColors.sage),
+      ('Completed today', '${stats.completedToday}', AppColors.ink),
       (
-        'Revenue (mo.)',
-        formatCurrency(stats.revenueThisMonth, currency),
+        'Revenue today',
+        formatCurrency(stats.revenueToday, currency),
         AppColors.sageDark,
       ),
-      ('No-shows (mo.)', '${stats.noShowsThisMonth}', AppColors.danger),
+      ('No-shows today', '${stats.noShowsToday}', AppColors.danger),
+      ('Cancelled today', '${stats.cancelledToday}', AppColors.terracotta),
       ('Pending deposits', '${stats.pendingDepositsCount}', AppColors.terracotta),
     ];
 

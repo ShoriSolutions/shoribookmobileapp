@@ -1,26 +1,28 @@
+/// Today's at-a-glance numbers for the Home screen. Monthly/weekly
+/// aggregates live in the Reports screen instead.
 class DashboardStats {
   final int bookingsToday;
-  final int bookingsThisWeek;
-  final int completedThisMonth;
-  final double revenueThisMonth;
-  final int noShowsThisMonth;
+  final int completedToday;
+  final double revenueToday;
+  final int noShowsToday;
+  final int cancelledToday;
   final int pendingDepositsCount;
 
   const DashboardStats({
     required this.bookingsToday,
-    required this.bookingsThisWeek,
-    required this.completedThisMonth,
-    required this.revenueThisMonth,
-    required this.noShowsThisMonth,
+    required this.completedToday,
+    required this.revenueToday,
+    required this.noShowsToday,
+    required this.cancelledToday,
     required this.pendingDepositsCount,
   });
 
   static const zero = DashboardStats(
     bookingsToday: 0,
-    bookingsThisWeek: 0,
-    completedThisMonth: 0,
-    revenueThisMonth: 0,
-    noShowsThisMonth: 0,
+    completedToday: 0,
+    revenueToday: 0,
+    noShowsToday: 0,
+    cancelledToday: 0,
     pendingDepositsCount: 0,
   );
 }

@@ -83,42 +83,27 @@ class DashboardRepository {
     try {
       final now = DateTime.now().toUtc();
       final todayDate = businessLocalDateString(now, timezone);
-      final todayLocal = utcToBusinessLocal(now, timezone);
-
-      final weekStartLocal = todayLocal.subtract(
-        Duration(days: todayLocal.weekday % 7),
-      ); // Sunday-start week, matches day_of_week 0=Sunday convention
-      final monthStartLocal = DateTime(todayLocal.year, todayLocal.month, 1);
-      final monthEndLocal = DateTime(todayLocal.year, todayLocal.month + 1, 0);
-
-      final rangeStartLocal = weekStartLocal.isBefore(monthStartLocal)
-          ? weekStartLocal
-          : monthStartLocal;
-
-      final rangeStartDate = _isoDate(rangeStartLocal);
-      final rangeEndDate = _isoDate(monthEndLocal);
-
-      final rangeStartUtc = businessLocalToUtc(
-        date: rangeStartDate,
+      final startUtc = businessLocalToUtc(
+        date: todayDate,
         time: '00:00',
         timezone: timezone,
       );
-      final rangeEndUtc = businessLocalToUtc(
-        date: rangeEndDate,
+      final endUtc = businessLocalToUtc(
+        date: todayDate,
         time: '23:59',
         timezone: timezone,
       );
 
-      var rangeQuery = _client
+      var todayQuery = _client
           .from('appointments')
-          .select('status, price, start_time, deposit_status')
+          .select('status, price')
           .eq('business_id', businessId)
-          .gte('start_time', rangeStartUtc.toIso8601String())
-          .lte('start_time', rangeEndUtc.toIso8601String());
+          .gte('start_time', startUtc.toIso8601String())
+          .lte('start_time', endUtc.toIso8601String());
       if (staffProfileId != null) {
-        rangeQuery = rangeQuery.eq('staff_profile_id', staffProfileId);
+        todayQuery = todayQuery.eq('staff_profile_id', staffProfileId);
       }
-      final rangeRows = await rangeQuery as List;
+      final todayRows = await todayQuery as List;
 
       var pendingDepositQuery = _client
           .from('appointments')
@@ -133,47 +118,36 @@ class DashboardRepository {
       }
       final pendingDepositRows = await pendingDepositQuery as List;
 
-      final weekStartDate = _isoDate(weekStartLocal);
-      final monthStartDate = _isoDate(monthStartLocal);
-
       int bookingsToday = 0;
-      int bookingsThisWeek = 0;
-      int completedThisMonth = 0;
-      double revenueThisMonth = 0;
-      int noShowsThisMonth = 0;
+      int completedToday = 0;
+      double revenueToday = 0;
+      int noShowsToday = 0;
+      int cancelledToday = 0;
 
-      for (final row in rangeRows) {
+      for (final row in todayRows) {
         final map = row as Map<String, dynamic>;
-        final startUtc = DateTime.parse(map['start_time'] as String);
-        final localDate = businessLocalDateString(startUtc, timezone);
+        bookingsToday++;
         final status = map['status'] as String;
-
-        if (localDate == todayDate) bookingsToday++;
-        if (localDate.compareTo(weekStartDate) >= 0) bookingsThisWeek++;
-
-        if (localDate.compareTo(monthStartDate) >= 0) {
-          if (status == AppointmentStatus.completed) {
-            completedThisMonth++;
-            final price = (map['price'] as num?)?.toDouble() ?? 0;
-            revenueThisMonth += price;
-          }
-          if (status == AppointmentStatus.noShow) noShowsThisMonth++;
+        if (status == AppointmentStatus.completed) {
+          completedToday++;
+          revenueToday += (map['price'] as num?)?.toDouble() ?? 0;
+        } else if (status == AppointmentStatus.noShow) {
+          noShowsToday++;
+        } else if (status == AppointmentStatus.cancelled) {
+          cancelledToday++;
         }
       }
 
       return DashboardStats(
         bookingsToday: bookingsToday,
-        bookingsThisWeek: bookingsThisWeek,
-        completedThisMonth: completedThisMonth,
-        revenueThisMonth: revenueThisMonth,
-        noShowsThisMonth: noShowsThisMonth,
+        completedToday: completedToday,
+        revenueToday: revenueToday,
+        noShowsToday: noShowsToday,
+        cancelledToday: cancelledToday,
         pendingDepositsCount: pendingDepositRows.length,
       );
     } catch (e) {
       throw AppException.from(e);
     }
   }
-
-  String _isoDate(DateTime d) =>
-      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 }
