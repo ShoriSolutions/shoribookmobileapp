@@ -58,12 +58,33 @@ class BusinessProfileScreen extends ConsumerWidget {
                 expandedHeight: 200,
                 backgroundColor: AppColors.cream,
                 foregroundColor: AppColors.ink,
+                automaticallyImplyLeading: false,
+                leading: context.canPop()
+                    ? Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back),
+                          color: Colors.white,
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.black38,
+                          ),
+                          onPressed: () => context.pop(),
+                        ),
+                      )
+                    : null,
                 actions: [
-                  IconButton(
-                    icon: const Icon(Icons.share_outlined),
-                    onPressed: () => Share.share(
-                      'Check out ${business.name} on BetterBooking: '
-                      'https://betterbooking.app/business/${business.slug}',
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: IconButton(
+                      icon: const Icon(Icons.share_outlined),
+                      color: Colors.white,
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.black38,
+                      ),
+                      onPressed: () => Share.share(
+                        'Check out ${business.name} on BetterBooking: '
+                        'https://betterbooking.app/business/${business.slug}',
+                      ),
                     ),
                   ),
                 ],
