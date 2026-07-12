@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../support/support_content.dart';
 
 /// The only file in the auth feature allowed to touch SupabaseClient
 /// directly — see the layering rule in the project plan.
@@ -39,7 +40,12 @@ class AuthRepository {
       final response = await _client.auth.signUp(
         email: email,
         password: password,
-        data: {'full_name': fullName, 'role': 'user'},
+        data: {
+          'full_name': fullName,
+          'role': 'user',
+          'terms_accepted_at': DateTime.now().toUtc().toIso8601String(),
+          'terms_version': SupportContent.termsVersion,
+        },
       );
       return response.session != null;
     } catch (e) {
@@ -72,6 +78,8 @@ class AuthRepository {
           'role': 'entrepreneur',
           'pending_business_name': businessName,
           'pending_business_category': category,
+          'terms_accepted_at': DateTime.now().toUtc().toIso8601String(),
+          'terms_version': SupportContent.termsVersion,
         },
       );
       return response.session != null;

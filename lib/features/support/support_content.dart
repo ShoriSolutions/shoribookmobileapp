@@ -9,6 +9,11 @@ class SupportContent {
   /// TODO: change this to your real support inbox.
   static const supportEmail = 'support@shorisolutions.com';
 
+  /// Bump this whenever the Terms/Privacy text below materially changes.
+  /// Stored on the account at sign-up (terms_version) so you can tell who
+  /// accepted which version.
+  static const termsVersion = '2026-07';
+
   static const faq = <(String, String)>[
     (
       'How do clients book with me?',
