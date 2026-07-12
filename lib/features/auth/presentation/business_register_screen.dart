@@ -6,6 +6,7 @@ import '../../../models/business.dart';
 import '../../../routing/route_paths.dart';
 import '../application/business_register_controller.dart';
 import 'widgets/auth_wave_header.dart';
+import 'widgets/terms_acceptance_checkbox.dart';
 
 class BusinessRegisterScreen extends ConsumerStatefulWidget {
   const BusinessRegisterScreen({super.key});
@@ -25,6 +26,7 @@ class _BusinessRegisterScreenState
   final _confirm = TextEditingController();
   String? _category;
   bool _obscurePassword = true;
+  bool _acceptedTerms = false;
   String? _checkEmailMessage;
 
   @override
@@ -203,11 +205,16 @@ class _BusinessRegisterScreenState
               style: const TextStyle(color: AppColors.danger),
             ),
           ],
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+          TermsAcceptanceCheckbox(
+            value: _acceptedTerms,
+            onChanged: (v) => setState(() => _acceptedTerms = v),
+          ),
+          const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: isLoading ? null : _submit,
+              onPressed: (isLoading || !_acceptedTerms) ? null : _submit,
               child: isLoading
                   ? const SizedBox(
                       width: 20,
