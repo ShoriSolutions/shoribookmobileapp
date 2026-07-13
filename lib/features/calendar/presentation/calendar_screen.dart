@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/date_time_formatters.dart';
+import '../../../core/utils/timezone_offsets.dart';
+import '../../../models/availability_models.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../routing/route_paths.dart';
@@ -26,6 +29,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Widget build(BuildContext context) {
     final selectedDate = ref.watch(selectedCalendarDateProvider);
     final apptsAsync = ref.watch(calendarAppointmentsProvider);
+    final blocks = ref.watch(calendarBlockedTimesProvider).valueOrNull ??
+        const <BlockedTime>[];
     final membership = ref.watch(activeMembershipProvider).valueOrNull;
 
     return Scaffold(
@@ -98,36 +103,80 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   ],
                 ),
                 data: (appts) {
-                  if (appts.isEmpty) {
+                  final tz =
+                      membership?.business.timezone ?? 'America/Barbados';
+                  if (appts.isEmpty && blocks.isEmpty) {
                     return ListView(
                       children: const [
                         SizedBox(height: 60),
                         EmptyState(
                           icon: '📅',
-                          title: 'No appointments this day',
-                          message: 'Pick another date, or add a booking.',
+                          title: 'Nothing this day',
+                          message: 'No appointments or blocked time. '
+                              'Pick another date, or add a booking.',
                         ),
                       ],
                     );
                   }
-                  final tz = membership?.business.timezone ?? 'America/Barbados';
-                  return ListView.separated(
+                  return ListView(
                     padding: const EdgeInsets.all(16),
-                    itemCount: appts.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, i) => AppointmentCard(
-                      appointment: appts[i],
-                      timezone: tz,
-                      onTap: () => context.push(
-                        RoutePaths.appointmentDetailPath(appts[i].id),
-                      ),
-                    ),
+                    children: [
+                      for (final b in blocks)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _BlockedCard(block: b, timezone: tz),
+                        ),
+                      for (final a in appts)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: AppointmentCard(
+                            appointment: a,
+                            timezone: tz,
+                            onTap: () => context.push(
+                              RoutePaths.appointmentDetailPath(a.id),
+                            ),
+                          ),
+                        ),
+                    ],
                   );
                 },
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BlockedCard extends StatelessWidget {
+  final BlockedTime block;
+  final String timezone;
+
+  const _BlockedCard({required this.block, required this.timezone});
+
+  @override
+  Widget build(BuildContext context) {
+    final start = utcToBusinessLocal(block.startDatetime, timezone);
+    final end = utcToBusinessLocal(block.endDatetime, timezone);
+    final sameDay = start.year == end.year &&
+        start.month == end.month &&
+        start.day == end.day;
+    final timeStr = sameDay
+        ? '${DateFormat('h:mm a').format(start)} – ${DateFormat('h:mm a').format(end)}'
+        : '${DateFormat('MMM d, h:mm a').format(start)} – ${DateFormat('MMM d, h:mm a').format(end)}';
+
+    return Card(
+      color: AppColors.parchment,
+      child: ListTile(
+        leading: const Icon(Icons.block, color: AppColors.muted),
+        title: const Text(
+          'Blocked',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(
+          block.reason == null ? timeStr : '$timeStr · ${block.reason}',
+        ),
       ),
     );
   }
