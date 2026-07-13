@@ -60,3 +60,20 @@ final calendarBlockedTimesProvider =
     return dateStr.compareTo(startDate) >= 0 && dateStr.compareTo(endDate) <= 0;
   }).toList();
 });
+
+/// The special-day override (holiday closure / custom hours) for the
+/// selected calendar day, if any.
+final calendarSpecialDayProvider =
+    FutureProvider.autoDispose<SpecialBusinessDay?>((ref) async {
+  final membership = await ref.watch(activeMembershipProvider.future);
+  if (membership == null) return null;
+
+  final dateStr = _isoDate(ref.watch(selectedCalendarDateProvider));
+  final all = await ref
+      .watch(availabilityRepositoryProvider)
+      .getSpecialDays(membership.business.id);
+  for (final d in all) {
+    if (d.date == dateStr) return d;
+  }
+  return null;
+});

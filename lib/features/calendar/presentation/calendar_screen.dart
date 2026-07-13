@@ -31,6 +31,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final apptsAsync = ref.watch(calendarAppointmentsProvider);
     final blocks = ref.watch(calendarBlockedTimesProvider).valueOrNull ??
         const <BlockedTime>[];
+    final specialDay = ref.watch(calendarSpecialDayProvider).valueOrNull;
     final membership = ref.watch(activeMembershipProvider).valueOrNull;
 
     return Scaffold(
@@ -105,7 +106,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 data: (appts) {
                   final tz =
                       membership?.business.timezone ?? 'America/Barbados';
-                  if (appts.isEmpty && blocks.isEmpty) {
+                  if (appts.isEmpty &&
+                      blocks.isEmpty &&
+                      specialDay == null) {
                     return ListView(
                       children: const [
                         SizedBox(height: 60),
@@ -121,6 +124,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   return ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
+                      if (specialDay != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _SpecialDayCard(day: specialDay),
+                        ),
                       for (final b in blocks)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 10),
@@ -144,6 +152,43 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SpecialDayCard extends StatelessWidget {
+  final SpecialBusinessDay day;
+
+  const _SpecialDayCard({required this.day});
+
+  String _time(String? hhmmss) {
+    if (hhmmss == null) return '';
+    final parts = hhmmss.split(':');
+    if (parts.length < 2) return hhmmss;
+    final h = int.tryParse(parts[0]) ?? 0;
+    final m = int.tryParse(parts[1]) ?? 0;
+    return DateFormat('h:mm a').format(DateTime(2000, 1, 1, h, m));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status = day.isClosed
+        ? 'Closed all day'
+        : 'Special hours: ${_time(day.customOpenTime)} – ${_time(day.customCloseTime)}';
+
+    return Card(
+      color: AppColors.sageLight,
+      child: ListTile(
+        leading: Icon(
+          day.isClosed ? Icons.event_busy : Icons.event_available,
+          color: AppColors.sageDark,
+        ),
+        title: const Text(
+          'Special day',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(day.note == null ? status : '$status · ${day.note}'),
       ),
     );
   }
