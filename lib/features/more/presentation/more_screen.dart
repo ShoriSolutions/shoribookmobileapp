@@ -74,6 +74,19 @@ class MoreScreen extends ConsumerWidget {
               onTap: () => _signOut(context, ref),
             ),
           ),
+          const SizedBox(height: 8),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.delete_forever_outlined,
+                  color: AppColors.danger),
+              title: const Text(
+                'Delete account',
+                style: TextStyle(color: AppColors.danger),
+              ),
+              trailing: const Icon(Icons.chevron_right, color: AppColors.muted),
+              onTap: () => context.push(RoutePaths.deleteAccount),
+            ),
+          ),
         ],
       ),
     );

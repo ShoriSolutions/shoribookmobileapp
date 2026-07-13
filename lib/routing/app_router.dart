@@ -11,6 +11,7 @@ import '../features/profile_marketplace/presentation/profile_marketplace_screen.
 import '../features/auth/application/auth_providers.dart';
 import '../features/auth/presentation/business_register_screen.dart';
 import '../features/auth/presentation/customer_register_screen.dart';
+import '../features/auth/presentation/delete_account_screen.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_choose_screen.dart';
@@ -388,6 +389,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.support,
         builder: (c, s) => const SupportScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.deleteAccount,
+        builder: (c, s) => const DeleteAccountScreen(),
       ),
 
       // ── Customer/marketplace top-level routes ───────────────────────────

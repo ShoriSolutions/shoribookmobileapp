@@ -117,6 +117,45 @@ class AuthRepository {
     }
   }
 
+  /// Sends a one-time confirmation code to the signed-in user's email —
+  /// used to confirm sensitive actions (e.g. account deletion).
+  Future<void> sendEmailOtp() async {
+    try {
+      final email = _client.auth.currentUser?.email;
+      if (email == null) {
+        throw const AppException('No email on this account.');
+      }
+      await _client.auth.signInWithOtp(email: email, shouldCreateUser: false);
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
+  /// Verifies the emailed code, then permanently deletes the account and
+  /// all owned data via the delete_my_account RPC, and signs out.
+  Future<void> deleteAccount(String code) async {
+    try {
+      final email = _client.auth.currentUser?.email;
+      if (email == null) {
+        throw const AppException('No email on this account.');
+      }
+      await _client.auth.verifyOTP(
+        email: email,
+        token: code.trim(),
+        type: OtpType.email,
+      );
+      await _client.rpc('delete_my_account');
+      try {
+        await _client.auth.signOut();
+      } catch (_) {
+        // The auth user is already gone; clearing local session may
+        // no-op or throw — either way the account is deleted.
+      }
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   Future<void> signOut() async {
     try {
       await _client.auth.signOut();
