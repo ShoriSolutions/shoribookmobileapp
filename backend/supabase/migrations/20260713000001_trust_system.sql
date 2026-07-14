@@ -168,7 +168,7 @@ BEGIN
     UPDATE public.profiles SET deposit_required = true
       WHERE id = p_user_id AND deposit_required = false;
     INSERT INTO public.trust_events(user_id, booking_id, event, notes)
-      SELECT p_user_id, p_booking_id, 'Deposit Required', 'Auto (trust 40–59)'
+      SELECT p_user_id, p_booking_id, 'Deposit Required', 'Auto (trust 40-59)'
       WHERE NOT EXISTS (
         SELECT 1 FROM public.trust_events
         WHERE user_id = p_user_id AND event = 'Deposit Required'
