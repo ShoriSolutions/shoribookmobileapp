@@ -256,7 +256,15 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
         const _GrabHandle(),
         Flexible(
           child: packagesAsync.when(
-            loading: () => const _LoadingSkeleton(),
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 80),
+              child: Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.sage,
+                ),
+              ),
+            ),
             error: (_, __) => _EmptyState(
               onRetry: () => ref.invalidate(subscriptionPackagesProvider),
             ),
@@ -475,39 +483,6 @@ class _GrabHandle extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
         ),
       );
-}
-
-class _LoadingSkeleton extends StatelessWidget {
-  const _LoadingSkeleton();
-
-  Widget _block(double h, {double w = double.infinity}) => Container(
-        height: h,
-        width: w,
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: AppColors.parchment.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(12),
-        ),
-      );
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          _block(28, w: 220),
-          _block(14, w: 280),
-          const SizedBox(height: 12),
-          _block(96),
-          _block(80),
-          _block(80),
-          _block(54),
-        ],
-      ),
-    );
-  }
 }
 
 class _EmptyState extends StatelessWidget {
