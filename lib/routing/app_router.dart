@@ -27,6 +27,7 @@ import '../features/clients/presentation/client_detail_screen.dart';
 import '../features/clients/presentation/client_form_screen.dart';
 import '../features/clients/presentation/clients_list_screen.dart';
 import '../features/customer_booking/presentation/booking_wizard_screen.dart';
+import '../features/customer_profile/presentation/customer_profile_edit_screen.dart';
 import '../features/customer_profile/presentation/customer_profile_screen.dart';
 import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/deposits/presentation/deposits_list_screen.dart';
@@ -396,6 +397,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.notificationPreferences,
         builder: (c, s) => const NotificationPreferencesScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.editCustomerProfile,
+        builder: (c, s) => const CustomerProfileEditScreen(),
       ),
       GoRoute(
         path: RoutePaths.support,

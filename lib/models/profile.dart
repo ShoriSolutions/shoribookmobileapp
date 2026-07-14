@@ -2,6 +2,7 @@ class Profile {
   final String id;
   final String email;
   final String fullName;
+  final String? phone;
   final String? avatarUrl;
   final String role; // platform-wide role: 'admin' | 'entrepreneur' | 'user'
 
@@ -9,6 +10,7 @@ class Profile {
     required this.id,
     required this.email,
     required this.fullName,
+    this.phone,
     this.avatarUrl,
     required this.role,
   });
@@ -17,6 +19,7 @@ class Profile {
     id: json['id'] as String,
     email: json['email'] as String,
     fullName: json['full_name'] as String? ?? '',
+    phone: json['phone'] as String?,
     avatarUrl: json['avatar_url'] as String?,
     role: json['role'] as String? ?? 'user',
   );
