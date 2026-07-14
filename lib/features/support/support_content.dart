@@ -173,7 +173,7 @@ What we do NOT use
 We do not use device fingerprinting, and we do not collect or use hardware identifiers (IMEI, MAC address, serial numbers) or advertising IDs — for trust calculations or for anything else.
 
 Where it's stored
-Your data is stored using Supabase (our backend and database provider). Images are stored in Supabase Storage. A vendor's public listing details (business name, category, description, images, and the map pin they set) are visible to anyone with the booking link or through the marketplace if the vendor enables it.
+Your data is stored securely in our database, and images are kept in cloud file storage. A vendor's public listing details (business name, category, description, images, and the map pin they set) are visible to anyone with the booking link or through the marketplace if the vendor enables it. The specific service providers we rely on to host and secure your data are available on request from support.
 
 Sharing
 We do not sell your data. Client contact details a vendor enters are used only to run that vendor's bookings and are not shared with other businesses.
