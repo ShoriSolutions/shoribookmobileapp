@@ -10,6 +10,7 @@ import '../../../routing/route_paths.dart';
 import '../../../routing/shell/nav_items.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../business_context/application/active_business_provider.dart';
+import '../../subscription/presentation/subscription_modal.dart';
 
 class MoreScreen extends ConsumerWidget {
   const MoreScreen({super.key});
@@ -56,6 +57,8 @@ class MoreScreen extends ConsumerWidget {
               ),
             ),
           const SizedBox(height: 12),
+          _GoPremiumCard(onTap: () => showSubscriptionModal(context)),
+          const SizedBox(height: 4),
           for (final item in moreMenuItems)
             if (role == null || item.visibleFor(role))
               Card(
@@ -112,5 +115,66 @@ class MoreScreen extends ConsumerWidget {
         );
       }
     }
+  }
+}
+
+/// Upgrade entry point — opens the premium subscription modal.
+class _GoPremiumCard extends StatelessWidget {
+  const _GoPremiumCard({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.sage,
+                AppColors.sageDark,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              const Text('✨', style: TextStyle(fontSize: 22)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Go Premium',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Start your 30-day free trial',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.white),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
