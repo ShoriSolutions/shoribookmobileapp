@@ -181,7 +181,7 @@ class _BubblePainter extends CustomPainter {
   final double t;
 
   /// Solid beige backdrop behind the bubbles.
-  static const _beige = Color(0xFFECE3D2);
+  static const _beige = Color(0xFFE0D8C8);
 
   // Muted, complementary washes — brand sage/terracotta plus a deep blue
   // and a soft gold to match the reference's colour story.
