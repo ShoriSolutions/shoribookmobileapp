@@ -6,8 +6,8 @@ import 'features/auth/application/auth_providers.dart';
 import 'routing/app_router.dart';
 import 'routing/route_paths.dart';
 
-class BetterBookingApp extends ConsumerWidget {
-  const BetterBookingApp({super.key});
+class ShoriBooksApp extends ConsumerWidget {
+  const ShoriBooksApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -27,7 +27,7 @@ class BetterBookingApp extends ConsumerWidget {
     });
 
     return MaterialApp.router(
-      title: 'BetterBooking',
+      title: 'ShoriBooks',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: router,

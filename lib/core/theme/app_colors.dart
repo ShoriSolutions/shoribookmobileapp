@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-/// BetterBooking's actual shipping brand palette (matched from the web
+/// ShoriBooks's actual shipping brand palette (matched from the web
 /// app's source, not the generic teal/navy direction in the original
 /// brief) — a warm sage/terracotta boutique look, kept identical across
 /// web and mobile.
@@ -23,6 +23,9 @@ class AppColors {
   static const Color danger = Color(0xFFB3543E);
 
   static const Color white = Color(0xFFFFFFFF);
+
+  /// ShoriBooks brand blue — the "S" mark and wordmark colour.
+  static const Color shoriBlue = Color(0xFFA3D0E6);
 
   static const Map<String, Color> roleColors = {
     'OWNER': sage,

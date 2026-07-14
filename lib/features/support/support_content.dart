@@ -77,9 +77,9 @@ class SupportContent {
   ];
 
   static const termsOfService = '''
-Welcome to BetterBooking. By creating an account or using the app you agree to these terms.
+Welcome to ShoriBooks. By creating an account or using the app you agree to these terms.
 
-BetterBooking has two kinds of user, and this agreement is organised so you can see which parts speak to you:
+ShoriBooks has two kinds of user, and this agreement is organised so you can see which parts speak to you:
 • VENDORS — business owners and their staff who manage a business, its services, and its bookings.
 • CUSTOMERS — people who book appointments with a business.
 Sections that apply to everyone come first, followed by vendor-only and customer-only terms.
@@ -91,10 +91,10 @@ Sections that apply to everyone come first, followed by vendor-only and customer
 You are responsible for the information you enter and for keeping your login secure. You must provide accurate contact details, and vendors must also provide accurate business details.
 
 2. Using the service
-BetterBooking helps vendors manage bookings, availability, staff, clients, and a public marketplace listing, and helps customers discover businesses and book appointments. You agree to use it lawfully and not to misuse, disrupt, or attempt to gain unauthorized access to the service or other users' data.
+ShoriBooks helps vendors manage bookings, availability, staff, clients, and a public marketplace listing, and helps customers discover businesses and book appointments. You agree to use it lawfully and not to misuse, disrupt, or attempt to gain unauthorized access to the service or other users' data.
 
 3. Bookings and payments
-Appointments, prices, deposits, and any payments are agreements between the vendor and the customer. BetterBooking provides the tools to schedule and track them but is not a party to those transactions and does not process payments on anyone's behalf.
+Appointments, prices, deposits, and any payments are agreements between the vendor and the customer. ShoriBooks provides the tools to schedule and track them but is not a party to those transactions and does not process payments on anyone's behalf.
 
 4. Deleting your account
 You can delete your account at any time from the app; we confirm the request by email first. Deletion is permanent. If you are a vendor who owns a business, deleting your account also permanently deletes that business and its data (services, staff, clients, bookings, images).
@@ -112,7 +112,7 @@ Questions about these terms? Email us at the support address in the Support scre
 ■ FOR VENDORS (business owners & staff)
 
 8. Content you provide
-You keep ownership of the content you upload (logo, cover image, gallery photos, descriptions, etc.). You confirm you have the right to upload it, and you grant BetterBooking permission to display that content where needed to run the service, including your public marketplace listing. Do not upload unlawful, infringing, or misleading content; we may remove content that violates these terms.
+You keep ownership of the content you upload (logo, cover image, gallery photos, descriptions, etc.). You confirm you have the right to upload it, and you grant ShoriBooks permission to display that content where needed to run the service, including your public marketplace listing. Do not upload unlawful, infringing, or misleading content; we may remove content that violates these terms.
 
 9. Your marketplace listing
 Publishing or requesting to be featured is optional. We may review, decline, or remove listings that are inaccurate, unlawful, or violate these terms. You are responsible for the services, prices, deposits, and cancellation rules you set for your own bookings.
@@ -128,7 +128,7 @@ To keep the marketplace reliable, each customer has a trust score based ONLY on 
 ''';
 
   static const privacyPolicy = '''
-This explains what BetterBooking collects and how it is used. BetterBooking is used by vendors (businesses and their staff) and by customers (people booking appointments). This notice covers both, and where it matters we label whether a detail applies to vendors or to customers.
+This explains what ShoriBooks collects and how it is used. ShoriBooks is used by vendors (businesses and their staff) and by customers (people booking appointments). This notice covers both, and where it matters we label whether a detail applies to vendors or to customers.
 
 
 ■ WHAT WE COLLECT

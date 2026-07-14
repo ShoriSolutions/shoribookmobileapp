@@ -123,7 +123,7 @@ class _CustomerProfileEditScreenState
       scheme: 'mailto',
       path: SupportContent.supportEmail,
       query: 'subject=Email change request'
-          '&body=I would like to change the email on my BetterBooking '
+          '&body=I would like to change the email on my ShoriBooks '
           'account.%0A%0ACurrent email: $currentEmail%0ANew email: ',
     );
     try {

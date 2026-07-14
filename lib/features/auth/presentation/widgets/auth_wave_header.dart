@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/shori_logo.dart';
 
 /// Text-free header for the auth screens: clear, translucent colour
 /// "bubbles" (seafoam / deep blue / gold / terracotta) sit still over a
@@ -15,6 +16,7 @@ class AuthWaveHeader extends StatefulWidget {
     this.height = 160,
     this.showBack = false,
     this.onBack,
+    this.showLogo = true,
   });
 
   /// Height of the coloured area, *excluding* the status-bar inset which
@@ -22,6 +24,9 @@ class AuthWaveHeader extends StatefulWidget {
   final double height;
   final bool showBack;
   final VoidCallback? onBack;
+
+  /// The white ShoriBooks mark + wordmark, centred over the header.
+  final bool showLogo;
 
   @override
   State<AuthWaveHeader> createState() => _AuthWaveHeaderState();
@@ -68,6 +73,19 @@ class _AuthWaveHeaderState extends State<AuthWaveHeader>
               ),
             ),
           ),
+          if (widget.showLogo)
+            Positioned(
+              top: topInset,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Center(
+                child: ShoriLogo(
+                  markSize: (widget.height * 0.36).clamp(40, 64),
+                  color: Colors.white,
+                ),
+              ),
+            ),
           if (widget.showBack)
             Positioned(
               top: topInset + 2,

@@ -83,7 +83,7 @@ class BusinessProfileScreen extends ConsumerWidget {
                         backgroundColor: Colors.black38,
                       ),
                       onPressed: () => Share.share(
-                        'Check out ${business.name} on BetterBooking: '
+                        'Check out ${business.name} on ShoriBooks: '
                         'https://betterbooking.app/business/${business.slug}',
                       ),
                     ),

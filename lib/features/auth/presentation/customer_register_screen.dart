@@ -121,7 +121,7 @@ class _CustomerRegisterScreenState
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Join BetterBooking',
+            'Join ShoriBooks',
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 4),

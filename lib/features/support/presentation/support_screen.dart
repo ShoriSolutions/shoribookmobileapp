@@ -146,7 +146,7 @@ class SupportScreen extends StatelessWidget {
           const SizedBox(height: 24),
           Center(
             child: Text(
-              'BetterBooking',
+              'ShoriBooks',
               style: theme.textTheme.bodySmall?.copyWith(color: AppColors.muted),
             ),
           ),

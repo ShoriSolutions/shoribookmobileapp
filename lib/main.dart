@@ -18,5 +18,5 @@ Future<void> main() async {
     publishableKey: Env.supabaseAnonKey,
   );
 
-  runApp(const ProviderScope(child: BetterBookingApp()));
+  runApp(const ProviderScope(child: ShoriBooksApp()));
 }

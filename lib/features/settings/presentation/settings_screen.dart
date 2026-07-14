@@ -49,7 +49,7 @@ class SettingsScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
                     Text(
                       'Full business profile editing (logo, hours, socials) '
-                      'is available on the BetterBooking website.',
+                      'is available on the ShoriBooks website.',
                       style: Theme.of(
                         context,
                       ).textTheme.bodySmall?.copyWith(color: AppColors.muted),

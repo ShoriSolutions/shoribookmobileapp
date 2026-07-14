@@ -38,7 +38,7 @@ class RegisterChooseScreen extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'How will you use BetterBooking?',
+                          'How will you use ShoriBooks?',
                           style: theme.textTheme.headlineSmall,
                         ),
                         const SizedBox(height: 6),
