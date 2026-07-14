@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/utils/timezone_offsets.dart';
@@ -7,6 +8,7 @@ import '../../../models/service.dart';
 import '../../../models/staff_profile.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../marketplace/application/marketplace_providers.dart';
+import '../../trust/application/trust_providers.dart';
 import '../data/availability_calculator.dart';
 import '../data/customer_booking_repository.dart';
 import 'booking_wizard_state.dart';
@@ -209,6 +211,34 @@ class BookingWizardController extends AutoDisposeFamilyNotifier<
     );
 
     try {
+      // Trust gate (server-calculated): block banned/suspended customers
+      // before creating the booking. Softer bands (deposit/manual approval)
+      // are advisory here and surfaced elsewhere.
+      final elig =
+          await ref.read(trustRepositoryProvider).checkBookingEligibility();
+      final eligStatus = elig['status'] as String?;
+      if (eligStatus == 'banned') {
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage:
+              "Your account isn't able to make bookings. Please contact support.",
+        );
+        return;
+      }
+      if (eligStatus == 'suspended') {
+        final until = elig['suspension_until'] as String?;
+        final when = until != null
+            ? DateFormat('MMM d, y').format(DateTime.parse(until).toLocal())
+            : null;
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage: when != null
+              ? 'Your account is temporarily suspended from booking until $when.'
+              : 'Your account is temporarily suspended from booking.',
+        );
+        return;
+      }
+
       final profileData = await ref.read(businessProfileProvider(arg).future);
       if (profileData == null) {
         state = state.copyWith(

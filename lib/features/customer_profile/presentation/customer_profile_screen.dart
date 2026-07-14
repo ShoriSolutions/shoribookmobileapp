@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../models/customer_trust.dart';
 import '../../../routing/route_paths.dart';
 import '../../app_mode/application/app_mode_provider.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../trust/application/trust_providers.dart';
 
 class CustomerProfileScreen extends ConsumerWidget {
   const CustomerProfileScreen({super.key});
@@ -61,6 +64,7 @@ class CustomerProfileScreen extends ConsumerWidget {
         data: (profile) {
           final name = profile?.fullName ?? '';
           final email = profile?.email ?? '';
+          final trust = ref.watch(myTrustProvider).valueOrNull;
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -75,6 +79,10 @@ class CustomerProfileScreen extends ConsumerWidget {
                   subtitle: Text(email),
                 ),
               ),
+              if (trust != null) ...[
+                const SizedBox(height: 12),
+                _ReputationCard(trust: trust),
+              ],
               const SizedBox(height: 20),
               Card(
                 child: ListTile(
@@ -129,6 +137,106 @@ class CustomerProfileScreen extends ConsumerWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _ReputationCard extends StatelessWidget {
+  final CustomerTrust trust;
+
+  const _ReputationCard({required this.trust});
+
+  Color get _color {
+    if (trust.trustScore >= 60) return AppColors.sage;
+    if (trust.trustScore >= 40) return AppColors.terracotta;
+    return AppColors.danger;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    String? statusLine;
+    if (trust.permanentBan) {
+      statusLine = 'Your account is restricted from booking. Contact support.';
+    } else if (trust.isSuspended) {
+      statusLine =
+          'Booking is paused until ${DateFormat('MMM d, y').format(trust.suspensionUntil!.toLocal())}.';
+    } else if (trust.depositRequired) {
+      statusLine = 'A refundable deposit may be required to book.';
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text('Your reputation',
+                    style: Theme.of(context).textTheme.titleMedium),
+                const Spacer(),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    trust.reputation,
+                    style: TextStyle(
+                      color: _color,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(
+                  '${trust.trustScore}',
+                  style: TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    color: _color,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '/ 100 trust score',
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: AppColors.muted),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                value: trust.trustScore / 100,
+                backgroundColor: AppColors.parchment,
+                color: _color,
+                minHeight: 6,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              statusLine ??
+                  'Completed bookings raise your score; no-shows lower it.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: statusLine != null
+                        ? AppColors.danger
+                        : AppColors.muted,
+                  ),
+            ),
+          ],
+        ),
       ),
     );
   }
