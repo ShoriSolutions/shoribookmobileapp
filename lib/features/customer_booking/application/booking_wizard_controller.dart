@@ -254,6 +254,26 @@ class BookingWizardController extends AutoDisposeFamilyNotifier<
         timezone: profileData.business.timezone,
       );
 
+      // Smart-scheduling guard (server-calculated): re-verifies open hours,
+      // closures, manual blocks, buffer/overlap, and booking limits. The
+      // slot calculator already hides invalid slots client-side; this is the
+      // authoritative recheck that also catches races and limit changes.
+      final slot = await ref
+          .read(customerBookingRepositoryProvider)
+          .checkSlotAvailable(
+            businessId: profileData.business.id,
+            serviceId: service.id,
+            staffProfileId: state.selectedStaff?.id,
+            startTime: startUtc,
+          );
+      if (!slot.available) {
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage: slot.reason ?? 'That time is no longer available.',
+        );
+        return;
+      }
+
       final result = await ref
           .read(customerBookingRepositoryProvider)
           .createAppointment(

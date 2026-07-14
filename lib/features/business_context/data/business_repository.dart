@@ -138,6 +138,29 @@ class BusinessRepository {
     }
   }
 
+  /// Saves the business's scheduling rules (buffer + booking limits) via
+  /// the save_booking_rules RPC (OWNER/ADMIN enforced server-side). A null
+  /// limit means "no limit".
+  Future<void> saveBookingRules({
+    required String businessId,
+    required int bufferMinutes,
+    int? maxPerDay,
+    int? maxPerHour,
+    int? maxSimultaneous,
+  }) async {
+    try {
+      await _client.rpc('save_booking_rules', params: {
+        'p_business_id': businessId,
+        'p_buffer_minutes': bufferMinutes,
+        'p_max_per_day': maxPerDay,
+        'p_max_per_hour': maxPerHour,
+        'p_max_simultaneous': maxSimultaneous,
+      });
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   /// Uploads a logo or cover image to the public business-images bucket
   /// (path is the business id, then "logo"/"cover" plus the extension)
   /// and stores the resulting URL on the business. A cache-busting query

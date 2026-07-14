@@ -23,6 +23,10 @@ class Business {
   final bool isPublished;
   final bool isMarketplaceListed;
   final bool featuredRequested;
+  final int bufferMinutes; // buffer before/after each appointment
+  final int? maxBookingsPerDay; // null = no limit
+  final int? maxBookingsPerHour;
+  final int? maxSimultaneousBookings;
   final DateTime? nameCategoryLockedUntil;
   final String status;
   final List<String> badges;
@@ -55,6 +59,10 @@ class Business {
     this.isPublished = true,
     this.isMarketplaceListed = true,
     this.featuredRequested = false,
+    this.bufferMinutes = 0,
+    this.maxBookingsPerDay,
+    this.maxBookingsPerHour,
+    this.maxSimultaneousBookings,
     this.nameCategoryLockedUntil,
     required this.status,
     required this.badges,
@@ -88,6 +96,10 @@ class Business {
     isPublished: json['is_published'] as bool? ?? true,
     isMarketplaceListed: json['is_marketplace_listed'] as bool? ?? true,
     featuredRequested: json['featured_requested'] as bool? ?? false,
+    bufferMinutes: json['buffer_minutes'] as int? ?? 0,
+    maxBookingsPerDay: json['max_bookings_per_day'] as int?,
+    maxBookingsPerHour: json['max_bookings_per_hour'] as int?,
+    maxSimultaneousBookings: json['max_simultaneous_bookings'] as int?,
     nameCategoryLockedUntil: json['name_category_locked_until'] == null
         ? null
         : DateTime.parse(json['name_category_locked_until'] as String),
@@ -129,6 +141,10 @@ class Business {
     'is_published': isPublished,
     'is_marketplace_listed': isMarketplaceListed,
     'featured_requested': featuredRequested,
+    'buffer_minutes': bufferMinutes,
+    'max_bookings_per_day': maxBookingsPerDay,
+    'max_bookings_per_hour': maxBookingsPerHour,
+    'max_simultaneous_bookings': maxSimultaneousBookings,
     'name_category_locked_until': nameCategoryLockedUntil?.toIso8601String(),
     'status': status,
     'badges': badges,

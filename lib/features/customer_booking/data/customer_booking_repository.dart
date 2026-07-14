@@ -42,6 +42,33 @@ class CustomerBookingRepository {
     }
   }
 
+  /// Server-side smart-scheduling guard. Returns (available, reason) from
+  /// the check_slot_available RPC, which enforces open hours, closures,
+  /// manual blocks, buffer/overlap, and booking limits — the authoritative
+  /// recheck before we attempt to create the appointment.
+  Future<({bool available, String? reason})> checkSlotAvailable({
+    required String businessId,
+    required String serviceId,
+    String? staffProfileId,
+    required DateTime startTime,
+  }) async {
+    try {
+      final result = await _client.rpc('check_slot_available', params: {
+        'p_business_id': businessId,
+        'p_service_id': serviceId,
+        'p_staff_profile_id': staffProfileId,
+        'p_start_time': startTime.toIso8601String(),
+      });
+      final map = (result as Map).cast<String, dynamic>();
+      return (
+        available: map['available'] as bool? ?? false,
+        reason: map['reason'] as String?,
+      );
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   Future<CustomerBookingResult> createAppointment({
     required String businessId,
     required String serviceId,
