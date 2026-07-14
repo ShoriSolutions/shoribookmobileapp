@@ -10,12 +10,20 @@ import '../../../../core/widgets/shori_logo.dart';
 /// animation at 0), they stay perfectly in sync through the cross-fade.
 final Stopwatch _authWaveClock = Stopwatch()..start();
 
-/// One full wave/bubble cycle. Long, so the motion stays gentle.
+/// One full wave cycle. Long, so the motion stays gentle.
 const Duration _wavePeriod = Duration(seconds: 28);
+
+/// Bubbles drift on their own phase, ~3% faster than the wave (28000 /
+/// 1.03). Its own wrapping phase stays continuous, so no jump on wrap.
+const Duration _bubblePeriod = Duration(milliseconds: 27184);
 
 double _wavePhase() =>
     (_authWaveClock.elapsedMilliseconds % _wavePeriod.inMilliseconds) /
     _wavePeriod.inMilliseconds;
+
+double _bubblePhase() =>
+    (_authWaveClock.elapsedMilliseconds % _bubblePeriod.inMilliseconds) /
+    _bubblePeriod.inMilliseconds;
 
 /// Header for the auth screens: soft colour "bubbles" drift slowly over a
 /// solid beige backdrop, while the wave line along the bottom edge flows.
@@ -74,12 +82,11 @@ class _AuthWaveHeaderState extends State<AuthWaveHeader>
               child: AnimatedBuilder(
                 animation: _ticker,
                 builder: (context, _) {
-                  final t = _wavePhase();
                   return ClipPath(
                     // The moving wave edge, re-cut each frame.
-                    clipper: _WaveClipper(t),
-                    // Beige backdrop + slowly drifting bubbles.
-                    child: CustomPaint(painter: _BubblePainter(t)),
+                    clipper: _WaveClipper(_wavePhase()),
+                    // Beige backdrop + slowly drifting bubbles (own phase).
+                    child: CustomPaint(painter: _BubblePainter(_bubblePhase())),
                   );
                 },
               ),
@@ -211,8 +218,8 @@ class _BubblePainter extends CustomPainter {
       final paint = Paint()
         ..shader = RadialGradient(
           colors: [
-            b.color.withValues(alpha: 0.45),
-            b.color.withValues(alpha: 0.34),
+            b.color.withValues(alpha: 0.48),
+            b.color.withValues(alpha: 0.37),
             b.color.withValues(alpha: 0.0),
           ],
           stops: const [0.0, 0.80, 1.0],
