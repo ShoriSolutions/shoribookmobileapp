@@ -15,11 +15,11 @@ class SplashScreen extends StatelessWidget {
       body: Center(
         child: TweenAnimationBuilder<double>(
           tween: Tween(begin: 0, end: 1),
-          duration: const Duration(milliseconds: 900),
-          curve: Curves.easeOut,
+          duration: const Duration(milliseconds: 1500),
+          curve: Curves.easeOutCubic,
           builder: (context, value, child) => Opacity(
             opacity: value,
-            child: Transform.scale(scale: 0.96 + 0.04 * value, child: child),
+            child: Transform.scale(scale: 0.92 + 0.08 * value, child: child),
           ),
           child: const ShoriLogo(markSize: 104),
         ),

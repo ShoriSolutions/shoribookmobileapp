@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -136,6 +138,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final authStatus = ref.read(authStatusProvider);
       final loc = state.matchedLocation;
+
+      // Cold-start branded hold: stay on the splash for its minimum window
+      // even if auth already resolved, so the fade-in isn't cut short.
+      if (loc == RoutePaths.splash && refreshNotifier.splashHolding) {
+        return null;
+      }
 
       if (authStatus == AuthStatus.unknown) {
         return loc == RoutePaths.splash ? null : RoutePaths.splash;
@@ -490,5 +498,25 @@ class GoRouterRefreshNotifier extends ChangeNotifier {
     ref.listen(authStatusProvider, (_, __) => notifyListeners());
     ref.listen(myProfileProvider, (_, __) => notifyListeners());
     ref.listen(activeMembershipProvider, (_, __) => notifyListeners());
+    // Hold the branded splash for a minimum moment on cold start so its
+    // fade-in can play fully even when auth resolves instantly. Fires one
+    // redirect re-evaluation when the window elapses.
+    _splashTimer = Timer(_minSplash, () {
+      _splashDone = true;
+      notifyListeners();
+    });
+  }
+
+  static const _minSplash = Duration(milliseconds: 2200);
+  Timer? _splashTimer;
+  bool _splashDone = false;
+
+  /// True only during the initial minimum-splash window.
+  bool get splashHolding => !_splashDone;
+
+  @override
+  void dispose() {
+    _splashTimer?.cancel();
+    super.dispose();
   }
 }
