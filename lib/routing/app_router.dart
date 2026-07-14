@@ -139,6 +139,25 @@ CustomTransitionPage<void> _fadePage(GoRouterState state, Widget child) {
   );
 }
 
+/// Plain fade-through page (fade in on enter, out on leave). Used for the
+/// splash and the home shell so app-launch → home cross-fades smoothly
+/// instead of hard-cutting. Ignores secondaryAnimation, so pushing a
+/// detail screen over the shell doesn't fade the shell underneath.
+CustomTransitionPage<dynamic> _fadeThroughPage(
+    GoRouterState state, Widget child) {
+  return CustomTransitionPage<dynamic>(
+    key: state.pageKey,
+    transitionDuration: const Duration(milliseconds: 550),
+    reverseTransitionDuration: const Duration(milliseconds: 450),
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+        FadeTransition(
+      opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+      child: child,
+    ),
+  );
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
   final refreshNotifier = GoRouterRefreshNotifier(ref);
 
@@ -251,7 +270,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: RoutePaths.splash, builder: (c, s) => const SplashScreen()),
+      GoRoute(
+        path: RoutePaths.splash,
+        pageBuilder: (c, s) => _fadeThroughPage(s, const SplashScreen()),
+      ),
       GoRoute(
         path: RoutePaths.login,
         pageBuilder: (c, s) => _fadePage(s, const LoginScreen()),
@@ -291,8 +313,10 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // ── Business Owner/Staff shell ──────────────────────────────────────
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) =>
-            BottomNavShell(navigationShell: navigationShell),
+        pageBuilder: (context, state, navigationShell) => _fadeThroughPage(
+          state,
+          BottomNavShell(navigationShell: navigationShell),
+        ),
         branches: [
           StatefulShellBranch(
             routes: [
@@ -449,9 +473,12 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // ── Customer/marketplace shell ───────────────────────────────────────
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) => BottomNavShell(
-          navigationShell: navigationShell,
-          items: customerBottomNavItems,
+        pageBuilder: (context, state, navigationShell) => _fadeThroughPage(
+          state,
+          BottomNavShell(
+            navigationShell: navigationShell,
+            items: customerBottomNavItems,
+          ),
         ),
         branches: [
           StatefulShellBranch(
