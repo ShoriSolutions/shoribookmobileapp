@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_time_formatters.dart';
+import '../../../core/utils/input_hints.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/service.dart';
@@ -399,7 +400,10 @@ class _DetailsStepState extends ConsumerState<_DetailsStep> {
             TextField(
               controller: _phone,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'Phone number'),
+              decoration: const InputDecoration(
+                labelText: 'Phone number',
+                hintText: kPhoneHint,
+              ),
               onChanged: (v) => controller.updateDetails(phone: v),
             ),
             const SizedBox(height: 12),
@@ -408,6 +412,7 @@ class _DetailsStepState extends ConsumerState<_DetailsStep> {
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(
                 labelText: 'WhatsApp (optional, same as phone if blank)',
+                hintText: kWhatsAppHint,
               ),
               onChanged: (v) => controller.updateDetails(whatsapp: v),
             ),

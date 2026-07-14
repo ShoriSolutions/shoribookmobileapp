@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../core/utils/input_hints.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../models/customer.dart';
 import '../../business_context/application/active_business_provider.dart';
@@ -148,7 +149,10 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
                       TextFormField(
                         controller: _phone,
                         keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(labelText: 'Phone'),
+                        decoration: const InputDecoration(
+                          labelText: 'Phone',
+                          hintText: kPhoneHint,
+                        ),
                         validator: (v) => (v == null || v.trim().isEmpty)
                             ? 'Phone number is required'
                             : null,
@@ -159,6 +163,7 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
                         keyboardType: TextInputType.phone,
                         decoration: const InputDecoration(
                           labelText: 'WhatsApp number (optional)',
+                          hintText: kWhatsAppHint,
                         ),
                       ),
                       const SizedBox(height: 12),

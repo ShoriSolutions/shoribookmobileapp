@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/input_hints.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../models/appointment.dart';
@@ -206,13 +207,19 @@ class _ClientSectionState extends ConsumerState<_ClientSection> {
               ),
               const SizedBox(height: 8),
               TextField(
-                decoration: const InputDecoration(labelText: 'Phone'),
+                decoration: const InputDecoration(
+                  labelText: 'Phone',
+                  hintText: kPhoneHint,
+                ),
                 keyboardType: TextInputType.phone,
                 onChanged: (v) => controller.updateNewCustomerField(phone: v),
               ),
               const SizedBox(height: 8),
               TextField(
-                decoration: const InputDecoration(labelText: 'WhatsApp (optional)'),
+                decoration: const InputDecoration(
+                  labelText: 'WhatsApp (optional)',
+                  hintText: kWhatsAppHint,
+                ),
                 keyboardType: TextInputType.phone,
                 onChanged: (v) => controller.updateNewCustomerField(whatsapp: v),
               ),

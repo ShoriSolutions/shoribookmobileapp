@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/input_hints.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/availability_models.dart';
@@ -198,7 +199,10 @@ class StaffDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 12),
                 TextField(
                   controller: phoneController,
-                  decoration: const InputDecoration(labelText: 'Phone'),
+                  decoration: const InputDecoration(
+                    labelText: 'Phone',
+                    hintText: kPhoneHint,
+                  ),
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,

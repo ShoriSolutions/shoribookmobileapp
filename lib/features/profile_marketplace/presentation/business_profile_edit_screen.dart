@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/input_hints.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/osm_map.dart';
 import '../../../models/business.dart';
@@ -391,6 +392,7 @@ class _BusinessProfileEditScreenState
                     // ── Contact & location ──────────────────────────────
                     _section(context, 'Contact & location'),
                     _field(_phone, 'Phone', canManage,
+                        hint: kPhoneHint,
                         keyboardType: TextInputType.phone),
                     _field(_email, 'Email', canManage,
                         keyboardType: TextInputType.emailAddress),
@@ -465,6 +467,7 @@ class _BusinessProfileEditScreenState
                     // ── Socials ─────────────────────────────────────────
                     _section(context, 'Social links'),
                     _field(_whatsapp, 'WhatsApp number', canManage,
+                        hint: kWhatsAppHint,
                         keyboardType: TextInputType.phone),
                     _field(_instagram, 'Instagram URL', canManage),
                     _field(_facebook, 'Facebook URL', canManage),

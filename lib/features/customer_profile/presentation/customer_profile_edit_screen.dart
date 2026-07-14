@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/input_hints.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../models/profile.dart';
 import '../../app_mode/application/app_mode_provider.dart';
@@ -218,8 +219,8 @@ class _CustomerProfileEditScreenState
                 controller: _phone,
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(
-                  labelText: 'Phone',
-                  hintText: 'Optional',
+                  labelText: 'Phone (optional)',
+                  hintText: kPhoneHint,
                   border: OutlineInputBorder(),
                 ),
               ),
