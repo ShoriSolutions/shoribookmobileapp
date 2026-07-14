@@ -86,6 +86,18 @@ class CustomerProfileScreen extends ConsumerWidget {
               const SizedBox(height: 20),
               Card(
                 child: ListTile(
+                  leading: const Icon(Icons.notifications_none,
+                      color: AppColors.sage),
+                  title: const Text('Notifications'),
+                  trailing:
+                      const Icon(Icons.chevron_right, color: AppColors.muted),
+                  onTap: () =>
+                      context.push(RoutePaths.notificationPreferences),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: ListTile(
                   leading: const Icon(Icons.help_outline, color: AppColors.sage),
                   title: const Text('Help & Support'),
                   trailing: const Icon(Icons.chevron_right, color: AppColors.muted),

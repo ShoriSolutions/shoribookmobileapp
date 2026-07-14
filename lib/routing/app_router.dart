@@ -34,6 +34,8 @@ import '../features/favorites/presentation/favorites_screen.dart';
 import '../features/marketplace/presentation/business_profile_screen.dart';
 import '../features/marketplace/presentation/discover_screen.dart';
 import '../features/more/presentation/more_screen.dart';
+import '../features/notifications/presentation/notification_preferences_screen.dart';
+import '../features/notifications/presentation/notification_settings_screen.dart';
 import '../features/my_bookings/presentation/booking_detail_screen.dart';
 import '../features/my_bookings/presentation/my_bookings_screen.dart';
 import '../features/reports/presentation/reports_screen.dart';
@@ -88,6 +90,7 @@ bool _isOwnerModePath(String path) {
       path == RoutePaths.availability ||
       path == RoutePaths.profileMarketplace ||
       path == RoutePaths.editBusinessProfile ||
+      path == RoutePaths.notificationSettings ||
       path.startsWith('/preview-business/') ||
       path == RoutePaths.settings ||
       path == RoutePaths.noBusiness ||
@@ -386,6 +389,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Neutral route — reachable from both the business "More" menu and
       // the customer profile, so it is intentionally not added to the
       // owner/customer mode-path lists.
+      GoRoute(
+        path: RoutePaths.notificationSettings,
+        builder: (c, s) => const NotificationSettingsScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.notificationPreferences,
+        builder: (c, s) => const NotificationPreferencesScreen(),
+      ),
       GoRoute(
         path: RoutePaths.support,
         builder: (c, s) => const SupportScreen(),

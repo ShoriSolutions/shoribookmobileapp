@@ -32,6 +32,8 @@ class RoutePaths {
   static const availability = '/availability';
   static const profileMarketplace = '/profile-marketplace';
   static const editBusinessProfile = '/business-profile';
+  static const notificationSettings = '/notification-settings';
+  static const notificationPreferences = '/notification-preferences';
   static const support = '/support';
   static const deleteAccount = '/delete-account';
   static const settings = '/settings';

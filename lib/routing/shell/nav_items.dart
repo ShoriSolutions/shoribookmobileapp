@@ -32,6 +32,7 @@ const moreMenuItems = [
   NavItem(label: 'Reports', icon: '↗', minRole: BusinessRole.admin),
   NavItem(label: 'Availability', icon: '◷', minRole: BusinessRole.admin),
   NavItem(label: 'Profile & Marketplace', icon: '❖', minRole: BusinessRole.admin),
+  NavItem(label: 'Reminders', icon: '⏰', minRole: BusinessRole.admin),
   NavItem(label: 'Help & Support', icon: '☂'),
 ];
 

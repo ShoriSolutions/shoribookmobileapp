@@ -20,6 +20,7 @@ class MoreScreen extends ConsumerWidget {
     'Reports': RoutePaths.reports,
     'Availability': RoutePaths.availability,
     'Profile & Marketplace': RoutePaths.profileMarketplace,
+    'Reminders': RoutePaths.notificationSettings,
     'Help & Support': RoutePaths.support,
   };
 
