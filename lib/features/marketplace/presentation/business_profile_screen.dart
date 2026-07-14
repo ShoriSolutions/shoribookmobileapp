@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/directions.dart';
 import '../../../core/utils/timezone_offsets.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../core/widgets/osm_map.dart';
@@ -286,9 +287,9 @@ class BusinessProfileScreen extends ConsumerWidget {
                                   width: double.infinity,
                                   child: ElevatedButton.icon(
                                     onPressed: () => launchUrl(
-                                      Uri.parse(
-                                        'https://www.google.com/maps/dir/?api=1'
-                                        '&destination=${business.latitude},${business.longitude}',
+                                      directionsUrl(
+                                        business.latitude!,
+                                        business.longitude!,
                                       ),
                                       mode: LaunchMode.externalApplication,
                                     ),
