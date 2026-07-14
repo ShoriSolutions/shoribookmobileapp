@@ -13,15 +13,39 @@ class SplashScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.cream,
       body: Center(
-        child: TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0, end: 1),
-          duration: const Duration(milliseconds: 1500),
-          curve: Curves.easeOutCubic,
-          builder: (context, value, child) => Opacity(
-            opacity: value,
-            child: Transform.scale(scale: 0.92 + 0.08 * value, child: child),
-          ),
-          child: const ShoriLogo(markSize: 104),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 1500),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, child) => Opacity(
+                opacity: value,
+                child:
+                    Transform.scale(scale: 0.92 + 0.08 * value, child: child),
+              ),
+              child: const ShoriLogo(markSize: 104),
+            ),
+            const SizedBox(height: 44),
+            // The app's standard loading indicator (same as the login
+            // screen), fading in just after the logo.
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 1600),
+              curve: Curves.easeIn,
+              builder: (context, value, child) =>
+                  Opacity(opacity: value, child: child),
+              child: const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.sage,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
