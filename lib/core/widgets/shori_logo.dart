@@ -30,7 +30,7 @@ class ShoriLogo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Image.asset(
-          'assets/branding/shoribooks_logo.png',
+          'assets/branding/shoribookslogo.png',
           width: markSize,
           height: markSize,
           fit: BoxFit.contain,

@@ -81,8 +81,8 @@ class _AuthWaveHeaderState extends State<AuthWaveHeader>
               bottom: 0,
               child: Center(
                 child: ShoriLogo(
-                  markSize: (widget.height * 0.36).clamp(40, 64),
-                  color: Colors.white,
+                  markSize: (widget.height * 0.40).clamp(44, 72),
+                  showWordmark: false,
                 ),
               ),
             ),
