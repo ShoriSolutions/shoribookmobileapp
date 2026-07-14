@@ -4,12 +4,23 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/shori_logo.dart';
 
-/// Text-free header for the auth screens: clear, translucent colour
-/// "bubbles" (seafoam / deep blue / gold / terracotta) sit still over a
-/// dark gradient, while the wave line along the bottom edge flows
-/// continuously. Purely decorative — no logo, no copy — so it reads as
-/// one continuous motif as the user moves between login / register
-/// sections.
+/// A single app-wide clock so every [AuthWaveHeader] computes the same
+/// wave/bubble phase for a given instant. Because the login and register
+/// headers read the same clock (rather than each starting its own
+/// animation at 0), they stay perfectly in sync through the cross-fade.
+final Stopwatch _authWaveClock = Stopwatch()..start();
+
+/// One full wave/bubble cycle. Long, so the motion stays gentle.
+const Duration _wavePeriod = Duration(seconds: 28);
+
+double _wavePhase() =>
+    (_authWaveClock.elapsedMilliseconds % _wavePeriod.inMilliseconds) /
+    _wavePeriod.inMilliseconds;
+
+/// Header for the auth screens: soft colour "bubbles" drift slowly over a
+/// solid beige backdrop, while the wave line along the bottom edge flows.
+/// The ShoriBooks mark sits centred on top. The motion is driven by a
+/// shared clock, so login ↔ register read as one continuous motif.
 class AuthWaveHeader extends StatefulWidget {
   const AuthWaveHeader({
     super.key,
@@ -25,7 +36,7 @@ class AuthWaveHeader extends StatefulWidget {
   final bool showBack;
   final VoidCallback? onBack;
 
-  /// The white ShoriBooks mark + wordmark, centred over the header.
+  /// The ShoriBooks mark, centred over the header.
   final bool showLogo;
 
   @override
@@ -34,21 +45,19 @@ class AuthWaveHeader extends StatefulWidget {
 
 class _AuthWaveHeaderState extends State<AuthWaveHeader>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
+  late final AnimationController _ticker;
 
   @override
   void initState() {
     super.initState();
-    // One slow, continuously-repeating cycle scrolls the wave's phase.
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 28),
-    )..repeat();
+    // Drives a repaint every frame; the actual phase comes from the
+    // shared clock so all header instances stay in lock-step.
+    _ticker = AnimationController(vsync: this, duration: _wavePeriod)..repeat();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _ticker.dispose();
     super.dispose();
   }
 
@@ -63,13 +72,16 @@ class _AuthWaveHeaderState extends State<AuthWaveHeader>
           Positioned.fill(
             child: RepaintBoundary(
               child: AnimatedBuilder(
-                animation: _controller,
-                builder: (context, _) => ClipPath(
-                  // The moving part: the wave edge is re-cut each frame.
-                  clipper: _WaveClipper(_controller.value),
-                  // The still part: bubbles + gradient don't animate.
-                  child: const CustomPaint(painter: _BubblePainter()),
-                ),
+                animation: _ticker,
+                builder: (context, _) {
+                  final t = _wavePhase();
+                  return ClipPath(
+                    // The moving wave edge, re-cut each frame.
+                    clipper: _WaveClipper(t),
+                    // Beige backdrop + slowly drifting bubbles.
+                    child: CustomPaint(painter: _BubblePainter(t)),
+                  );
+                },
               ),
             ),
           ),
@@ -83,6 +95,9 @@ class _AuthWaveHeaderState extends State<AuthWaveHeader>
                 child: ShoriLogo(
                   markSize: (widget.height * 0.40).clamp(44, 72),
                   showWordmark: false,
+                  // Deeper than the pale brand blue so the mark reads on
+                  // the light beige backdrop.
+                  color: const Color(0xFF66A9CE),
                 ),
               ),
             ),
@@ -91,7 +106,7 @@ class _AuthWaveHeaderState extends State<AuthWaveHeader>
               top: topInset + 2,
               left: 4,
               child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                icon: const Icon(Icons.arrow_back, color: AppColors.ink),
                 onPressed:
                     widget.onBack ?? () => Navigator.of(context).maybePop(),
               ),
@@ -153,7 +168,13 @@ class _Bubble {
 }
 
 class _BubblePainter extends CustomPainter {
-  const _BubblePainter();
+  const _BubblePainter(this.t);
+
+  /// Animation progress, 0..1 — drives the slow bubble drift.
+  final double t;
+
+  /// Solid beige backdrop behind the bubbles.
+  static const _beige = Color(0xFFECE3D2);
 
   // Muted, complementary washes — brand sage/terracotta plus a deep blue
   // and a soft gold to match the reference's colour story.
@@ -165,7 +186,7 @@ class _BubblePainter extends CustomPainter {
     _Bubble(color: _deepBlue, radius: 0.26, cx: 0.74, cy: 0.30),
     _Bubble(color: _gold, radius: 0.18, cx: 0.50, cy: 0.66),
     _Bubble(color: AppColors.terracotta, radius: 0.16, cx: 0.87, cy: 0.68),
-    _Bubble(color: AppColors.sageLight, radius: 0.14, cx: 0.09, cy: 0.78),
+    _Bubble(color: AppColors.sage, radius: 0.14, cx: 0.09, cy: 0.78),
   ];
 
   @override
@@ -173,27 +194,25 @@ class _BubblePainter extends CustomPainter {
     final rect = Offset.zero & size;
     canvas.clipRect(rect);
 
-    // Dark, slightly green-teal gradient backdrop.
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF25332F), Color(0xFF181D1B)],
-        ).createShader(rect),
-    );
+    // Solid beige background.
+    canvas.drawRect(rect, Paint()..color = _beige);
 
-    for (final b in _bubbles) {
-      final center = Offset(b.cx * size.width, b.cy * size.height);
+    for (var i = 0; i < _bubbles.length; i++) {
+      final b = _bubbles[i];
+      // Each bubble drifts along its own gentle ellipse, offset in phase so
+      // they don't move in unison.
+      final ang = 2 * math.pi * (t + i / _bubbles.length);
+      final cx = (b.cx + 0.03 * math.sin(ang)) * size.width;
+      final cy = (b.cy + 0.02 * math.cos(ang)) * size.height;
+      final center = Offset(cx, cy);
       final r = b.radius * size.width;
       // Clear orb: a defined core held most of the way out, then a quick
       // fade to transparent at the rim. A tiny blur softens the edge.
       final paint = Paint()
         ..shader = RadialGradient(
           colors: [
-            b.color.withValues(alpha: 0.50),
-            b.color.withValues(alpha: 0.40),
+            b.color.withValues(alpha: 0.45),
+            b.color.withValues(alpha: 0.34),
             b.color.withValues(alpha: 0.0),
           ],
           stops: const [0.0, 0.80, 1.0],
@@ -204,5 +223,6 @@ class _BubblePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _BubblePainter oldDelegate) => false;
+  bool shouldRepaint(covariant _BubblePainter oldDelegate) =>
+      oldDelegate.t != t;
 }
