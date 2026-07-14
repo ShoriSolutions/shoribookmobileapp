@@ -1,3 +1,5 @@
+import 'address.dart';
+
 class Profile {
   final String id;
   final String email;
@@ -5,6 +7,7 @@ class Profile {
   final String? phone;
   final String? avatarUrl;
   final String role; // platform-wide role: 'admin' | 'entrepreneur' | 'user'
+  final Address address; // may be empty (Address.isEmpty)
 
   const Profile({
     required this.id,
@@ -13,6 +16,7 @@ class Profile {
     this.phone,
     this.avatarUrl,
     required this.role,
+    this.address = const Address(),
   });
 
   factory Profile.fromJson(Map<String, dynamic> json) => Profile(
@@ -22,5 +26,6 @@ class Profile {
     phone: json['phone'] as String?,
     avatarUrl: json['avatar_url'] as String?,
     role: json['role'] as String? ?? 'user',
+    address: Address.fromJson(json),
   );
 }

@@ -32,6 +32,15 @@ class LoginController extends AsyncNotifier<void> {
         // Swallow: login already succeeded.
       }
 
+      // Best-effort: if an address was captured at sign-up (before email
+      // confirmation), drain it into the profile now. No-op once drained.
+      try {
+        await authRepo.drainPendingAddress();
+        ref.invalidate(myProfileProvider);
+      } catch (_) {
+        // Swallow: login already succeeded; address can be set later.
+      }
+
       state = const AsyncData(null);
       return true;
     } catch (e, st) {

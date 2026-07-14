@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../models/address.dart';
 import 'auth_providers.dart';
 
 /// Result of a successful registration — whether the session is already
@@ -18,12 +19,18 @@ class CustomerRegisterController extends AsyncNotifier<void> {
     required String fullName,
     required String email,
     required String password,
+    Address? address,
   }) async {
     state = const AsyncLoading();
     try {
       final sessionActive = await ref
           .read(authRepositoryProvider)
-          .signUpCustomer(email: email, password: password, fullName: fullName);
+          .signUpCustomer(
+            email: email,
+            password: password,
+            fullName: fullName,
+            address: address,
+          );
       state = const AsyncData(null);
       return RegisterResult(sessionActive: sessionActive);
     } catch (e, st) {

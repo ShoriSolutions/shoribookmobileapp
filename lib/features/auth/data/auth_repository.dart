@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../models/address.dart';
 import '../../support/support_content.dart';
 
 /// The only file in the auth feature allowed to touch SupabaseClient
@@ -35,19 +36,37 @@ class AuthRepository {
     required String email,
     required String password,
     required String fullName,
+    Address? address,
   }) async {
     try {
+      final data = <String, dynamic>{
+        'full_name': fullName,
+        'role': 'user',
+        'terms_accepted_at': DateTime.now().toUtc().toIso8601String(),
+        'terms_version': SupportContent.termsVersion,
+      };
+      // Stashed in signup metadata and drained into the profile on first
+      // login (drain_pending_address) — there's no session yet when email
+      // confirmation is on, mirroring the pending-business pattern.
+      if (address != null && !address.isEmpty) {
+        data['pending_address'] = address.toProfileJson();
+      }
       final response = await _client.auth.signUp(
         email: email,
         password: password,
-        data: {
-          'full_name': fullName,
-          'role': 'user',
-          'terms_accepted_at': DateTime.now().toUtc().toIso8601String(),
-          'terms_version': SupportContent.termsVersion,
-        },
+        data: data,
       );
       return response.session != null;
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
+  /// Drains any address captured during sign-up into the profile. Safe to
+  /// call on every login — a no-op once drained (see drain_pending_address).
+  Future<void> drainPendingAddress() async {
+    try {
+      await _client.rpc('drain_pending_address');
     } catch (e) {
       throw AppException.from(e);
     }

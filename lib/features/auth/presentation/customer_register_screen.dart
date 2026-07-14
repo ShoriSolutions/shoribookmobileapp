@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/location/address_form.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../models/address.dart';
 import '../../../routing/route_paths.dart';
 import '../application/customer_register_controller.dart';
 import 'widgets/auth_wave_header.dart';
@@ -25,6 +27,7 @@ class _CustomerRegisterScreenState
   bool _obscurePassword = true;
   bool _acceptedTerms = false;
   String? _checkEmailMessage;
+  Address _address = const Address();
 
   @override
   void dispose() {
@@ -43,6 +46,7 @@ class _CustomerRegisterScreenState
           fullName: _fullName.text.trim(),
           email: _email.text.trim(),
           password: _password.text,
+          address: _address.isEmpty ? null : _address,
         );
     if (result == null || !mounted) return; // error already surfaced via the AsyncValue
     if (!result.sessionActive) {
@@ -171,6 +175,17 @@ class _CustomerRegisterScreenState
             validator: (v) =>
                 v != _password.text ? 'Passwords do not match' : null,
           ),
+          const SizedBox(height: 24),
+          Text('Your address', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 2),
+          Text(
+            'Optional — helps us show pros near you. You can add or change '
+            'it anytime.',
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: AppColors.muted),
+          ),
+          const SizedBox(height: 12),
+          AddressForm(onChanged: (a) => _address = a),
           if (registerState.hasError) ...[
             const SizedBox(height: 12),
             Text(

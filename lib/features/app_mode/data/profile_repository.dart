@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../models/address.dart';
 import '../../../models/profile.dart';
 
 class ProfileRepository {
@@ -35,6 +36,25 @@ class ProfileRepository {
         'p_full_name': fullName,
         'p_phone': phone,
         'p_avatar_url': avatarUrl,
+      });
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
+  /// Saves the caller's own structured address (+ coordinates) via the
+  /// save_my_address RPC. Reusable for registration and profile editing.
+  Future<void> saveMyAddress(Address a) async {
+    try {
+      await _client.rpc('save_my_address', params: {
+        'p_country_code': a.countryCode,
+        'p_country_name': a.countryName,
+        'p_admin_area': a.adminArea,
+        'p_city': a.city,
+        'p_postal_code': a.postalCode,
+        'p_street': a.street,
+        'p_lat': a.latitude,
+        'p_lng': a.longitude,
       });
     } catch (e) {
       throw AppException.from(e);

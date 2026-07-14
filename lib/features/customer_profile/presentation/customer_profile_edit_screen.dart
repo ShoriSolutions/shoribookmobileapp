@@ -7,9 +7,11 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../core/location/address_form.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/input_hints.dart';
 import '../../../core/widgets/app_snackbar.dart';
+import '../../../models/address.dart';
 import '../../../models/profile.dart';
 import '../../app_mode/application/app_mode_provider.dart';
 import '../../auth/application/auth_providers.dart';
@@ -38,6 +40,7 @@ class _CustomerProfileEditScreenState
   String? _pickedExt;
   String? _avatarUrl; // the currently stored photo
   bool _removePhoto = false;
+  Address _address = const Address();
 
   @override
   void dispose() {
@@ -50,6 +53,7 @@ class _CustomerProfileEditScreenState
     _name.text = p.fullName;
     _phone.text = p.phone ?? '';
     _avatarUrl = p.avatarUrl;
+    _address = p.address;
     _seeded = true;
   }
 
@@ -98,6 +102,7 @@ class _CustomerProfileEditScreenState
         phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
         avatarUrl: avatarUrl,
       );
+      await repo.saveMyAddress(_address);
       await ref.read(myProfileProvider.notifier).refresh();
       if (mounted) {
         showAppSnackBar(context, message: 'Profile updated');
@@ -251,6 +256,13 @@ class _CustomerProfileEditScreenState
                     child: const Text('Request change'),
                   ),
                 ],
+              ),
+              const SizedBox(height: 24),
+              Text('Address', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              AddressForm(
+                initial: _address,
+                onChanged: (a) => _address = a,
               ),
               const SizedBox(height: 24),
               SizedBox(
