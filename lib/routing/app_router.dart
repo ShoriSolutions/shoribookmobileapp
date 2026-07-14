@@ -100,29 +100,39 @@ bool _isOwnerModePath(String path) {
       path == RoutePaths.createBusiness;
 }
 
-/// Cross-fade page transition, used for the auth screens (login ↔
-/// register sections) so moving between them eases instead of snapping.
-/// Works for both push (fade the new screen in over the old) and go
-/// (cross-fade when the stack is replaced).
+/// Slow, smooth cross-fade page transition, used for the auth screens
+/// (login ↔ register sections) so moving between them eases instead of
+/// snapping. The incoming screen fades in while the outgoing one fades
+/// out — for both push (via secondaryAnimation) and go/replace (the
+/// outgoing page's own reverse animation).
 CustomTransitionPage<void> _fadePage(GoRouterState state, Widget child) {
   return CustomTransitionPage<void>(
     key: state.pageKey,
-    transitionDuration: const Duration(milliseconds: 340),
-    reverseTransitionDuration: const Duration(milliseconds: 280),
+    transitionDuration: const Duration(milliseconds: 600),
+    reverseTransitionDuration: const Duration(milliseconds: 600),
     child: child,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final fade = CurvedAnimation(
+      // Fade in on enter (and fade out on remove, when this animation runs
+      // in reverse).
+      final fadeIn = CurvedAnimation(
         parent: animation,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic,
+        curve: Curves.easeInOut,
+        reverseCurve: Curves.easeInOut,
+      );
+      // Fade out while being covered by the next screen (push case).
+      final fadeOut = Tween<double>(begin: 1.0, end: 0.0).animate(
+        CurvedAnimation(parent: secondaryAnimation, curve: Curves.easeInOut),
       );
       // A whisper of scale adds depth without a directional slide, which
       // keeps the animated header feeling continuous across screens.
       return FadeTransition(
-        opacity: fade,
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.985, end: 1.0).animate(fade),
-          child: child,
+        opacity: fadeIn,
+        child: FadeTransition(
+          opacity: fadeOut,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.99, end: 1.0).animate(fadeIn),
+            child: child,
+          ),
         ),
       );
     },
