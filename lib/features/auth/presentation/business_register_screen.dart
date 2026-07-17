@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/password_policy.dart';
+import '../../../core/widgets/password_requirements.dart';
 import '../../../models/business.dart';
 import '../../../routing/route_paths.dart';
 import '../application/business_register_controller.dart';
@@ -172,9 +174,10 @@ class _BusinessRegisterScreenState
           TextFormField(
             controller: _password,
             obscureText: _obscurePassword,
+            onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
               labelText: 'Password',
-              hintText: 'Min. 8 characters',
+              hintText: '8–12 characters',
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword
@@ -186,10 +189,10 @@ class _BusinessRegisterScreenState
                     setState(() => _obscurePassword = !_obscurePassword),
               ),
             ),
-            validator: (v) => (v == null || v.length < 8)
-                ? 'Password must be at least 8 characters'
-                : null,
+            validator: PasswordPolicy.validate,
           ),
+          const SizedBox(height: 8),
+          PasswordRequirements(password: _password.text),
           const SizedBox(height: 16),
           TextFormField(
             controller: _confirm,

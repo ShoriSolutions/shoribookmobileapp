@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/password_policy.dart';
 import '../../../core/widgets/app_snackbar.dart';
+import '../../../core/widgets/password_requirements.dart';
 import '../application/auth_providers.dart';
 
 /// Reached via deep link after either a "forgot password" reset or a
@@ -21,6 +23,7 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
   bool _isLoading = false;
+  bool _obscure = true;
 
   @override
   void dispose() {
@@ -76,19 +79,29 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
                 const SizedBox(height: 20),
                 TextFormField(
                   controller: _passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
+                  obscureText: _obscure,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
                     labelText: 'New password',
-                    hintText: 'Min. 8 characters',
+                    hintText: '8–12 characters',
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscure
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: AppColors.muted,
+                      ),
+                      onPressed: () => setState(() => _obscure = !_obscure),
+                    ),
                   ),
-                  validator: (value) => (value == null || value.length < 8)
-                      ? 'Password must be at least 8 characters'
-                      : null,
+                  validator: PasswordPolicy.validate,
                 ),
+                const SizedBox(height: 8),
+                PasswordRequirements(password: _passwordController.text),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _confirmController,
-                  obscureText: true,
+                  obscureText: _obscure,
                   decoration: const InputDecoration(
                     labelText: 'Confirm password',
                   ),
