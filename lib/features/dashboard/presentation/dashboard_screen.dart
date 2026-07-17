@@ -14,6 +14,8 @@ import '../../appointments/presentation/widgets/appointment_card.dart';
 import '../../booking_link/presentation/booking_share_sheet.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
+import '../../subscription/application/subscription_providers.dart';
+import '../../subscription/presentation/subscription_modal.dart';
 import '../application/dashboard_controller.dart';
 import '../application/dashboard_prefs.dart';
 import '../data/dashboard_stats.dart';
@@ -29,6 +31,8 @@ class DashboardScreen extends ConsumerWidget {
     if (membership == null) return const SizedBox.shrink();
     final business = membership.business;
     final timezone = business.timezone;
+
+    _maybeShowLaunchPromo(context, ref);
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -503,4 +507,23 @@ class _ActionChip extends StatelessWidget {
       ),
     );
   }
+}
+
+// Shows the subscription promo once per app launch for business owners who
+// haven't chosen "Don't show again". Scheduled after the first frame so it
+// slides up over the settled dashboard.
+bool _launchPromoShown = false;
+
+void _maybeShowLaunchPromo(BuildContext context, WidgetRef ref) {
+  if (_launchPromoShown) return;
+  _launchPromoShown = true;
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    final dismissed =
+        await ref.read(subscriptionPromoPrefsProvider).dismissedForever();
+    if (dismissed || !context.mounted) return;
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    if (context.mounted) {
+      showSubscriptionModal(context, autoPromo: true);
+    }
+  });
 }

@@ -16,18 +16,24 @@ import 'widgets/trial_badge.dart';
 
 /// Opens the premium subscription bottom sheet. Plans are loaded live from
 /// the DB; the trial and purchase flows are server- and store-driven.
-Future<void> showSubscriptionModal(BuildContext context) {
+Future<void> showSubscriptionModal(
+  BuildContext context, {
+  bool autoPromo = false,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.45),
-    builder: (_) => const _SubscriptionSheet(),
+    builder: (_) => _SubscriptionSheet(autoPromo: autoPromo),
   );
 }
 
 class _SubscriptionSheet extends ConsumerStatefulWidget {
-  const _SubscriptionSheet();
+  const _SubscriptionSheet({this.autoPromo = false});
+
+  /// True when opened automatically on launch — shows a "Don't show again".
+  final bool autoPromo;
 
   @override
   ConsumerState<_SubscriptionSheet> createState() => _SubscriptionSheetState();
@@ -388,6 +394,17 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
             child: const Text('Maybe later',
                 style: TextStyle(color: AppColors.muted)),
           ),
+          if (widget.autoPromo)
+            TextButton(
+              onPressed: () async {
+                await ref
+                    .read(subscriptionPromoPrefsProvider)
+                    .setDismissedForever();
+                if (context.mounted) Navigator.of(context).pop();
+              },
+              child: const Text("Don't show this again",
+                  style: TextStyle(color: AppColors.muted, fontSize: 12)),
+            ),
           const SizedBox(height: 4),
           Text(
             eligible
