@@ -518,6 +518,13 @@ void _maybeShowLaunchPromo(BuildContext context, WidgetRef ref) {
   if (_launchPromoShown) return;
   _launchPromoShown = true;
   WidgetsBinding.instance.addPostFrameCallback((_) async {
+    // Skip if the business is already subscribed or on a trial.
+    final status = ref
+        .read(activeMembershipProvider)
+        .valueOrNull
+        ?.business
+        .subscriptionStatus;
+    if (status == 'active' || status == 'trialing') return;
     final dismissed =
         await ref.read(subscriptionPromoPrefsProvider).dismissedForever();
     if (dismissed || !context.mounted) return;

@@ -27,6 +27,8 @@ class Business {
   final int? maxBookingsPerDay; // null = no limit
   final int? maxBookingsPerHour;
   final int? maxSimultaneousBookings;
+  // 'none' | 'trialing' | 'trial_pending' | 'active' | 'past_due' | 'canceled'
+  final String subscriptionStatus;
   final DateTime? nameCategoryLockedUntil;
   final String status;
   final List<String> badges;
@@ -63,6 +65,7 @@ class Business {
     this.maxBookingsPerDay,
     this.maxBookingsPerHour,
     this.maxSimultaneousBookings,
+    this.subscriptionStatus = 'none',
     this.nameCategoryLockedUntil,
     required this.status,
     required this.badges,
@@ -100,6 +103,7 @@ class Business {
     maxBookingsPerDay: json['max_bookings_per_day'] as int?,
     maxBookingsPerHour: json['max_bookings_per_hour'] as int?,
     maxSimultaneousBookings: json['max_simultaneous_bookings'] as int?,
+    subscriptionStatus: json['subscription_status'] as String? ?? 'none',
     nameCategoryLockedUntil: json['name_category_locked_until'] == null
         ? null
         : DateTime.parse(json['name_category_locked_until'] as String),
@@ -145,6 +149,7 @@ class Business {
     'max_bookings_per_day': maxBookingsPerDay,
     'max_bookings_per_hour': maxBookingsPerHour,
     'max_simultaneous_bookings': maxSimultaneousBookings,
+    'subscription_status': subscriptionStatus,
     'name_category_locked_until': nameCategoryLockedUntil?.toIso8601String(),
     'status': status,
     'badges': badges,
