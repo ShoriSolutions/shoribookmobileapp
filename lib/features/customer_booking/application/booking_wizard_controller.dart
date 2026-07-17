@@ -8,6 +8,7 @@ import '../../../models/service.dart';
 import '../../../models/staff_profile.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../marketplace/application/marketplace_providers.dart';
+import '../../my_bookings/application/my_bookings_providers.dart';
 import '../../trust/application/trust_providers.dart';
 import '../data/availability_calculator.dart';
 import '../data/customer_booking_repository.dart';
@@ -302,9 +303,18 @@ class BookingWizardController extends AutoDisposeFamilyNotifier<
 
       switch (result.status) {
         case CustomerBookingStatus.created:
+          final apptId = result.appointmentId;
+          // Remember guest bookings on this device so they appear in
+          // "My bookings" (looked up server-side by id + phone).
+          if (apptId != null &&
+              ref.read(authRepositoryProvider).currentUser == null) {
+            await ref
+                .read(guestBookingsStoreProvider)
+                .add(id: apptId, phone: state.phone.trim());
+          }
           state = state.copyWith(
             isSubmitting: false,
-            createdAppointmentId: result.appointmentId,
+            createdAppointmentId: apptId,
             step: BookingWizardStep.confirmation,
           );
           break;

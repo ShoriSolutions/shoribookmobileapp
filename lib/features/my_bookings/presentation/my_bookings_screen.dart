@@ -5,7 +5,6 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/appointment.dart';
 import '../../../routing/route_paths.dart';
-import '../../auth/application/auth_providers.dart';
 import '../application/my_bookings_providers.dart';
 import 'widgets/booking_card.dart';
 
@@ -14,25 +13,6 @@ class MyBookingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authStatus = ref.watch(authStatusProvider);
-
-    if (authStatus != AuthStatus.authenticated) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('My Bookings')),
-        body: Center(
-          child: EmptyState(
-            icon: '▤',
-            title: 'Sign in to see your bookings',
-            message: 'Log in to view and manage your appointments.',
-            action: ElevatedButton(
-              onPressed: () => context.push(RoutePaths.login),
-              child: const Text('Log in'),
-            ),
-          ),
-        ),
-      );
-    }
-
     return DefaultTabController(
       length: 2,
       child: Scaffold(

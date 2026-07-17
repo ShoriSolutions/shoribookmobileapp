@@ -11,6 +11,7 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../models/appointment.dart';
+import '../../auth/application/auth_providers.dart';
 import '../application/my_bookings_providers.dart';
 import '../data/my_bookings_repository.dart';
 
@@ -224,7 +225,9 @@ class BookingDetailScreen extends ConsumerWidget {
                   ],
                 ),
               const SizedBox(height: 10),
-              if (appt.isActive) ...[
+              if (appt.isActive &&
+                  ref.watch(authStatusProvider) ==
+                      AuthStatus.authenticated) ...[
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
@@ -242,6 +245,15 @@ class BookingDetailScreen extends ConsumerWidget {
                     onPressed: () => _cancel(context, ref),
                     child: const Text('Cancel booking'),
                   ),
+                ),
+              ] else if (appt.isActive) ...[
+                Text(
+                  'To change or cancel this booking, contact the business '
+                  'using the details above.',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: AppColors.muted),
                 ),
               ],
             ],

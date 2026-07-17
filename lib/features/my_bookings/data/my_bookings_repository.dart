@@ -34,6 +34,53 @@ class MyBookingsRepository {
     }
   }
 
+  /// Guest bookings: look up appointments made on this device by their
+  /// ids, validated server-side against the phone used. [refs] is a list of
+  /// {id, phone} maps from the on-device store.
+  Future<List<Appointment>> fetchGuestBookings(
+      List<Map<String, String>> refs) async {
+    try {
+      // Group ids by the phone they were booked with (usually just one).
+      final byPhone = <String, List<String>>{};
+      for (final r in refs) {
+        final id = r['id'];
+        final phone = r['phone'];
+        if (id == null || phone == null || phone.isEmpty) continue;
+        byPhone.putIfAbsent(phone, () => []).add(id);
+      }
+      final out = <Appointment>[];
+      for (final entry in byPhone.entries) {
+        final data = await _client.rpc('get_guest_appointments', params: {
+          'p_ids': entry.value,
+          'p_phone': entry.key,
+        });
+        for (final e in (data as List)) {
+          out.add(Appointment.fromJson(e as Map<String, dynamic>));
+        }
+      }
+      out.sort((a, b) => b.startTime.compareTo(a.startTime));
+      return out;
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
+  Future<Appointment> fetchGuestById(String id, String phone) async {
+    try {
+      final data = await _client.rpc('get_guest_appointments', params: {
+        'p_ids': [id],
+        'p_phone': phone,
+      });
+      final list = data as List;
+      if (list.isEmpty) {
+        throw const AppException('Booking not found.');
+      }
+      return Appointment.fromJson(list.first as Map<String, dynamic>);
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   Future<Appointment> fetchById(String id) async {
     try {
       final data = await _client
