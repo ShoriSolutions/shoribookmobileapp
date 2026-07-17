@@ -163,6 +163,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             child: const Text('New here? Create an account'),
                           ),
                         ),
+                        Center(
+                          child: TextButton(
+                            // Customers don't need to log in — let anyone who
+                            // lands here go straight to the marketplace.
+                            onPressed: () => context.go(RoutePaths.discover),
+                            child: const Text('Continue as a customer instead'),
+                          ),
+                        ),
                       ],
                     ),
                   ),

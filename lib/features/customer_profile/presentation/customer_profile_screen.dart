@@ -11,6 +11,8 @@ import '../../../models/customer_trust.dart';
 import '../../../routing/route_paths.dart';
 import '../../app_mode/application/app_mode_provider.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../support/presentation/legal_document_screen.dart';
+import '../../support/support_content.dart';
 import '../../trust/application/trust_providers.dart';
 
 class CustomerProfileScreen extends ConsumerWidget {
@@ -23,32 +25,63 @@ class CustomerProfileScreen extends ConsumerWidget {
     if (authStatus != AuthStatus.authenticated) {
       return Scaffold(
         appBar: AppBar(title: const Text('Profile')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('◐', style: TextStyle(fontSize: 32)),
-                const SizedBox(height: 12),
-                Text(
-                  'Sign in to manage your account',
-                  style: Theme.of(context).textTheme.titleMedium,
-                  textAlign: TextAlign.center,
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // Guest header — no account needed to browse or book.
+            const Card(
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: AppColors.sageLight,
+                  foregroundColor: AppColors.sageDark,
+                  child: Icon(Icons.person_outline),
                 ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () => context.push(RoutePaths.login),
-                  child: const Text('Log in'),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => context.push(RoutePaths.customerRegister),
-                  child: const Text('Create an account'),
-                ),
-              ],
+                title: Text('Guest User'),
+                subtitle: Text('Browsing without an account'),
+              ),
             ),
-          ),
+            const SizedBox(height: 12),
+            _GuestTile(
+              icon: Icons.event_note_outlined,
+              label: 'My Appointments',
+              onTap: () => context.push(RoutePaths.bookings),
+            ),
+            _GuestTile(
+              icon: Icons.storefront_outlined,
+              label: 'Become a Vendor',
+              onTap: () => context.push(RoutePaths.businessRegister),
+            ),
+            _GuestTile(
+              icon: Icons.login,
+              label: 'Vendor Login',
+              onTap: () => context.push(RoutePaths.login),
+            ),
+            const SizedBox(height: 8),
+            _GuestTile(
+              icon: Icons.help_outline,
+              label: 'Support',
+              onTap: () => context.push(RoutePaths.support),
+            ),
+            _GuestTile(
+              icon: Icons.privacy_tip_outlined,
+              label: 'Privacy Policy',
+              onTap: () => _openLegal(
+                  context, 'Privacy Policy', SupportContent.privacyPolicy),
+            ),
+            _GuestTile(
+              icon: Icons.description_outlined,
+              label: 'Terms of Service',
+              onTap: () => _openLegal(
+                  context, 'Terms of Service', SupportContent.termsOfService),
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: TextButton(
+                onPressed: () => context.push(RoutePaths.customerRegister),
+                child: const Text('Create a customer account'),
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -258,6 +291,40 @@ class _ReputationCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+void _openLegal(BuildContext context, String title, String body) {
+  Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => LegalDocumentScreen(title: title, body: body),
+    ),
+  );
+}
+
+/// A tappable row in the Guest Profile.
+class _GuestTile extends StatelessWidget {
+  const _GuestTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Icon(icon, color: AppColors.sage),
+        title: Text(label),
+        trailing: const Icon(Icons.chevron_right, color: AppColors.muted),
+        onTap: onTap,
       ),
     );
   }
