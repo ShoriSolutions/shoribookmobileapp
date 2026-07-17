@@ -26,6 +26,24 @@ class AuthRepository {
     }
   }
 
+  // ── Login attempt limiting (server-side) ─────────────────────────────────
+  /// { locked: bool, locked_until: iso? } or null if never attempted.
+  Future<Map<String, dynamic>?> checkLoginLock(String email) async {
+    final res = await _client.rpc('check_login_lock', params: {'p_email': email});
+    return (res as Map?)?.cast<String, dynamic>();
+  }
+
+  /// Records a failed login; returns { locked, remaining, locked_until }.
+  Future<Map<String, dynamic>?> recordFailedLogin(String email) async {
+    final res =
+        await _client.rpc('record_failed_login', params: {'p_email': email});
+    return (res as Map?)?.cast<String, dynamic>();
+  }
+
+  Future<void> resetLoginAttempts(String email) async {
+    await _client.rpc('reset_login_attempts', params: {'p_email': email});
+  }
+
   /// Customer self-registration — matches the web app's
   /// src/app/(auth)/register/user/page.tsx signUp call exactly
   /// (role: 'user' in the metadata is what the profiles-creation
