@@ -73,6 +73,16 @@ class MoreScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           Card(
             child: ListTile(
+              leading: const Icon(Icons.swap_horiz, color: AppColors.sage),
+              title: const Text('Switch account'),
+              subtitle: const Text('Sign out and log in as someone else'),
+              trailing: const Icon(Icons.chevron_right, color: AppColors.muted),
+              onTap: () => _switchAccount(context, ref),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            child: ListTile(
               leading: const Icon(Icons.logout, color: AppColors.danger),
               title: const Text('Sign out'),
               onTap: () => _signOut(context, ref),
@@ -94,6 +104,21 @@ class MoreScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _switchAccount(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(authRepositoryProvider).signOut();
+      if (context.mounted) context.go(RoutePaths.login);
+    } catch (e) {
+      if (context.mounted) {
+        showAppSnackBar(
+          context,
+          message: AppException.from(e).message,
+          isError: true,
+        );
+      }
+    }
   }
 
   Future<void> _signOut(BuildContext context, WidgetRef ref) async {

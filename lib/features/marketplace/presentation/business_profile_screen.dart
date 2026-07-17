@@ -11,6 +11,7 @@ import '../../../core/utils/directions.dart';
 import '../../../core/utils/timezone_offsets.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../core/widgets/osm_map.dart';
+import '../../../core/widgets/photo_viewer.dart';
 import '../../../models/availability_models.dart';
 import '../../../models/service.dart';
 import '../../../routing/route_paths.dart';
@@ -91,9 +92,13 @@ class BusinessProfileScreen extends ConsumerWidget {
                 ],
                 flexibleSpace: FlexibleSpaceBar(
                   background: business.coverImageUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: business.coverImageUrl!,
-                          fit: BoxFit.cover,
+                      ? GestureDetector(
+                          onTap: () => openPhotoViewer(
+                              context, [business.coverImageUrl!]),
+                          child: CachedNetworkImage(
+                            imageUrl: business.coverImageUrl!,
+                            fit: BoxFit.cover,
+                          ),
                         )
                       : Container(
                           decoration: const BoxDecoration(
@@ -239,13 +244,20 @@ class BusinessProfileScreen extends ConsumerWidget {
                               itemCount: business.galleryUrls.length,
                               separatorBuilder: (_, __) =>
                                   const SizedBox(width: 8),
-                              itemBuilder: (c, i) => ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: CachedNetworkImage(
-                                  imageUrl: business.galleryUrls[i],
-                                  width: 120,
-                                  height: 120,
-                                  fit: BoxFit.cover,
+                              itemBuilder: (c, i) => GestureDetector(
+                                onTap: () => openPhotoViewer(
+                                  c,
+                                  business.galleryUrls,
+                                  initialIndex: i,
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: CachedNetworkImage(
+                                    imageUrl: business.galleryUrls[i],
+                                    width: 120,
+                                    height: 120,
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
                               ),
                             ),

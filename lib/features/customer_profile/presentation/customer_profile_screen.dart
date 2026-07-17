@@ -149,6 +149,29 @@ class CustomerProfileScreen extends ConsumerWidget {
               const SizedBox(height: 8),
               Card(
                 child: ListTile(
+                  leading: const Icon(Icons.swap_horiz, color: AppColors.sage),
+                  title: const Text('Switch account'),
+                  trailing:
+                      const Icon(Icons.chevron_right, color: AppColors.muted),
+                  onTap: () async {
+                    try {
+                      await ref.read(authRepositoryProvider).signOut();
+                      if (context.mounted) context.go(RoutePaths.login);
+                    } catch (e) {
+                      if (context.mounted) {
+                        showAppSnackBar(
+                          context,
+                          message: AppException.from(e).message,
+                          isError: true,
+                        );
+                      }
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: ListTile(
                   leading: const Icon(Icons.logout, color: AppColors.danger),
                   title: const Text('Sign out'),
                   onTap: () async {
