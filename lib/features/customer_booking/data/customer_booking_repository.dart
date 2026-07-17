@@ -2,7 +2,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../models/customer.dart';
 
-enum CustomerBookingStatus { created, conflict, phoneConflict, notAcceptingBookings }
+enum CustomerBookingStatus {
+  created,
+  conflict,
+  phoneConflict,
+  notAcceptingBookings,
+  rateLimited,
+}
 
 class CustomerBookingResult {
   final CustomerBookingStatus status;
@@ -114,6 +120,10 @@ class CustomerBookingRepository {
         case 'not_accepting_bookings':
           return const CustomerBookingResult(
             status: CustomerBookingStatus.notAcceptingBookings,
+          );
+        case 'rate_limited':
+          return const CustomerBookingResult(
+            status: CustomerBookingStatus.rateLimited,
           );
         default:
           return CustomerBookingResult(

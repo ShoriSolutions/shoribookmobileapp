@@ -5,7 +5,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_time_formatters.dart';
 import '../../../core/utils/input_hints.dart';
-import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/service.dart';
 import '../../../models/staff_profile.dart';
@@ -449,6 +448,9 @@ class _DetailsStepState extends ConsumerState<_DetailsStep> {
   }
 }
 
+/// A guest's checkout choice: book without an account, or sign in first.
+enum _CheckoutChoice { guest, login }
+
 class _ReviewStep extends ConsumerWidget {
   final String slug;
   final String currency;
@@ -461,22 +463,67 @@ class _ReviewStep extends ConsumerWidget {
   });
 
   Future<void> _confirm(BuildContext context, WidgetRef ref) async {
+    // Customers can book without an account. Signed-in customers confirm
+    // straight away; guests get a quick choice (book as guest, or log in
+    // for history/faster booking — optional, never required).
     if (ref.read(authStatusProvider) != AuthStatus.authenticated) {
-      final confirmed = await showConfirmDialog(
-        context,
-        title: 'Sign in to book',
-        message: 'Create a free account or log in to confirm this booking '
-            'and keep track of it in My Bookings.',
-        confirmLabel: 'Continue',
-        isDestructive: false,
-      );
-      if (!confirmed) return;
-      if (context.mounted) context.push(RoutePaths.login);
-      return;
+      final choice = await _showGuestOptions(context);
+      if (choice == null) return; // dismissed
+      if (choice == _CheckoutChoice.login) {
+        if (context.mounted) context.push(RoutePaths.login);
+        return;
+      }
+      // guest → fall through and submit
     }
-    await ref
-        .read(bookingWizardControllerProvider(slug).notifier)
-        .submit();
+    await ref.read(bookingWizardControllerProvider(slug).notifier).submit();
+  }
+
+  Future<_CheckoutChoice?> _showGuestOptions(BuildContext context) {
+    return showModalBottomSheet<_CheckoutChoice>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Almost done',
+                  style: Theme.of(ctx).textTheme.titleLarge),
+              const SizedBox(height: 4),
+              Text(
+                "No account needed — we'll send your confirmation to the "
+                'contact details you entered.',
+                style: Theme.of(ctx)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: AppColors.muted),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, _CheckoutChoice.guest),
+                child: const Text('Continue as guest'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton(
+                onPressed: () => Navigator.pop(ctx, _CheckoutChoice.login),
+                child: const Text('Log in or create an account'),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'An account saves your details, booking history and favourites.',
+                textAlign: TextAlign.center,
+                style: Theme.of(ctx)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: AppColors.muted),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override

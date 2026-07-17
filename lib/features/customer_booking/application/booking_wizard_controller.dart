@@ -211,32 +211,34 @@ class BookingWizardController extends AutoDisposeFamilyNotifier<
     );
 
     try {
-      // Trust gate (server-calculated): block banned/suspended customers
-      // before creating the booking. Softer bands (deposit/manual approval)
-      // are advisory here and surfaced elsewhere.
-      final elig =
-          await ref.read(trustRepositoryProvider).checkBookingEligibility();
-      final eligStatus = elig['status'] as String?;
-      if (eligStatus == 'banned') {
-        state = state.copyWith(
-          isSubmitting: false,
-          errorMessage:
-              "Your account isn't able to make bookings. Please contact support.",
-        );
-        return;
-      }
-      if (eligStatus == 'suspended') {
-        final until = elig['suspension_until'] as String?;
-        final when = until != null
-            ? DateFormat('MMM d, y').format(DateTime.parse(until).toLocal())
-            : null;
-        state = state.copyWith(
-          isSubmitting: false,
-          errorMessage: when != null
-              ? 'Your account is temporarily suspended from booking until $when.'
-              : 'Your account is temporarily suspended from booking.',
-        );
-        return;
+      // Trust gate — only for signed-in customers. Guests have no trust
+      // account (banned/suspended is account-level), so they book without
+      // it. Softer bands (deposit/manual approval) are surfaced elsewhere.
+      if (ref.read(authRepositoryProvider).currentUser != null) {
+        final elig =
+            await ref.read(trustRepositoryProvider).checkBookingEligibility();
+        final eligStatus = elig['status'] as String?;
+        if (eligStatus == 'banned') {
+          state = state.copyWith(
+            isSubmitting: false,
+            errorMessage:
+                "Your account isn't able to make bookings. Please contact support.",
+          );
+          return;
+        }
+        if (eligStatus == 'suspended') {
+          final until = elig['suspension_until'] as String?;
+          final when = until != null
+              ? DateFormat('MMM d, y').format(DateTime.parse(until).toLocal())
+              : null;
+          state = state.copyWith(
+            isSubmitting: false,
+            errorMessage: when != null
+                ? 'Your account is temporarily suspended from booking until $when.'
+                : 'Your account is temporarily suspended from booking.',
+          );
+          return;
+        }
       }
 
       final profileData = await ref.read(businessProfileProvider(arg).future);
@@ -316,6 +318,13 @@ class BookingWizardController extends AutoDisposeFamilyNotifier<
           state = state.copyWith(
             isSubmitting: false,
             errorMessage: 'This business is not accepting bookings right now.',
+          );
+          break;
+        case CustomerBookingStatus.rateLimited:
+          state = state.copyWith(
+            isSubmitting: false,
+            errorMessage: "You've made several bookings with this number "
+                'recently. Please try again later or log in to continue.',
           );
           break;
       }
