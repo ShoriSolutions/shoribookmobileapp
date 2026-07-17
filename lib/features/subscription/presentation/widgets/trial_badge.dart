@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 
-/// Prominent "✨ 30 DAYS FREE" pill on a soft accent background.
+/// Prominent "✨ 14 DAYS FREE" pill on a soft accent background.
 class TrialBadge extends StatelessWidget {
-  const TrialBadge({super.key, this.label = '✨ 30 DAYS FREE'});
+  const TrialBadge({super.key, this.label = '✨ 14 DAYS FREE'});
 
   final String label;
 

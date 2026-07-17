@@ -1,6 +1,6 @@
 -- ================================================================
 -- ShoriBooks — Subscriptions: a dynamic, web-manageable package catalog,
--- a 30-day trial, and store-IAP purchase recording. The mobile modal
+-- a 14-day trial, and store-IAP purchase recording. The mobile modal
 -- reads the catalog live (nothing hardcoded), so pricing changes in the
 -- DB reflect automatically. Subscriptions are per BUSINESS (the premium
 -- features are all vendor-side).
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.subscription_packages (
   currency             TEXT NOT NULL DEFAULT 'BBD',
   billing_period       TEXT NOT NULL DEFAULT 'monthly'
                          CHECK (billing_period IN ('monthly','annual','weekly','once','trial')),
-  trial_days           INT NOT NULL DEFAULT 30,
+  trial_days           INT NOT NULL DEFAULT 14,
   -- Store product identifiers — the app queries these for the real
   -- localized price and to start the purchase. Configure matching products
   -- in App Store Connect / Play Console.
@@ -82,12 +82,12 @@ BEGIN
     RETURN jsonb_build_object('status','pending',
       'message','Your trial request is under review. We''ll email you shortly.');
   END IF;
-  RETURN jsonb_build_object('status','eligible','message','Eligible for a 30-day free trial.');
+  RETURN jsonb_build_object('status','eligible','message','Eligible for a 14-day free trial.');
 END;
 $$;
 GRANT EXECUTE ON FUNCTION public.check_trial_eligibility(UUID) TO authenticated;
 
--- ── Start the 30-day trial ──────────────────────────────────────────────────
+-- ── Start the 14-day trial ──────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.start_trial(p_business_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
@@ -101,7 +101,7 @@ BEGIN
   IF (v_elig ->> 'status') <> 'eligible' THEN
     RETURN v_elig;  -- pending / ineligible, unchanged
   END IF;
-  v_ends := now() + INTERVAL '30 days';
+  v_ends := now() + INTERVAL '14 days';
   UPDATE public.businesses SET
     subscription_status = 'trialing',
     trial_started_at    = now(),
@@ -109,7 +109,7 @@ BEGIN
     updated_at          = now()
   WHERE id = p_business_id;
   RETURN jsonb_build_object('status','trialing','trial_ends_at', v_ends,
-    'message','Your 30-day free trial is active.');
+    'message','Your 14-day free trial is active.');
 END;
 $$;
 GRANT EXECUTE ON FUNCTION public.start_trial(UUID) TO authenticated;

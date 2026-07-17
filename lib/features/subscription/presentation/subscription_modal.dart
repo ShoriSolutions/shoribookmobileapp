@@ -119,7 +119,7 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
     final pkg = _selected(packages);
     if (id == null || pkg == null) return;
 
-    // Trial path — eligible customers start the 30-day trial (no payment).
+    // Trial path — eligible customers start the 14-day trial (no payment).
     if (_eligibility?.isEligible ?? true) {
       setState(() => _busy = true);
       try {
@@ -300,7 +300,7 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
           const Center(child: Text('🎉', style: TextStyle(fontSize: 34))),
           const SizedBox(height: 8),
           Text(
-            'Start Your FREE 30-Day Trial',
+            'Start Your FREE 14-Day Trial',
             textAlign: TextAlign.center,
             style: Theme.of(context)
                 .textTheme
@@ -309,7 +309,7 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
           ),
           const SizedBox(height: 6),
           Text(
-            'Experience every premium feature free for 30 days. No credit '
+            'Experience every premium feature free for 14 days. No credit '
             'card required to get started.',
             textAlign: TextAlign.center,
             style: Theme.of(context)
@@ -391,7 +391,7 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
           const SizedBox(height: 4),
           Text(
             eligible
-                ? 'Your trial starts today and runs for 30 days. Cancel '
+                ? 'Your trial starts today and runs for 14 days. Cancel '
                     'anytime.'
                 : 'Billed through the App Store / Google Play. Cancel anytime '
                     'in your store account.',

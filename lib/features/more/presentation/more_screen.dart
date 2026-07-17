@@ -186,7 +186,7 @@ class _GoPremiumCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Start your 30-day free trial',
+                      'Start your 14-day free trial',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 13,
