@@ -2,28 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/bubble_background.dart';
 import '../../../../core/widgets/shori_logo.dart';
-
-/// A single app-wide clock so every [AuthWaveHeader] computes the same
-/// wave/bubble phase for a given instant. Because the login and register
-/// headers read the same clock (rather than each starting its own
-/// animation at 0), they stay perfectly in sync through the cross-fade.
-final Stopwatch _authWaveClock = Stopwatch()..start();
-
-/// One full wave cycle. Long, so the motion stays gentle.
-const Duration _wavePeriod = Duration(seconds: 28);
-
-/// Bubbles drift on their own phase, ~3% faster than the wave (28000 /
-/// 1.03). Its own wrapping phase stays continuous, so no jump on wrap.
-const Duration _bubblePeriod = Duration(milliseconds: 27184);
-
-double _wavePhase() =>
-    (_authWaveClock.elapsedMilliseconds % _wavePeriod.inMilliseconds) /
-    _wavePeriod.inMilliseconds;
-
-double _bubblePhase() =>
-    (_authWaveClock.elapsedMilliseconds % _bubblePeriod.inMilliseconds) /
-    _bubblePeriod.inMilliseconds;
 
 /// Header for the auth screens: soft colour "bubbles" drift slowly over a
 /// solid beige backdrop, while the wave line along the bottom edge flows.
@@ -60,7 +40,8 @@ class _AuthWaveHeaderState extends State<AuthWaveHeader>
     super.initState();
     // Drives a repaint every frame; the actual phase comes from the
     // shared clock so all header instances stay in lock-step.
-    _ticker = AnimationController(vsync: this, duration: _wavePeriod)..repeat();
+    _ticker = AnimationController(vsync: this, duration: bubbleWavePeriod)
+      ..repeat();
   }
 
   @override
@@ -84,9 +65,10 @@ class _AuthWaveHeaderState extends State<AuthWaveHeader>
                 builder: (context, _) {
                   return ClipPath(
                     // The moving wave edge, re-cut each frame.
-                    clipper: _WaveClipper(_wavePhase()),
-                    // Beige backdrop + slowly drifting bubbles (own phase).
-                    child: CustomPaint(painter: _BubblePainter(_bubblePhase())),
+                    clipper: _WaveClipper(wavePhase()),
+                    // Beige backdrop + slowly drifting bubbles (own phase),
+                    // shared with the splash so they read as one motif.
+                    child: CustomPaint(painter: BubblePainter(bubblePhase())),
                   );
                 },
               ),
@@ -160,76 +142,3 @@ class _WaveClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant _WaveClipper oldClipper) => oldClipper.t != t;
 }
 
-class _Bubble {
-  const _Bubble({
-    required this.color,
-    required this.radius,
-    required this.cx,
-    required this.cy,
-  });
-
-  final Color color;
-  final double radius; // fraction of width
-  final double cx; // fraction of width
-  final double cy; // fraction of height
-}
-
-class _BubblePainter extends CustomPainter {
-  const _BubblePainter(this.t);
-
-  /// Animation progress, 0..1 — drives the slow bubble drift.
-  final double t;
-
-  /// Solid beige backdrop behind the bubbles.
-  static const _beige = Color(0xFFE0D8C8);
-
-  // Muted, complementary washes — brand sage/terracotta plus a deep blue
-  // and a soft gold to match the reference's colour story.
-  static const _deepBlue = Color(0xFF3E6E8E);
-  static const _gold = Color(0xFFD9B45F);
-
-  static const _bubbles = <_Bubble>[
-    _Bubble(color: AppColors.sage, radius: 0.30, cx: 0.16, cy: 0.42),
-    _Bubble(color: _deepBlue, radius: 0.26, cx: 0.74, cy: 0.30),
-    _Bubble(color: _gold, radius: 0.18, cx: 0.50, cy: 0.66),
-    _Bubble(color: AppColors.terracotta, radius: 0.16, cx: 0.87, cy: 0.68),
-    _Bubble(color: AppColors.sage, radius: 0.14, cx: 0.09, cy: 0.78),
-  ];
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    canvas.clipRect(rect);
-
-    // Solid beige background.
-    canvas.drawRect(rect, Paint()..color = _beige);
-
-    for (var i = 0; i < _bubbles.length; i++) {
-      final b = _bubbles[i];
-      // Each bubble drifts along its own gentle ellipse, offset in phase so
-      // they don't move in unison.
-      final ang = 2 * math.pi * (t + i / _bubbles.length);
-      final cx = (b.cx + 0.03 * math.sin(ang)) * size.width;
-      final cy = (b.cy + 0.02 * math.cos(ang)) * size.height;
-      final center = Offset(cx, cy);
-      final r = b.radius * size.width;
-      // Clear orb: a defined core held most of the way out, then a quick
-      // fade to transparent at the rim. A tiny blur softens the edge.
-      final paint = Paint()
-        ..shader = RadialGradient(
-          colors: [
-            b.color.withValues(alpha: 0.48),
-            b.color.withValues(alpha: 0.37),
-            b.color.withValues(alpha: 0.0),
-          ],
-          stops: const [0.0, 0.80, 1.0],
-        ).createShader(Rect.fromCircle(center: center, radius: r))
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
-      canvas.drawCircle(center, r, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _BubblePainter oldDelegate) =>
-      oldDelegate.t != t;
-}
