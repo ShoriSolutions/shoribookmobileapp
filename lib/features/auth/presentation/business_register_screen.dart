@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/password_policy.dart';
 import '../../../core/widgets/password_requirements.dart';
+import '../../../models/subscription_package.dart';
+import '../../subscription/application/subscription_providers.dart';
 import '../../../models/business.dart';
 import '../../../routing/route_paths.dart';
 import '../application/business_register_controller.dart';
@@ -132,6 +134,8 @@ class _BusinessRegisterScreenState
             style: Theme.of(context).textTheme.bodyMedium
                 ?.copyWith(color: AppColors.muted),
           ),
+          const SizedBox(height: 20),
+          const _PlansPreview(),
           const SizedBox(height: 24),
           TextFormField(
             controller: _fullName,
@@ -269,6 +273,105 @@ class _CheckEmailView extends StatelessWidget {
           child: const Text('Go to log in'),
         ),
       ],
+    );
+  }
+}
+
+/// Read-only preview of the subscription plans shown during registration —
+/// sets expectations: 14-day full-access trial, then pick a plan. Loaded
+/// live from the DB (anon-readable), so it always reflects current pricing.
+class _PlansPreview extends ConsumerWidget {
+  const _PlansPreview();
+
+  String _price(SubscriptionPackage p) {
+    if (p.priceAmount == null) return '';
+    final amount = p.priceAmount!;
+    final n = amount == amount.roundToDouble()
+        ? amount.toStringAsFixed(0)
+        : amount.toStringAsFixed(2);
+    final per = switch (p.billingPeriod) {
+      'annual' => '/yr',
+      'weekly' => '/wk',
+      'once' => '',
+      _ => '/mo',
+    };
+    return '${p.currency} $n $per';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(subscriptionPackagesProvider);
+    return async.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (packages) {
+        if (packages.isEmpty) return const SizedBox.shrink();
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.sageLight,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('✨ 14-day free trial',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w800, color: AppColors.sageDark)),
+              const SizedBox(height: 2),
+              Text(
+                'Full access to everything free for 14 days. After that, choose '
+                'the plan that fits:',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: AppColors.muted),
+              ),
+              const SizedBox(height: 12),
+              for (final p in packages)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Flexible(
+                              child: Text(p.name,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600)),
+                            ),
+                            if (p.isPopular) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: AppColors.sage.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: const Text('Popular',
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.sageDark)),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      Text(_price(p),
+                          style: TextStyle(
+                              color: AppColors.ink,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
