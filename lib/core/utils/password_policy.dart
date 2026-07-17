@@ -8,14 +8,14 @@ class PasswordPolicy {
   static const int maxLength = 12;
 
   static bool _len(String p) => p.length >= minLength && p.length <= maxLength;
-  static bool _upper(String p) => p.contains(RegExp(r'[A-Z]'));
-  static bool _lower(String p) => p.contains(RegExp(r'[a-z]'));
-  static bool _digit(String p) => p.contains(RegExp(r'[0-9]'));
-  // Any non-alphanumeric, non-space character.
-  static bool _special(String p) => p.contains(RegExp(r'[^A-Za-z0-9\s]'));
 
-  static bool isValid(String p) =>
-      _len(p) && _upper(p) && _lower(p) && _digit(p) && _special(p);
+  // At least one letter, number, or special character.
+  static bool _hasChar(String p) =>
+      p.contains(RegExp(r'[A-Za-z]')) ||
+      p.contains(RegExp(r'[0-9]')) ||
+      p.contains(RegExp(r'[^A-Za-z0-9\s]'));
+
+  static bool isValid(String p) => _len(p) && _hasChar(p);
 
   /// Form-field validator: an error message, or null when valid.
   static String? validate(String? p) {
@@ -26,19 +26,16 @@ class PasswordPolicy {
     if (v.length > maxLength) {
       return 'Password must be $maxLength characters or fewer';
     }
-    if (!_upper(v)) return 'Add an uppercase letter';
-    if (!_lower(v)) return 'Add a lowercase letter';
-    if (!_digit(v)) return 'Add a number';
-    if (!_special(v)) return 'Add a special character';
+    if (!_hasChar(v)) return 'Add a letter, number, or special character';
     return null;
   }
 
   /// The requirements + whether each is currently met, for a live checklist.
   static List<({String label, bool met})> checklist(String p) => [
         (label: '$minLength–$maxLength characters', met: _len(p)),
-        (label: 'An uppercase letter', met: _upper(p)),
-        (label: 'A lowercase letter', met: _lower(p)),
-        (label: 'A number', met: _digit(p)),
-        (label: 'A special character', met: _special(p)),
+        (
+          label: 'A letter, number, or special character',
+          met: _hasChar(p),
+        ),
       ];
 }
