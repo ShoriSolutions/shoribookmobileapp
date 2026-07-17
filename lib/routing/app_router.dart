@@ -181,6 +181,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (authStatus == AuthStatus.unauthenticated) {
         if (_preAuthRoutes.contains(loc)) return null;
         if (_isCustomerModePath(loc)) return null;
+        // Public help — reachable from the Guest Profile without an account.
+        if (loc == RoutePaths.support) return null;
         // Browsing-first default: an unauthenticated session's home is the
         // marketplace, not a login wall — booking still requires login,
         // enforced inline by the wizard's "Confirm" step, not here.
