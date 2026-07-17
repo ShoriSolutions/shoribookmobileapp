@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/calendar_export.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_time_formatters.dart';
 import '../../../core/utils/input_hints.dart';
+import '../../../core/utils/timezone_offsets.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/service.dart';
 import '../../../models/staff_profile.dart';
@@ -77,8 +80,10 @@ class BookingWizardScreen extends ConsumerWidget {
               );
             case BookingWizardStep.confirmation:
               return _ConfirmationStep(
+                slug: slug,
                 businessName: data.business.name,
                 businessAddress: data.business.address,
+                timezone: data.business.timezone,
               );
           }
         },
@@ -698,48 +703,198 @@ class _ReviewStep extends ConsumerWidget {
   }
 }
 
-class _ConfirmationStep extends StatelessWidget {
+class _ConfirmationStep extends ConsumerWidget {
+  final String slug;
   final String businessName;
   final String? businessAddress;
+  final String timezone;
 
   const _ConfirmationStep({
+    required this.slug,
     required this.businessName,
     this.businessAddress,
+    required this.timezone,
   });
 
+  static String _isoDate(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(bookingWizardControllerProvider(slug));
+    final service = state.selectedService;
+    final date = state.selectedDate;
+    final time = state.selectedTime;
+    final staff = state.selectedStaff;
+    final apptId = state.createdAppointmentId;
+    final reference = (apptId != null && apptId.length >= 8)
+        ? apptId.substring(0, 8).toUpperCase()
+        : apptId?.toUpperCase();
+    final dateLabel =
+        date != null ? DateFormat('EEE, MMM d, y').format(date) : '';
+
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('✓', style: TextStyle(fontSize: 40, color: AppColors.sage)),
-            const SizedBox(height: 16),
-            Text(
-              'Your appointment with $businessName has been booked.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
+            // Success animation
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 550),
+              curve: Curves.elasticOut,
+              builder: (context, v, child) =>
+                  Transform.scale(scale: v, child: child),
+              child: Container(
+                width: 76,
+                height: 76,
+                decoration: const BoxDecoration(
+                    color: AppColors.sage, shape: BoxShape.circle),
+                child:
+                    const Icon(Icons.check_rounded, color: Colors.white, size: 42),
+              ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            Text('Booking confirmed',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
+            Text(
+              'Your appointment with $businessName is booked.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: AppColors.muted),
+            ),
+            const SizedBox(height: 20),
+
+            // Details
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.parchment),
+              ),
+              child: Column(
+                children: [
+                  if (service != null)
+                    _DetailRow(Icons.spa_outlined, service.name),
+                  if (date != null && time != null)
+                    _DetailRow(Icons.event_outlined, '$dateLabel  ·  $time'),
+                  if (staff != null)
+                    _DetailRow(Icons.person_outline, staff.name),
+                  if (businessAddress != null && businessAddress!.isNotEmpty)
+                    _DetailRow(Icons.place_outlined, businessAddress!),
+                  if (reference != null)
+                    _DetailRow(Icons.confirmation_number_outlined,
+                        'Booking ref $reference'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Reminder info
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.notifications_none,
+                    size: 18, color: AppColors.muted),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "We'll send a reminder before your appointment to the "
+                    'contact details you provided.',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: AppColors.muted),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => context.go(RoutePaths.bookings),
-                child: const Text('View My Bookings'),
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.event_available_outlined, size: 18),
+                label: const Text('Add to calendar'),
+                onPressed: (service == null || date == null || time == null)
+                    ? null
+                    : () {
+                        final start = businessLocalToUtc(
+                          date: _isoDate(date),
+                          time: time,
+                          timezone: timezone,
+                        );
+                        final end = start
+                            .add(Duration(minutes: service.durationMinutes));
+                        addAppointmentToCalendar(
+                          title: '${service.name} at $businessName',
+                          startUtc: start,
+                          endUtc: end,
+                          location: businessAddress,
+                          description: reference != null
+                              ? 'Booking reference $reference'
+                              : null,
+                        );
+                      },
               ),
             ),
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: () => context.go(RoutePaths.discover),
-                child: const Text('Back to Discover'),
+                onPressed: () => ref
+                    .read(bookingWizardControllerProvider(slug).notifier)
+                    .bookAnother(),
+                child: const Text('Book another appointment'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  final authed = ref.read(authStatusProvider) ==
+                      AuthStatus.authenticated;
+                  context.go(
+                      authed ? RoutePaths.bookings : RoutePaths.discover);
+                },
+                child: const Text('Done'),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow(this.icon, this.text);
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: AppColors.sage),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
+          ),
+        ],
       ),
     );
   }

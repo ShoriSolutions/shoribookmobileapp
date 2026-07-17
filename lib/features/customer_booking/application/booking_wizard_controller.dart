@@ -181,6 +181,14 @@ class BookingWizardController extends AutoDisposeFamilyNotifier<
     state = state.copyWith(policyAccepted: value);
   }
 
+  /// Resets the wizard back to the service step for a fresh booking at the
+  /// same business (used by "Book another appointment"). Re-prefills the
+  /// contact details for signed-in customers.
+  void bookAnother() {
+    state = const BookingWizardState();
+    _prefillFromExistingCustomer();
+  }
+
   void goToStep(BookingWizardStep step) {
     state = state.copyWith(step: step, clearError: true, clearConflict: true);
   }
