@@ -30,6 +30,7 @@ class Business {
   // 'none' | 'trialing' | 'trial_pending' | 'active' | 'past_due' | 'canceled'
   final String subscriptionStatus;
   final DateTime? trialEndsAt;
+  final String? countryCode; // ISO 3166-1 alpha-2, for price display currency
   final DateTime? nameCategoryLockedUntil;
   final String status;
   final List<String> badges;
@@ -68,6 +69,7 @@ class Business {
     this.maxSimultaneousBookings,
     this.subscriptionStatus = 'none',
     this.trialEndsAt,
+    this.countryCode,
     this.nameCategoryLockedUntil,
     required this.status,
     required this.badges,
@@ -127,6 +129,7 @@ class Business {
     trialEndsAt: json['trial_ends_at'] == null
         ? null
         : DateTime.parse(json['trial_ends_at'] as String),
+    countryCode: json['country_code'] as String?,
     nameCategoryLockedUntil: json['name_category_locked_until'] == null
         ? null
         : DateTime.parse(json['name_category_locked_until'] as String),
@@ -174,6 +177,7 @@ class Business {
     'max_simultaneous_bookings': maxSimultaneousBookings,
     'subscription_status': subscriptionStatus,
     'trial_ends_at': trialEndsAt?.toIso8601String(),
+    'country_code': countryCode,
     'name_category_locked_until': nameCategoryLockedUntil?.toIso8601String(),
     'status': status,
     'badges': badges,

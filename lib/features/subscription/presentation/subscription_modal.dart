@@ -47,7 +47,7 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
   Map<String, ProductDetails> _products = {};
   bool _productsRequested = false;
   String? _selectedId;
-  String _displayCurrency = 'USD';
+  String? _displayCurrency; // null = auto from the business's country
   bool _busy = false;
   String? _successMessage;
   StreamSubscription<List<PurchaseDetails>>? _purchaseSub;
@@ -101,16 +101,31 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
     }
   }
 
-  String _priceFor(SubscriptionPackage p) {
+  String _priceFor(SubscriptionPackage p, String currency) {
     final repo = ref.read(subscriptionRepositoryProvider);
     final storeId = repo.storeProductId(p);
     final product = storeId == null ? null : _products[storeId];
     if (product != null) return product.price; // real, store-localized price
     if (p.priceAmount != null) {
-      // DB base is USD; convert for display to the chosen currency.
-      return CurrencyRates.format(p.priceAmount!, _displayCurrency);
+      // Convert the stored price (p.currency, BBD) to the chosen currency.
+      return CurrencyRates.format(p.priceAmount!, currency, from: p.currency);
     }
     return '—';
+  }
+
+  /// The currency to display prices in: the user's manual pick, else their
+  /// business's country currency, else the base (BBD).
+  String _resolveCurrency() {
+    if (_displayCurrency != null) return _displayCurrency!;
+    final code = ref
+        .read(activeMembershipProvider)
+        .valueOrNull
+        ?.business
+        .countryCode;
+    if (code != null && code.isNotEmpty) {
+      return CurrencyRates.currencyForCountry(code);
+    }
+    return 'BBD';
   }
 
   SubscriptionPackage? _selected(List<SubscriptionPackage> packages) {
@@ -299,6 +314,7 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
     final selected = _selected(packages)!;
     final eligible = _eligibility?.isEligible ?? true;
     final primaryLabel = eligible ? 'Start Free Trial' : 'Subscribe';
+    final currency = _resolveCurrency();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
@@ -339,7 +355,7 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
                         .bodySmall
                         ?.copyWith(color: AppColors.muted)),
                 DropdownButton<String>(
-                  value: _displayCurrency,
+                  value: currency,
                   isDense: true,
                   underline: const SizedBox.shrink(),
                   items: [
@@ -378,7 +394,7 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
               child: PricingCard(
                 package: packages[i],
                 selected: packages[i].id == selected.id,
-                priceText: _priceFor(packages[i]),
+                priceText: _priceFor(packages[i], currency),
                 onTap: () => setState(() => _selectedId = packages[i].id),
               ),
             ),

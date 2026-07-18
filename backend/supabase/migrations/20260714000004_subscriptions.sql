@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS public.subscription_packages (
   tagline              TEXT,                       -- short description
   features             TEXT[] NOT NULL DEFAULT '{}',
   price_amount         NUMERIC(10, 2),             -- display/fallback price
-  currency             TEXT NOT NULL DEFAULT 'USD',
+  currency             TEXT NOT NULL DEFAULT 'BBD',
   billing_period       TEXT NOT NULL DEFAULT 'monthly'
                          CHECK (billing_period IN ('monthly','annual','weekly','once','trial')),
   trial_days           INT NOT NULL DEFAULT 14,
@@ -158,7 +158,7 @@ SELECT * FROM (VALUES
    ARRAY['WhatsApp booking integration','Business profile & booking link',
          'Up to 5 services with prices & durations','Smart booking calendar',
          'Manual bookings from DMs, calls & walk-ins'],
-   10.00::numeric, 'USD', 'monthly', false, 1,
+   10.00::numeric, 'BBD', 'monthly', false, 1,
    'com.shorisolutions.shoribook.sidehustle.monthly',
    'com.shorisolutions.shoribook.sidehustle.monthly'),
   ('Solo Pro',
@@ -167,7 +167,7 @@ SELECT * FROM (VALUES
          'Deposits & no-show protection','Client database with history & notes',
          'QR code & social booking links','Marketplace listing',
          'Reports - bookings, revenue, top services'],
-   30.00::numeric, 'USD', 'monthly', true, 2,
+   30.00::numeric, 'BBD', 'monthly', true, 2,
    'com.shorisolutions.shoribook.solopro.monthly',
    'com.shorisolutions.shoribook.solopro.monthly'),
   ('Squad',
@@ -175,7 +175,7 @@ SELECT * FROM (VALUES
    ARRAY['Everything in Solo Pro, plus','Up to 5 staff members',
          'Per-staff schedules & availability','Clients can book a specific staff member',
          'Top-staff reporting'],
-   50.00::numeric, 'USD', 'monthly', false, 3,
+   50.00::numeric, 'BBD', 'monthly', false, 3,
    'com.shorisolutions.shoribook.squad.monthly',
    'com.shorisolutions.shoribook.squad.monthly')
 ) AS v(name, tagline, features, price_amount, currency, billing_period, is_popular, sort_order,

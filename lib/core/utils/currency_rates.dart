@@ -1,11 +1,13 @@
 /// Display-only currency conversion for subscription prices. Prices are
-/// stored in USD; this converts to a chosen currency for display. These are
+/// stored in BBD; this converts to a chosen currency for display. These are
 /// approximate estimates — the real charge for a paid plan comes from the
 /// App Store / Play in the store's own localized currency at purchase.
 class CurrencyRates {
   const CurrencyRates._();
 
-  /// Supported display currencies: code → (label, symbol, USD→currency rate).
+  /// Supported currencies: code → (label, symbol, USD→currency rate).
+  /// [rate] is how many of this currency equal 1 USD, used as a cross-rate
+  /// so any currency can convert to any other.
   static const Map<String, ({String label, String symbol, double rate})>
       currencies = {
     'USD': (label: 'US Dollar', symbol: r'$', rate: 1.0),
@@ -37,11 +39,18 @@ class CurrencyRates {
 
   static bool isSupported(String code) => currencies.containsKey(code);
 
-  /// Formats a USD amount in [currency], e.g. 10.0 → "$10.00" / "Bds$20.00".
-  static String format(double usdAmount, String currency) {
-    final c = currencies[currency] ?? currencies['USD']!;
-    final v = usdAmount * c.rate;
-    final whole = v >= 1000 || currency == 'JMD' || currency == 'GYD';
+  static double _rate(String code) => currencies[code]?.rate ?? 1.0;
+
+  /// Converts [amount] from one currency to another via a USD cross-rate.
+  static double convert(double amount, String from, String to) =>
+      (amount / _rate(from)) * _rate(to);
+
+  /// Formats [amount] (given in [from]) shown in [to], e.g. 10 BBD → "$5.00"
+  /// (USD) or "£3.95" (GBP). Defaults the base to BBD.
+  static String format(double amount, String to, {String from = 'BBD'}) {
+    final v = convert(amount, from, to);
+    final c = currencies[to] ?? currencies['BBD']!;
+    final whole = v >= 1000 || to == 'JMD' || to == 'GYD';
     final n = whole ? _withCommas(v.round()) : v.toStringAsFixed(2);
     return '${c.symbol}$n';
   }

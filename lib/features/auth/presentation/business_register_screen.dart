@@ -292,8 +292,8 @@ class _PlansPreview extends ConsumerWidget {
       'once' => '',
       _ => '/mo',
     };
-    // Base prices are USD; the modal lets them switch currency.
-    return '${CurrencyRates.format(p.priceAmount!, 'USD')} $per';
+    // Shown in the stored base currency (BBD); the modal lets them convert.
+    return '${CurrencyRates.format(p.priceAmount!, p.currency, from: p.currency)} $per';
   }
 
   @override
