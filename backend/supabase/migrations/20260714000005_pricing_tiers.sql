@@ -22,7 +22,7 @@ VALUES
          'Up to 5 services with prices & durations',
          'Smart booking calendar',
          'Manual bookings from DMs, calls & walk-ins'],
-   10.00, 'BBD', 'monthly', false, 1,
+   10.00, 'USD', 'monthly', false, 1,
    'com.shorisolutions.shoribook.sidehustle.monthly',
    'com.shorisolutions.shoribook.sidehustle.monthly'),
 
@@ -35,7 +35,7 @@ VALUES
          'QR code & social booking links',
          'Marketplace listing',
          'Reports - bookings, revenue, top services'],
-   30.00, 'BBD', 'monthly', true, 2,
+   30.00, 'USD', 'monthly', true, 2,
    'com.shorisolutions.shoribook.solopro.monthly',
    'com.shorisolutions.shoribook.solopro.monthly'),
 
@@ -46,6 +46,6 @@ VALUES
          'Per-staff schedules & availability',
          'Clients can book a specific staff member',
          'Top-staff reporting'],
-   50.00, 'BBD', 'monthly', false, 3,
+   50.00, 'USD', 'monthly', false, 3,
    'com.shorisolutions.shoribook.squad.monthly',
    'com.shorisolutions.shoribook.squad.monthly');

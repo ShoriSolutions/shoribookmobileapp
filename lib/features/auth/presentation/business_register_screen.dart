@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/currency_rates.dart';
 import '../../../core/utils/password_policy.dart';
 import '../../../core/widgets/password_requirements.dart';
 import '../../../models/subscription_package.dart';
@@ -285,17 +286,14 @@ class _PlansPreview extends ConsumerWidget {
 
   String _price(SubscriptionPackage p) {
     if (p.priceAmount == null) return '';
-    final amount = p.priceAmount!;
-    final n = amount == amount.roundToDouble()
-        ? amount.toStringAsFixed(0)
-        : amount.toStringAsFixed(2);
     final per = switch (p.billingPeriod) {
       'annual' => '/yr',
       'weekly' => '/wk',
       'once' => '',
       _ => '/mo',
     };
-    return '${p.currency} $n $per';
+    // Base prices are USD; the modal lets them switch currency.
+    return '${CurrencyRates.format(p.priceAmount!, 'USD')} $per';
   }
 
   @override

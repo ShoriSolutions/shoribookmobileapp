@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/currency_rates.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../models/subscription_package.dart';
 import '../../../models/trial_eligibility.dart';
@@ -46,6 +47,7 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
   Map<String, ProductDetails> _products = {};
   bool _productsRequested = false;
   String? _selectedId;
+  String _displayCurrency = 'USD';
   bool _busy = false;
   String? _successMessage;
   StreamSubscription<List<PurchaseDetails>>? _purchaseSub;
@@ -103,9 +105,10 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
     final repo = ref.read(subscriptionRepositoryProvider);
     final storeId = repo.storeProductId(p);
     final product = storeId == null ? null : _products[storeId];
-    if (product != null) return product.price; // localized store price
+    if (product != null) return product.price; // real, store-localized price
     if (p.priceAmount != null) {
-      return '${p.currency} ${p.priceAmount!.toStringAsFixed(2)}';
+      // DB base is USD; convert for display to the chosen currency.
+      return CurrencyRates.format(p.priceAmount!, _displayCurrency);
     }
     return '—';
   }
@@ -325,7 +328,36 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
           ),
           const SizedBox(height: 14),
           const Center(child: TrialBadge()),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
+          Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Show prices in ',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: AppColors.muted)),
+                DropdownButton<String>(
+                  value: _displayCurrency,
+                  isDense: true,
+                  underline: const SizedBox.shrink(),
+                  items: [
+                    for (final e in CurrencyRates.currencies.entries)
+                      DropdownMenuItem(
+                        value: e.key,
+                        child: Text('${e.key} (${e.value.symbol})',
+                            style: Theme.of(context).textTheme.bodySmall),
+                      ),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) setState(() => _displayCurrency = v);
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
 
           // Feature summary for the selected plan
           Container(
