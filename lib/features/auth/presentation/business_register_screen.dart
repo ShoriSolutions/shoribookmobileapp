@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/location/address_form.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_rates.dart';
 import '../../../core/utils/password_policy.dart';
+import '../../../models/address.dart';
 import '../../../core/widgets/password_requirements.dart';
 import '../../../models/subscription_package.dart';
 import '../../subscription/application/subscription_providers.dart';
@@ -33,6 +35,7 @@ class _BusinessRegisterScreenState
   bool _obscurePassword = true;
   bool _acceptedTerms = false;
   String? _checkEmailMessage;
+  Address _address = const Address();
 
   @override
   void dispose() {
@@ -54,6 +57,7 @@ class _BusinessRegisterScreenState
           category: _category ?? 'other',
           email: _email.text.trim(),
           password: _password.text,
+          address: _address.isEmpty ? null : _address,
         );
     if (result == null || !mounted) return; // error surfaced via AsyncValue
     if (!result.sessionActive) {
@@ -205,6 +209,21 @@ class _BusinessRegisterScreenState
             decoration: const InputDecoration(labelText: 'Confirm password'),
             validator: (v) =>
                 v != _password.text ? 'Passwords do not match' : null,
+          ),
+          const SizedBox(height: 24),
+          Text('Business location',
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 2),
+          Text(
+            'So customers can find you on the map and nearby search. You can '
+            'change it anytime.',
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: AppColors.muted),
+          ),
+          const SizedBox(height: 12),
+          AddressForm(
+            streetLabel: 'Business address (optional)',
+            onChanged: (a) => _address = a,
           ),
           if (registerState.hasError) ...[
             const SizedBox(height: 12),

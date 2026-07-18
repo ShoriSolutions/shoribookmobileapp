@@ -105,20 +105,32 @@ class AuthRepository {
     required String fullName,
     required String businessName,
     required String category,
+    Address? address,
   }) async {
     try {
-      final response = await _client.auth.signUp(
-        email: email,
-        password: password,
-        data: {
-          'full_name': fullName,
-          'role': 'entrepreneur',
-          'pending_business_name': businessName,
-          'pending_business_category': category,
-          'terms_accepted_at': DateTime.now().toUtc().toIso8601String(),
-          'terms_version': SupportContent.termsVersion,
-        },
-      );
+      final data = <String, dynamic>{
+        'full_name': fullName,
+        'role': 'entrepreneur',
+        'pending_business_name': businessName,
+        'pending_business_category': category,
+        'terms_accepted_at': DateTime.now().toUtc().toIso8601String(),
+        'terms_version': SupportContent.termsVersion,
+      };
+      // Applied to the business by register_business() on first login.
+      if (address != null && !address.isEmpty) {
+        data['pending_business_address'] = {
+          'country_code': address.countryCode,
+          'country_name': address.countryName,
+          'admin_area': address.adminArea,
+          'city': address.city,
+          'postal_code': address.postalCode,
+          'address': address.street,
+          'latitude': address.latitude,
+          'longitude': address.longitude,
+        };
+      }
+      final response =
+          await _client.auth.signUp(email: email, password: password, data: data);
       return response.session != null;
     } catch (e) {
       throw AppException.from(e);

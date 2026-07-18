@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../models/address.dart';
 import '../../app_mode/application/app_mode_provider.dart';
 import '../../business_context/application/active_business_provider.dart';
 import 'auth_providers.dart';
@@ -20,6 +21,7 @@ class BusinessRegisterController extends AsyncNotifier<void> {
     required String category,
     required String email,
     required String password,
+    Address? address,
   }) async {
     state = const AsyncLoading();
     try {
@@ -30,6 +32,7 @@ class BusinessRegisterController extends AsyncNotifier<void> {
         fullName: fullName,
         businessName: businessName,
         category: category,
+        address: address,
       );
 
       if (sessionActive) {
