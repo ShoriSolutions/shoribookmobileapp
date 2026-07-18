@@ -38,6 +38,7 @@ class RoutePaths {
   static const support = '/support';
   static const deleteAccount = '/delete-account';
   static const settings = '/settings';
+  static const subscriptionRequired = '/subscription-required';
 
   static String clientDetail(String id) => '/clients/$id';
   static String clientEdit(String id) => '/clients/$id/edit';

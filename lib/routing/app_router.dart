@@ -30,6 +30,7 @@ import '../features/clients/presentation/client_form_screen.dart';
 import '../features/clients/presentation/clients_list_screen.dart';
 import '../features/customer_booking/presentation/booking_wizard_screen.dart';
 import '../features/customer_profile/presentation/customer_profile_edit_screen.dart';
+import '../features/subscription/presentation/subscription_required_screen.dart';
 import '../features/customer_profile/presentation/customer_profile_screen.dart';
 import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/deposits/presentation/deposits_list_screen.dart';
@@ -224,6 +225,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           // the destination genuinely isn't known yet.
           return (loc == RoutePaths.splash ||
                   loc == RoutePaths.setPassword ||
+                  loc == RoutePaths.subscriptionRequired ||
                   _isOwnerModePath(loc))
               ? null
               : RoutePaths.splash;
@@ -235,10 +237,20 @@ final routerProvider = Provider<GoRouter>((ref) {
               ? null
               : RoutePaths.noBusiness;
         }
+        // Access gate: no dashboard without an active trial or paid plan.
+        // While locked, only the subscription-required screen (and a
+        // password set from a deep link) are reachable.
+        if (!membership.business.hasActiveAccess) {
+          return (loc == RoutePaths.subscriptionRequired ||
+                  loc == RoutePaths.setPassword)
+              ? null
+              : RoutePaths.subscriptionRequired;
+        }
         if (loc == RoutePaths.splash ||
             loc == RoutePaths.noBusiness ||
             loc == RoutePaths.setPassword ||
-            loc == RoutePaths.createBusiness) {
+            loc == RoutePaths.createBusiness ||
+            loc == RoutePaths.subscriptionRequired) {
           return RoutePaths.home;
         }
         if (_isCustomerModePath(loc)) {
@@ -311,6 +323,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.unsupportedRole,
         builder: (c, s) => const UnsupportedRoleScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.subscriptionRequired,
+        builder: (c, s) => const SubscriptionRequiredScreen(),
       ),
 
       // ── Business Owner/Staff shell ──────────────────────────────────────

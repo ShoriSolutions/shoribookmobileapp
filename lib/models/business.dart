@@ -29,6 +29,7 @@ class Business {
   final int? maxSimultaneousBookings;
   // 'none' | 'trialing' | 'trial_pending' | 'active' | 'past_due' | 'canceled'
   final String subscriptionStatus;
+  final DateTime? trialEndsAt;
   final DateTime? nameCategoryLockedUntil;
   final String status;
   final List<String> badges;
@@ -66,6 +67,7 @@ class Business {
     this.maxBookingsPerHour,
     this.maxSimultaneousBookings,
     this.subscriptionStatus = 'none',
+    this.trialEndsAt,
     this.nameCategoryLockedUntil,
     required this.status,
     required this.badges,
@@ -73,6 +75,24 @@ class Business {
     required this.createdAt,
     required this.updatedAt,
   });
+
+  /// Whether the business can use the paid app right now: an active paid
+  /// subscription, or a trial that hasn't expired yet. 'none' (never
+  /// trialed) and an expired trial both count as no access.
+  bool get hasActiveAccess {
+    if (subscriptionStatus == 'active') return true;
+    if (subscriptionStatus == 'trialing') {
+      final ends = trialEndsAt;
+      return ends != null && ends.isAfter(DateTime.now());
+    }
+    return false;
+  }
+
+  /// True once a trial was started but has now run out (and not converted).
+  bool get trialExpired =>
+      subscriptionStatus == 'trialing' &&
+      trialEndsAt != null &&
+      !trialEndsAt!.isAfter(DateTime.now());
 
   factory Business.fromJson(Map<String, dynamic> json) => Business(
     id: json['id'] as String,
@@ -104,6 +124,9 @@ class Business {
     maxBookingsPerHour: json['max_bookings_per_hour'] as int?,
     maxSimultaneousBookings: json['max_simultaneous_bookings'] as int?,
     subscriptionStatus: json['subscription_status'] as String? ?? 'none',
+    trialEndsAt: json['trial_ends_at'] == null
+        ? null
+        : DateTime.parse(json['trial_ends_at'] as String),
     nameCategoryLockedUntil: json['name_category_locked_until'] == null
         ? null
         : DateTime.parse(json['name_category_locked_until'] as String),
@@ -150,6 +173,7 @@ class Business {
     'max_bookings_per_hour': maxBookingsPerHour,
     'max_simultaneous_bookings': maxSimultaneousBookings,
     'subscription_status': subscriptionStatus,
+    'trial_ends_at': trialEndsAt?.toIso8601String(),
     'name_category_locked_until': nameCategoryLockedUntil?.toIso8601String(),
     'status': status,
     'badges': badges,
