@@ -190,6 +190,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         return RoutePaths.discover;
       }
 
+      // Password recovery in progress — keep the user on the Set-password
+      // screen until they've chosen a new one (otherwise the role-based
+      // redirect below would bounce them to their home first).
+      if (ref.read(passwordRecoveryProvider)) {
+        return loc == RoutePaths.setPassword ? null : RoutePaths.setPassword;
+      }
+
       // authenticated — resolve which mode this account uses before
       // deciding anything else.
       final profileAsync = ref.read(myProfileProvider);
@@ -553,6 +560,7 @@ class GoRouterRefreshNotifier extends ChangeNotifier {
     ref.listen(authStatusProvider, (_, __) => notifyListeners());
     ref.listen(myProfileProvider, (_, __) => notifyListeners());
     ref.listen(activeMembershipProvider, (_, __) => notifyListeners());
+    ref.listen(passwordRecoveryProvider, (_, __) => notifyListeners());
     // Hold the branded splash for a minimum moment on cold start so its
     // fade-in can play fully even when auth resolves instantly. Fires one
     // redirect re-evaluation when the window elapses.

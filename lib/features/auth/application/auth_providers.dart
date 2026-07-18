@@ -13,6 +13,12 @@ final authStateChangesProvider = StreamProvider<AuthState>((ref) {
   return ref.watch(authRepositoryProvider).onAuthStateChange;
 });
 
+/// True from the moment a password-recovery deep link signs the user in
+/// until they've set a new password. While true, the router pins them to
+/// the Set-password screen (otherwise the normal role redirect would bounce
+/// them to their home before they can change it).
+final passwordRecoveryProvider = StateProvider<bool>((ref) => false);
+
 enum AuthStatus { unknown, unauthenticated, authenticated }
 
 /// Derived, synchronously-readable auth status for the router guard.

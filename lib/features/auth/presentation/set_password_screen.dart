@@ -39,6 +39,8 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
       final authRepo = ref.read(authRepositoryProvider);
       await authRepo.updatePassword(_passwordController.text);
       await authRepo.markMembershipActive();
+      // Recovery finished — let the router route to the normal home now.
+      ref.read(passwordRecoveryProvider.notifier).state = false;
       if (mounted) {
         showAppSnackBar(context, message: 'Password set. Welcome!');
       }

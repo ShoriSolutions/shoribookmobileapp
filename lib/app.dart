@@ -22,7 +22,12 @@ class ShoriBooksApp extends ConsumerWidget {
     ref.listen(authStateChangesProvider, (previous, next) {
       final event = next.valueOrNull?.event;
       if (event == AuthChangeEvent.passwordRecovery) {
+        // Pin to Set-password until the new password is saved, so the
+        // role-based redirect can't bounce them to their home first.
+        ref.read(passwordRecoveryProvider.notifier).state = true;
         router.go(RoutePaths.setPassword);
+      } else if (event == AuthChangeEvent.signedOut) {
+        ref.read(passwordRecoveryProvider.notifier).state = false;
       }
     });
 
