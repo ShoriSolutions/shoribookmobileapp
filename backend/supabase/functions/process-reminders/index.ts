@@ -1,24 +1,18 @@
 // ============================================================================
-// process-reminders — Supabase Edge Function (skeleton)
+// process-reminders — Supabase Edge Function
 //
 // Runs on a schedule (cron, e.g. every minute) and dispatches due reminders.
 // It is the ONLY place notifications are sent; the booking workflow just
 // enqueues rows in reminder_queue (see 20260714000000_reminder_system.sql).
 //
-// Deploy:   supabase functions deploy process-reminders
-// Schedule: create a cron that invokes this function every minute, e.g. via
-//           pg_cron + net.http_post, or Supabase scheduled functions.
+// Deploy:   supabase functions deploy process-reminders --no-verify-jwt
+// Secrets:  supabase secrets set RESEND_API_KEY=... EMAIL_FROM="ShoriBooks <noreply@yourdomain>"
+//           (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are provided automatically)
+// Schedule: a cron (pg_cron + net.http_post) that invokes it every minute.
 //
-// Secrets (Edge Function env — NEVER in the DB or in Flutter):
-//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-//   PUSH_* , EMAIL_* , and the WhatsApp provider creds, e.g.
-//   WHATSAPP_PROVIDER=meta_cloud|twilio|360dialog and that provider's tokens.
-//
-// WhatsApp: OFFICIAL WhatsApp Business Platform ONLY (Meta Cloud API / Twilio /
-// 360dialog). Never personal accounts, unofficial/reverse-engineered APIs, or
-// browser automation. If a business has no connected official account, the
-// 'whatsapp' channel is simply never enqueued (see generate_reminders), so we
-// won't receive rows for it here.
+// Email is implemented via Resend. Push (FCM/APNs) and the OFFICIAL WhatsApp
+// Business Platform remain stubs until those providers are configured; email
+// is the fallback so reminders still go out.
 // ============================================================================
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -26,40 +20,68 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const BATCH_SIZE = 100;
 const MAX_RETRIES = 3;
 
-// ── Provider abstraction ────────────────────────────────────────────────────
-// Booking logic never calls these directly. Add a provider by implementing
-// this interface and registering it below — no change to booking code.
 interface NotificationProvider {
   readonly channel: "push" | "email" | "whatsapp" | "sms";
-  send(to: Recipient, message: string): Promise<SendResult>;
+  send(to: Recipient, subject: string, message: string): Promise<SendResult>;
 }
 interface Recipient { userId: string | null; email?: string; phone?: string; }
 interface SendResult { ok: boolean; providerStatus?: string; error?: string; }
 
-// TODO: implement each provider against your chosen service (env-configured).
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// ── Resend email ────────────────────────────────────────────────────────────
+async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+): Promise<SendResult> {
+  const key = Deno.env.get("RESEND_API_KEY");
+  if (!key) return { ok: false, error: "RESEND_API_KEY not set" };
+  const from = Deno.env.get("EMAIL_FROM") ??
+    "ShoriBooks <noreply@shorisolutions.com>";
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ from, to, subject, html }),
+    });
+    if (r.ok) return { ok: true, providerStatus: String(r.status) };
+    return { ok: false, error: `resend ${r.status}: ${await r.text()}` };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
 const pushProvider: NotificationProvider = {
   channel: "push",
-  async send(_to, _message) {
+  async send(_to, _subject, _message) {
     // TODO: send via FCM/APNs using stored device tokens.
     return { ok: false, error: "push provider not configured" };
   },
 };
 const emailProvider: NotificationProvider = {
   channel: "email",
-  async send(_to, _message) {
-    // TODO: send via your email provider (Resend/SendGrid/SES…).
-    return { ok: false, error: "email provider not configured" };
+  async send(to, subject, message) {
+    if (!to.email) return { ok: false, error: "no email address" };
+    return sendEmail(to.email, subject, `<p>${escapeHtml(message)}</p>`);
   },
 };
 const whatsappProvider: NotificationProvider = {
   channel: "whatsapp",
-  async send(_to, _message) {
-    // TODO: send via the OFFICIAL WhatsApp Business Platform provider selected
-    // in env (Meta Cloud API / Twilio / 360dialog). Official APIs only.
+  async send(_to, _subject, _message) {
+    // TODO: OFFICIAL WhatsApp Business Platform only (Meta Cloud / Twilio /
+    // 360dialog). Official APIs only.
     return { ok: false, error: "whatsapp provider not connected" };
   },
 };
-// SMS: architecture only for the MVP.
 const providers: Record<string, NotificationProvider> = {
   push: pushProvider,
   email: emailProvider,
@@ -74,6 +96,11 @@ const FALLBACK: Record<string, string[]> = {
   sms: ["push", "email"],
 };
 
+const DEFAULT_TEMPLATE =
+  "Hi {{customer_name}}, this is a reminder of your {{service_name}} " +
+  "appointment with {{business_name}} on {{date}} at {{time}}. " +
+  "Ref: {{booking_reference}}";
+
 function renderTemplate(tpl: string, ctx: Record<string, string>): string {
   return tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => ctx[k] ?? "");
 }
@@ -84,7 +111,6 @@ Deno.serve(async () => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  // Due, still-pending reminders under the retry cap.
   const { data: due, error } = await supabase
     .from("reminder_queue")
     .select("id, booking_id, business_id, user_id, channel, retry_count")
@@ -95,31 +121,86 @@ Deno.serve(async () => {
     .limit(BATCH_SIZE);
   if (error) return new Response(error.message, { status: 500 });
 
+  const settingsCache = new Map<string, { reminder_template?: string } | null>();
+  async function settingsFor(businessId: string) {
+    if (settingsCache.has(businessId)) return settingsCache.get(businessId);
+    const { data } = await supabase
+      .from("notification_settings")
+      .select("reminder_template")
+      .eq("business_id", businessId)
+      .maybeSingle();
+    settingsCache.set(businessId, data);
+    return data;
+  }
+
   let processed = 0;
   for (const row of due ?? []) {
-    // TODO: fetch booking + business + customer + service + staff, build the
-    // placeholder context and the recipient, then render the template:
-    //   const message = renderTemplate(tpl, ctx);
-    const ctx: Record<string, string> = {};
-    const message = renderTemplate("", ctx);
-    const recipient: Recipient = { userId: row.user_id };
+    // Build the message + recipient from the appointment.
+    const { data: appt } = await supabase
+      .from("appointments")
+      .select(
+        "id, customer_name, customer_email, start_time, " +
+          "services(name), businesses(name, timezone)",
+      )
+      .eq("id", row.booking_id)
+      .maybeSingle();
 
-    // Try the requested channel, then fall back through enabled channels.
+    if (!appt) {
+      await supabase.from("reminder_queue").update({
+        status: "failed",
+        failed_at: new Date().toISOString(),
+        error_message: "appointment not found",
+      }).eq("id", row.id);
+      processed++;
+      continue;
+    }
+
+    // deno-lint-ignore no-explicit-any
+    const a = appt as any;
+    const tz = a.businesses?.timezone ?? "America/Barbados";
+    const start = new Date(a.start_time);
+    const date = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    }).format(start);
+    const time = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(start);
+
+    const settings = await settingsFor(row.business_id);
+    const tpl = settings?.reminder_template ?? DEFAULT_TEMPLATE;
+    const message = renderTemplate(tpl, {
+      customer_name: a.customer_name ?? "there",
+      service_name: a.services?.name ?? "appointment",
+      business_name: a.businesses?.name ?? "us",
+      date,
+      time,
+      booking_reference: String(a.id).slice(0, 8).toUpperCase(),
+    });
+    const subject = `Reminder: ${a.services?.name ?? "appointment"} at ` +
+      `${a.businesses?.name ?? "your appointment"}`;
+    const recipient: Recipient = {
+      userId: row.user_id,
+      email: a.customer_email ?? undefined,
+    };
+
     const order = [row.channel, ...(FALLBACK[row.channel] ?? [])];
     let sent = false;
     let lastError = "";
     for (const ch of order) {
       const provider = providers[ch];
       if (!provider) continue;
-      const res = await provider.send(recipient, message);
+      const res = await provider.send(recipient, subject, message);
       if (res.ok) {
         await supabase.from("reminder_queue").update({
           status: "sent",
           sent_at: new Date().toISOString(),
-          channel: ch, // record the channel that actually delivered it
+          channel: ch,
         }).eq("id", row.id);
-        // TODO (fallback audit): if ch !== row.channel, also insert a row
-        // recording the fallback attempt.
         sent = true;
         break;
       }
@@ -142,6 +223,3 @@ Deno.serve(async () => {
     headers: { "content-type": "application/json" },
   });
 });
-
-// Delivery/read receipts: register a separate webhook Edge Function with each
-// provider to flip status → 'delivered' / 'read' as callbacks arrive.

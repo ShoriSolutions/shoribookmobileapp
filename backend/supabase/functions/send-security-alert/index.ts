@@ -23,19 +23,24 @@ interface EmailResult {
   error?: string;
 }
 
-// TODO: implement against your chosen provider (env-configured).
+// Sends via Resend. Set RESEND_API_KEY (and optionally SECURITY_FROM_EMAIL).
 async function sendEmail(to: string, subject: string, body: string): Promise<EmailResult> {
-  const provider = Deno.env.get("EMAIL_PROVIDER");
-  if (!provider) return { ok: false, error: "email provider not configured" };
-  // e.g. Resend:
-  //   const r = await fetch("https://api.resend.com/emails", {
-  //     method: "POST",
-  //     headers: { Authorization: `Bearer ${Deno.env.get("RESEND_API_KEY")}`,
-  //                "Content-Type": "application/json" },
-  //     body: JSON.stringify({ from: FROM, to, subject, html: body }),
-  //   });
-  //   return { ok: r.ok, error: r.ok ? undefined : await r.text() };
-  return { ok: false, error: `provider ${provider} not implemented` };
+  const key = Deno.env.get("RESEND_API_KEY");
+  if (!key) return { ok: false, error: "RESEND_API_KEY not set" };
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ from: FROM, to, subject, html: body }),
+    });
+    if (r.ok) return { ok: true };
+    return { ok: false, error: `resend ${r.status}: ${await r.text()}` };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
 }
 
 function alertEmail(email: string): { subject: string; body: string } {
