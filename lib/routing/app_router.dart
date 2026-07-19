@@ -31,6 +31,7 @@ import '../features/clients/presentation/clients_list_screen.dart';
 import '../features/customer_booking/presentation/booking_wizard_screen.dart';
 import '../features/customer_profile/presentation/customer_profile_edit_screen.dart';
 import '../features/subscription/presentation/subscription_required_screen.dart';
+import '../features/subscription/presentation/trial_started_screen.dart';
 import '../features/customer_profile/presentation/customer_profile_screen.dart';
 import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/deposits/presentation/deposits_list_screen.dart';
@@ -106,6 +107,7 @@ bool _isOwnerModePath(String path) {
       path.startsWith('/preview-business/') ||
       path == RoutePaths.settings ||
       path == RoutePaths.noBusiness ||
+      path == RoutePaths.trialStarted ||
       path == RoutePaths.createBusiness;
 }
 
@@ -358,6 +360,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.subscriptionRequired,
         builder: (c, s) => const SubscriptionRequiredScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.trialStarted,
+        builder: (c, s) => const TrialStartedScreen(),
       ),
 
       // ── Business Owner/Staff shell ──────────────────────────────────────

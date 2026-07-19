@@ -34,8 +34,10 @@ class _SubscriptionRequiredScreenState
           await ref.read(subscriptionRepositoryProvider).startTrial(businessId);
       if (!mounted) return;
       if (res.status == TrialStatus.trialing) {
-        // Access granted — the router reroutes to the dashboard.
+        // Access granted — refresh access, then show the trial-started
+        // confirmation (V03) before the dashboard.
         ref.invalidate(activeMembershipProvider);
+        if (mounted) context.go(RoutePaths.trialStarted);
       } else {
         showAppSnackBar(context, message: res.message);
       }

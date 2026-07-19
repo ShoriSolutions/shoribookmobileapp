@@ -225,6 +225,30 @@ class _BusinessRegisterScreenState
             streetLabel: 'Business address (optional)',
             onChanged: (a) => _address = a,
           ),
+          const SizedBox(height: 16),
+          // V01 · the category/name 90-day lock note, surfaced up front.
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.sageLight,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.sageTintBorder),
+            ),
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.lock_outline, size: 18, color: AppColors.sageDark),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Your name & category lock for 90 days after setup to keep '
+                    'marketplace listings stable.',
+                    style: TextStyle(fontSize: 13, color: AppColors.sageDark),
+                  ),
+                ),
+              ],
+            ),
+          ),
           if (registerState.hasError) ...[
             const SizedBox(height: 12),
             Text(
