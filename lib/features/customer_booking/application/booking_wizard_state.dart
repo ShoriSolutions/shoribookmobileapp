@@ -1,7 +1,11 @@
 import '../../../models/service.dart';
 import '../../../models/staff_profile.dart';
 
-enum BookingWizardStep { service, staff, date, time, details, review, confirmation }
+/// The booking flow, collapsed to match the marketplace redesign:
+/// [service] (skipped when opened onto a chosen service) →
+/// [schedule] (pro + date + time on one screen, C05) →
+/// [confirm] (guest details + summary, C06) → [confirmation] (C07).
+enum BookingWizardStep { service, schedule, confirm, confirmation }
 
 class BookingWizardState {
   final BookingWizardStep step;
@@ -50,6 +54,13 @@ class BookingWizardState {
   bool get canContinueFromDetails =>
       firstName.trim().isNotEmpty && phone.trim().isNotEmpty;
 
+  /// C05 → C06: a date and time must be chosen (pro defaults to "Any").
+  bool get canContinueFromSchedule =>
+      selectedDate != null && selectedTime != null;
+
+  /// C06: guest name + phone entered and the cancellation policy accepted.
+  bool get canConfirm => canContinueFromDetails && policyAccepted;
+
   BookingWizardState copyWith({
     BookingWizardStep? step,
     Service? selectedService,
@@ -57,6 +68,7 @@ class BookingWizardState {
     bool clearSelectedStaff = false,
     DateTime? selectedDate,
     String? selectedTime,
+    bool clearSelectedTime = false,
     String? firstName,
     String? lastName,
     String? phone,
@@ -78,7 +90,8 @@ class BookingWizardState {
       selectedStaff:
           clearSelectedStaff ? null : (selectedStaff ?? this.selectedStaff),
       selectedDate: selectedDate ?? this.selectedDate,
-      selectedTime: selectedTime ?? this.selectedTime,
+      selectedTime:
+          clearSelectedTime ? null : (selectedTime ?? this.selectedTime),
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       phone: phone ?? this.phone,

@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/calendar_export.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/date_time_formatters.dart';
 import '../../../core/utils/input_hints.dart';
 import '../../../core/utils/timezone_offsets.dart';
 import '../../../core/widgets/error_retry_view.dart';
@@ -14,229 +13,268 @@ import '../../../models/staff_profile.dart';
 import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../marketplace/application/marketplace_providers.dart';
+import '../../marketplace/presentation/widgets/category_visuals.dart';
 import '../application/booking_wizard_controller.dart';
 import '../application/booking_wizard_state.dart';
 
 const _cancellationPolicyText =
-    "We require at least 24 hours' notice to cancel or reschedule. "
-    "Cancellations with less than 24 hours' notice, or no-shows, may "
-    "result in a charge of up to 50% of the scheduled service fee. By "
-    "confirming your booking, you agree to this policy.";
+    "24 hours' notice to cancel or reschedule; late cancellations or "
+    'no-shows may be charged.';
 
-class BookingWizardScreen extends ConsumerWidget {
+/// The customer booking flow: service picker → C05 schedule (pro/date/time)
+/// → C06 confirm (guest-first) → C07 confirmed. Driven by one wizard
+/// controller keyed by business slug.
+class BookingWizardScreen extends ConsumerStatefulWidget {
   final String slug;
 
-  const BookingWizardScreen({super.key, required this.slug});
+  /// When set, the flow opens straight onto C05 with this service chosen
+  /// (tap-to-book from a business profile). Null starts on the picker.
+  final String? initialServiceId;
+
+  const BookingWizardScreen({
+    super.key,
+    required this.slug,
+    this.initialServiceId,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final profileAsync = ref.watch(businessProfileProvider(slug));
-    final wizardState = ref.watch(bookingWizardControllerProvider(slug));
+  ConsumerState<BookingWizardScreen> createState() =>
+      _BookingWizardScreenState();
+}
+
+class _BookingWizardScreenState extends ConsumerState<BookingWizardScreen> {
+  /// Whether the initial-service preselect has been scheduled and resolved
+  /// (once resolved we never re-run it — "Book another" legitimately clears
+  /// the service and should land on the picker, not re-preselect).
+  bool _preselectScheduled = false;
+  bool _preselectResolved = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final profileAsync = ref.watch(businessProfileProvider(widget.slug));
+    final state = ref.watch(bookingWizardControllerProvider(widget.slug));
+    final controller =
+        ref.read(bookingWizardControllerProvider(widget.slug).notifier);
 
     return Scaffold(
-      appBar: AppBar(
-        leading: wizardState.step != BookingWizardStep.service &&
-                wizardState.step != BookingWizardStep.confirmation
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => ref
-                    .read(bookingWizardControllerProvider(slug).notifier)
-                    .backOneStep(),
-              )
-            : null,
-        title: Text(_stepTitle(wizardState.step)),
-      ),
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, st) => ErrorRetryView(
-          message: 'Could not load this business.',
-          onRetry: () => ref.invalidate(businessProfileProvider(slug)),
+        error: (err, st) => Center(
+          child: ErrorRetryView(
+            message: 'Could not load this business.',
+            onRetry: () =>
+                ref.invalidate(businessProfileProvider(widget.slug)),
+          ),
         ),
         data: (data) {
           if (data == null) {
             return const Center(child: Text('Business not found'));
           }
-          switch (wizardState.step) {
+
+          // Open straight onto the chosen service, once.
+          if (!_preselectScheduled && widget.initialServiceId != null) {
+            _preselectScheduled = true;
+            final match = data.services
+                .where((s) => s.id == widget.initialServiceId)
+                .toList();
+            if (match.isNotEmpty) {
+              WidgetsBinding.instance.addPostFrameCallback(
+                  (_) => controller.selectService(match.first));
+            } else {
+              _preselectResolved = true; // bad id → fall through to picker
+            }
+          }
+          if (state.selectedService != null) _preselectResolved = true;
+
+          // Hide the one-frame flash of the picker while the preselect runs.
+          if (_preselectScheduled && !_preselectResolved) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          switch (state.step) {
             case BookingWizardStep.service:
-              return _ServiceStep(slug: slug, services: data.services);
-            case BookingWizardStep.staff:
-              return _StaffStep(
-                slug: slug,
-                allStaff: data.staff,
-                assignedStaffIds:
-                    data.serviceStaffLinks[wizardState.selectedService?.id],
-              );
-            case BookingWizardStep.date:
-              return _DateStep(slug: slug);
-            case BookingWizardStep.time:
-              return _TimeStep(slug: slug);
-            case BookingWizardStep.details:
-              return _DetailsStep(slug: slug);
-            case BookingWizardStep.review:
-              return _ReviewStep(
-                slug: slug,
-                currency: data.business.currency,
-                businessName: data.business.name,
-              );
+              return _ServicePicker(slug: widget.slug, services: data.services);
+            case BookingWizardStep.schedule:
+              return _ScheduleScreen(slug: widget.slug, data: data);
+            case BookingWizardStep.confirm:
+              return _ConfirmScreen(slug: widget.slug, data: data);
             case BookingWizardStep.confirmation:
-              return _ConfirmationStep(
-                slug: slug,
-                businessName: data.business.name,
-                businessAddress: data.business.address,
-                timezone: data.business.timezone,
-              );
+              return _ConfirmedScreen(slug: widget.slug, data: data);
           }
         },
       ),
     );
   }
-
-  String _stepTitle(BookingWizardStep step) {
-    switch (step) {
-      case BookingWizardStep.service:
-        return 'Choose a service';
-      case BookingWizardStep.staff:
-        return 'Choose your pro';
-      case BookingWizardStep.date:
-        return 'Pick a date';
-      case BookingWizardStep.time:
-        return 'Choose a time';
-      case BookingWizardStep.details:
-        return 'Your details';
-      case BookingWizardStep.review:
-        return 'Review your booking';
-      case BookingWizardStep.confirmation:
-        return 'Booking confirmed';
-    }
-  }
 }
 
-class _ServiceStep extends ConsumerWidget {
-  final String slug;
-  final List<Service> services;
+// ── Shared header ────────────────────────────────────────────────────────
 
-  const _ServiceStep({required this.slug, required this.services});
+class _PushHeader extends StatelessWidget {
+  const _PushHeader({required this.title, required this.onBack});
+  final String title;
+  final VoidCallback onBack;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (services.isEmpty) {
-      return const Center(child: Text('No services available for booking.'));
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: services.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, i) {
-        final s = services[i];
-        return Card(
-          child: ListTile(
-            title: Text(s.name),
-            subtitle: Text(
-              '${s.durationMinutes} min'
-              '${s.depositRequired ? ' · deposit required' : ''}',
-            ),
-            trailing: Text(
-              formatCurrency(s.price, s.currency),
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                color: AppColors.sageDark,
-              ),
-            ),
-            onTap: () => ref
-                .read(bookingWizardControllerProvider(slug).notifier)
-                .selectService(s),
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 20, 8),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.ink),
+            onPressed: onBack,
           ),
-        );
-      },
+          const SizedBox(width: 4),
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink)),
+        ],
+      ),
     );
   }
 }
 
-class _StaffStep extends ConsumerWidget {
-  final String slug;
-  final List<StaffProfile> allStaff;
-  final Set<String>? assignedStaffIds;
-
-  const _StaffStep({
-    required this.slug,
-    required this.allStaff,
-    required this.assignedStaffIds,
+/// Sticky terracotta footer with a primary action and an optional summary
+/// line, matching C05/C06.
+class _StickyFooter extends StatelessWidget {
+  const _StickyFooter({
+    required this.label,
+    required this.onPressed,
+    this.summary,
+    this.busy = false,
   });
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final eligible = (assignedStaffIds == null || assignedStaffIds!.isEmpty)
-        ? allStaff.where((s) => s.isBookable)
-        : allStaff.where(
-            (s) => s.isBookable && assignedStaffIds!.contains(s.id),
-          );
+  final String label;
+  final VoidCallback? onPressed;
+  final String? summary;
+  final bool busy;
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Card(
-          child: ListTile(
-            leading: const CircleAvatar(
-              backgroundColor: AppColors.sageLight,
-              child: Text('✦'),
-            ),
-            title: const Text('Any Available Pro'),
-            subtitle: const Text("We'll assign someone for your chosen time"),
-            onTap: () => ref
-                .read(bookingWizardControllerProvider(slug).notifier)
-                .selectStaff(null),
-          ),
-        ),
-        const SizedBox(height: 8),
-        for (final s in eligible)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Card(
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: AppColors.sageLight,
-                  foregroundColor: AppColors.sageDark,
-                  backgroundImage: s.profileImageUrl != null
-                      ? NetworkImage(s.profileImageUrl!)
-                      : null,
-                  child: s.profileImageUrl == null
-                      ? Text(s.name.isNotEmpty ? s.name[0].toUpperCase() : '?')
-                      : null,
-                ),
-                title: Text(s.name),
-                subtitle: s.role != null ? Text(s.role!) : null,
-                onTap: () => ref
-                    .read(bookingWizardControllerProvider(slug).notifier)
-                    .selectStaff(s),
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.cream,
+        boxShadow: [
+          BoxShadow(
+              color: Color(0x0D1E1B16), blurRadius: 18, offset: Offset(0, -6)),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: 54,
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: busy ? null : onPressed,
+                child: busy
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : Text(label,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w700)),
               ),
             ),
-          ),
-      ],
+            if (summary != null) ...[
+              const SizedBox(height: 8),
+              Text(summary!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.muted)),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _DateStep extends ConsumerWidget {
-  final String slug;
+/// The service summary card at the top of C05 / C06.
+class _ServiceSummaryCard extends StatelessWidget {
+  const _ServiceSummaryCard({
+    required this.service,
+    required this.businessName,
+    required this.category,
+    this.onChange,
+  });
 
-  const _DateStep({required this.slug});
+  final Service service;
+  final String businessName;
+  final String? category;
+  final VoidCallback? onChange;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final now = DateTime.now();
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
+  Widget build(BuildContext context) {
+    final visual = CategoryVisual.of(category);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.parchment),
+      ),
+      child: Row(
         children: [
-          Expanded(
-            child: CalendarDatePicker(
-              initialDate: now,
-              firstDate: now.subtract(const Duration(days: 0)),
-              lastDate: now.add(const Duration(days: 90)),
-              onDateChanged: (date) => ref
-                  .read(bookingWizardControllerProvider(slug).notifier)
-                  .selectDate(date),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              gradient: visual.gradient,
+              borderRadius: BorderRadius.circular(12),
             ),
+            child: Icon(visual.icon, color: Colors.white, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(service.name,
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink)),
+                const SizedBox(height: 2),
+                Text('${service.durationMinutes} min · $businessName',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 13, color: AppColors.muted)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(formatCurrency(service.price, service.currency),
+                  style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.sageDark)),
+              if (onChange != null)
+                GestureDetector(
+                  onTap: onChange,
+                  child: const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: Text('Change',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.sageDark)),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -244,106 +282,520 @@ class _DateStep extends ConsumerWidget {
   }
 }
 
-class _TimeStep extends ConsumerWidget {
-  final String slug;
+// ── Service picker (entry when no service preselected) ────────────────────
 
-  const _TimeStep({required this.slug});
+class _ServicePicker extends ConsumerWidget {
+  const _ServicePicker({required this.slug, required this.services});
+  final String slug;
+  final List<Service> services;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final wizardState = ref.watch(bookingWizardControllerProvider(slug));
-    final service = wizardState.selectedService;
-    final date = wizardState.selectedDate;
-    if (service == null || date == null) {
-      return const Center(child: Text('Select a service and date first'));
-    }
-
-    final slotsAsync = ref.watch(
-      availableSlotsProvider((
-        slug: slug,
-        serviceId: service.id,
-        staffId: wizardState.selectedStaff?.id,
-        date: date,
-      )),
+    final controller = ref.read(bookingWizardControllerProvider(slug).notifier);
+    return SafeArea(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _PushHeader(title: 'Choose a service', onBack: () => context.pop()),
+          Expanded(
+            child: services.isEmpty
+                ? const Center(child: Text('No services available for booking.'))
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                    itemCount: services.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (c, i) {
+                      final s = services[i];
+                      return _ServiceRowTile(
+                        service: s,
+                        onTap: () => controller.selectService(s),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
+  }
+}
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: slotsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, st) => ErrorRetryView(
-          message: 'Could not load available times.',
-          onRetry: () => ref.invalidate(
-            availableSlotsProvider((
-              slug: slug,
-              serviceId: service.id,
-              staffId: wizardState.selectedStaff?.id,
-              date: date,
-            )),
+class _ServiceRowTile extends StatelessWidget {
+  const _ServiceRowTile({required this.service, required this.onTap});
+  final Service service;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.parchment),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(service.name,
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink)),
+                    const SizedBox(height: 2),
+                    Text('${service.durationMinutes} min'
+                        '${service.depositRequired ? ' · deposit' : ''}',
+                        style: const TextStyle(
+                            fontSize: 13, color: AppColors.muted)),
+                  ],
+                ),
+              ),
+              Text(formatCurrency(service.price, service.currency),
+                  style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.sageDark)),
+              const SizedBox(width: 6),
+              const Icon(Icons.chevron_right, color: AppColors.faint),
+            ],
           ),
         ),
-        data: (slots) {
-          if (slots.isEmpty) {
-            return const Center(
-              child: Text(
-                'No times available for this date.\nTry a different date or pro.',
-                textAlign: TextAlign.center,
-              ),
-            );
-          }
-          return GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: 2.2,
-            ),
-            itemCount: slots.length,
-            itemBuilder: (context, i) {
-              final slot = slots[i];
-              final selected = slot.startTime == wizardState.selectedTime;
-              return OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: selected ? AppColors.sage : null,
-                  foregroundColor: selected ? Colors.white : AppColors.ink,
+      ),
+    );
+  }
+}
+
+// ── C05 · Pro, date & time ────────────────────────────────────────────────
+
+class _ScheduleScreen extends ConsumerWidget {
+  const _ScheduleScreen({required this.slug, required this.data});
+  final String slug;
+  final BusinessProfileData data;
+
+  static const _avatarColors = [
+    (bg: AppColors.sage, fg: Colors.white),
+    (bg: AppColors.terracotta, fg: Colors.white),
+    (bg: AppColors.shoriBlue, fg: AppColors.ink),
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(bookingWizardControllerProvider(slug));
+    final controller = ref.read(bookingWizardControllerProvider(slug).notifier);
+    final service = state.selectedService;
+    if (service == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Eligible pros: those linked to this service (or all bookable if the
+    // service has no explicit links), mirroring availability logic.
+    final assigned = data.serviceStaffLinks[service.id];
+    final eligible = (assigned == null || assigned.isEmpty)
+        ? data.staff.where((s) => s.isBookable).toList()
+        : data.staff
+            .where((s) => s.isBookable && assigned.contains(s.id))
+            .toList();
+
+    return SafeArea(
+      child: Column(
+        children: [
+          _PushHeader(title: 'Book', onBack: () => context.pop()),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+              children: [
+                _ServiceSummaryCard(
+                  service: service,
+                  businessName: data.business.name,
+                  category: data.business.category,
+                  onChange: () => controller.changeService(),
                 ),
-                onPressed: () => ref
-                    .read(bookingWizardControllerProvider(slug).notifier)
-                    .selectTime(slot.startTime),
-                child: Text(_formatTime(slot.startTime)),
-              );
-            },
+                const SizedBox(height: 24),
+                const _SectionLabel('Choose your pro'),
+                const SizedBox(height: 12),
+                _ProRow(
+                  slug: slug,
+                  eligible: eligible,
+                  selectedId: state.selectedStaff?.id,
+                  colors: _avatarColors,
+                ),
+                const SizedBox(height: 24),
+                const _SectionLabel('Pick a date'),
+                const SizedBox(height: 12),
+                _DateRow(slug: slug, data: data),
+                const SizedBox(height: 24),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    const _SectionLabel('Available times'),
+                    const SizedBox(width: 8),
+                    if (state.selectedDate != null)
+                      Text(DateFormat('EEE, d MMM').format(state.selectedDate!),
+                          style: const TextStyle(
+                              fontSize: 13.5, color: AppColors.muted)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _TimesGrid(slug: slug, data: data),
+              ],
+            ),
+          ),
+          _StickyFooter(
+            label: 'Continue',
+            onPressed: state.canContinueFromSchedule
+                ? () => controller.continueToConfirm()
+                : null,
+            summary: _footerSummary(state),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String? _footerSummary(BookingWizardState state) {
+    if (state.selectedDate == null || state.selectedTime == null) return null;
+    final who = state.selectedStaff?.name ?? 'any pro';
+    return '${DateFormat('EEE, d MMM').format(state.selectedDate!)} · '
+        '${_fmtTime(state.selectedTime!)} · with $who';
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(text,
+        style: const TextStyle(
+            fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.ink));
+  }
+}
+
+class _ProRow extends ConsumerWidget {
+  const _ProRow({
+    required this.slug,
+    required this.eligible,
+    required this.selectedId,
+    required this.colors,
+  });
+
+  final String slug;
+  final List<StaffProfile> eligible;
+  final String? selectedId;
+  final List<({Color bg, Color fg})> colors;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.read(bookingWizardControllerProvider(slug).notifier);
+    return SizedBox(
+      height: 92,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _ProAvatar(
+            label: 'Any',
+            selected: selectedId == null,
+            background: AppColors.sageLight,
+            onTap: () => controller.selectStaff(null),
+            child: const Icon(Icons.groups_outlined,
+                color: AppColors.sageDark, size: 26),
+          ),
+          for (var i = 0; i < eligible.length; i++)
+            _ProAvatar(
+              label: eligible[i].name,
+              selected: selectedId == eligible[i].id,
+              background: colors[i % colors.length].bg,
+              onTap: () => controller.selectStaff(eligible[i]),
+              child: Text(
+                eligible[i].name.isNotEmpty
+                    ? eligible[i].name[0].toUpperCase()
+                    : '?',
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: colors[i % colors.length].fg),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProAvatar extends StatelessWidget {
+  const _ProAvatar({
+    required this.label,
+    required this.selected,
+    required this.child,
+    required this.background,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final Widget child;
+  final Color background;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 14),
+        child: Column(
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: background,
+                    shape: BoxShape.circle,
+                    border: selected
+                        ? Border.all(color: AppColors.sage, width: 2.5)
+                        : null,
+                  ),
+                  child: child,
+                ),
+                if (selected)
+                  Positioned(
+                    right: -2,
+                    bottom: -2,
+                    child: Container(
+                      width: 20,
+                      height: 20,
+                      decoration: const BoxDecoration(
+                        color: AppColors.sage,
+                        shape: BoxShape.circle,
+                        border: Border.fromBorderSide(
+                            BorderSide(color: AppColors.cream, width: 2)),
+                      ),
+                      child: const Icon(Icons.check,
+                          size: 12, color: Colors.white),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            SizedBox(
+              width: 64,
+              child: Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      color: selected ? AppColors.ink : AppColors.muted)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DateRow extends ConsumerWidget {
+  const _DateRow({required this.slug, required this.data});
+  final String slug;
+  final BusinessProfileData data;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(bookingWizardControllerProvider(slug));
+    final controller = ref.read(bookingWizardControllerProvider(slug).notifier);
+    final today = DateTime.now();
+    final base = DateTime(today.year, today.month, today.day);
+
+    return SizedBox(
+      height: 66,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: 14,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (c, i) {
+          final date = base.add(Duration(days: i));
+          final selected = state.selectedDate != null &&
+              _sameDay(state.selectedDate!, date);
+          final available = _dayIsOpen(date);
+          return _DateChip(
+            date: date,
+            selected: selected,
+            available: available,
+            onTap: available ? () => controller.selectDate(date) : null,
           );
         },
       ),
     );
   }
 
-  String _formatTime(String hhmm) {
-    final parts = hhmm.split(':');
-    final h = int.parse(parts[0]);
-    final ampm = h >= 12 ? 'PM' : 'AM';
-    final hour = h % 12 == 0 ? 12 : h % 12;
-    return '$hour:${parts[1]} $ampm';
+  bool _dayIsOpen(DateTime date) {
+    if (data.hours.isEmpty) return true; // unknown → let the times grid decide
+    final dow = date.weekday % 7; // 0=Sun..6=Sat
+    final entry = data.hours.where((h) => h.dayOfWeek == dow);
+    if (entry.isEmpty) return false;
+    return !entry.first.isClosed;
   }
 }
 
-class _DetailsStep extends ConsumerStatefulWidget {
-  final String slug;
+class _DateChip extends StatelessWidget {
+  const _DateChip({
+    required this.date,
+    required this.selected,
+    required this.available,
+    required this.onTap,
+  });
 
-  const _DetailsStep({required this.slug});
+  final DateTime date;
+  final bool selected;
+  final bool available;
+  final VoidCallback? onTap;
 
   @override
-  ConsumerState<_DetailsStep> createState() => _DetailsStepState();
+  Widget build(BuildContext context) {
+    final fg = selected
+        ? Colors.white
+        : (available ? AppColors.ink : AppColors.faint);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 52,
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.sage
+              : (available ? AppColors.white : AppColors.fieldMuted),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+              color: selected ? AppColors.sage : AppColors.parchment),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(DateFormat('EEE').format(date),
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? Colors.white70 : AppColors.muted)),
+            const SizedBox(height: 2),
+            Text('${date.day}',
+                style: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.w800, color: fg)),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _DetailsStepState extends ConsumerState<_DetailsStep> {
+class _TimesGrid extends ConsumerWidget {
+  const _TimesGrid({required this.slug, required this.data});
+  final String slug;
+  final BusinessProfileData data;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(bookingWizardControllerProvider(slug));
+    final controller = ref.read(bookingWizardControllerProvider(slug).notifier);
+    final service = state.selectedService;
+    final date = state.selectedDate;
+    if (service == null || date == null) {
+      return const Text('Pick a date to see available times.',
+          style: TextStyle(color: AppColors.muted));
+    }
+
+    final args = (
+      slug: slug,
+      serviceId: service.id,
+      staffId: state.selectedStaff?.id,
+      date: date,
+    );
+    final slotsAsync = ref.watch(availableSlotsProvider(args));
+
+    return slotsAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (err, st) => ErrorRetryView(
+        message: 'Could not load available times.',
+        onRetry: () => ref.invalidate(availableSlotsProvider(args)),
+      ),
+      data: (slots) {
+        if (slots.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Text(
+              'No times available for this date.\nTry a different date or pro.',
+              style: TextStyle(color: AppColors.muted),
+            ),
+          );
+        }
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 2.4,
+          ),
+          itemCount: slots.length,
+          itemBuilder: (c, i) {
+            final slot = slots[i];
+            final selected = slot.startTime == state.selectedTime;
+            return GestureDetector(
+              onTap: () => controller.selectTime(slot.startTime),
+              child: Container(
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: selected ? AppColors.sage : AppColors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: selected ? AppColors.sage : AppColors.parchment),
+                ),
+                child: Text(_fmtTime(slot.startTime),
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: selected ? Colors.white : AppColors.ink)),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+// ── C06 · Confirm — guest-first ───────────────────────────────────────────
+
+class _ConfirmScreen extends ConsumerStatefulWidget {
+  const _ConfirmScreen({required this.slug, required this.data});
+  final String slug;
+  final BusinessProfileData data;
+
+  @override
+  ConsumerState<_ConfirmScreen> createState() => _ConfirmScreenState();
+}
+
+class _ConfirmScreenState extends ConsumerState<_ConfirmScreen> {
   late final TextEditingController _firstName;
   late final TextEditingController _lastName;
   late final TextEditingController _phone;
   late final TextEditingController _whatsapp;
-  late final TextEditingController _email;
-  late final TextEditingController _notes;
 
   @override
   void initState() {
@@ -353,8 +805,6 @@ class _DetailsStepState extends ConsumerState<_DetailsStep> {
     _lastName = TextEditingController(text: s.lastName);
     _phone = TextEditingController(text: s.phone);
     _whatsapp = TextEditingController(text: s.whatsapp);
-    _email = TextEditingController(text: s.email);
-    _notes = TextEditingController(text: s.notes);
   }
 
   @override
@@ -363,309 +813,338 @@ class _DetailsStepState extends ConsumerState<_DetailsStep> {
     _lastName.dispose();
     _phone.dispose();
     _whatsapp.dispose();
-    _email.dispose();
-    _notes.dispose();
     super.dispose();
+  }
+
+  Future<void> _confirm() async {
+    final controller =
+        ref.read(bookingWizardControllerProvider(widget.slug).notifier);
+    await controller.submit();
   }
 
   @override
   Widget build(BuildContext context) {
-    final controller = ref.read(bookingWizardControllerProvider(widget.slug).notifier);
     final state = ref.watch(bookingWizardControllerProvider(widget.slug));
-
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _firstName,
-                    decoration: const InputDecoration(labelText: 'First name'),
-                    onChanged: (v) => controller.updateDetails(firstName: v),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    controller: _lastName,
-                    decoration: const InputDecoration(
-                      labelText: 'Last name',
-                    ),
-                    onChanged: (v) => controller.updateDetails(lastName: v),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _phone,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Phone number',
-                hintText: kPhoneHint,
-              ),
-              onChanged: (v) => controller.updateDetails(phone: v),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _whatsapp,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'WhatsApp (optional, same as phone if blank)',
-                hintText: kWhatsAppHint,
-              ),
-              onChanged: (v) => controller.updateDetails(whatsapp: v),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _email,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email (optional)'),
-              onChanged: (v) => controller.updateDetails(email: v),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _notes,
-              decoration: const InputDecoration(
-                labelText: 'Notes (optional)',
-              ),
-              minLines: 2,
-              maxLines: 4,
-              onChanged: (v) => controller.updateDetails(notes: v),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed:
-                    state.canContinueFromDetails ? controller.continueToReview : null,
-                child: const Text('Continue to review'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// A guest's checkout choice: book without an account, or sign in first.
-enum _CheckoutChoice { guest, login }
-
-class _ReviewStep extends ConsumerWidget {
-  final String slug;
-  final String currency;
-  final String businessName;
-
-  const _ReviewStep({
-    required this.slug,
-    required this.currency,
-    required this.businessName,
-  });
-
-  Future<void> _confirm(BuildContext context, WidgetRef ref) async {
-    // Customers can book without an account. Signed-in customers confirm
-    // straight away; guests get a quick choice (book as guest, or log in
-    // for history/faster booking — optional, never required).
-    if (ref.read(authStatusProvider) != AuthStatus.authenticated) {
-      final choice = await _showGuestOptions(context);
-      if (choice == null) return; // dismissed
-      if (choice == _CheckoutChoice.login) {
-        if (context.mounted) context.push(RoutePaths.login);
-        return;
-      }
-      // guest → fall through and submit
-    }
-    await ref.read(bookingWizardControllerProvider(slug).notifier).submit();
-  }
-
-  Future<_CheckoutChoice?> _showGuestOptions(BuildContext context) {
-    return showModalBottomSheet<_CheckoutChoice>(
-      context: context,
-      showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Almost done',
-                  style: Theme.of(ctx).textTheme.titleLarge),
-              const SizedBox(height: 4),
-              Text(
-                "No account needed — we'll send your confirmation to the "
-                'contact details you entered.',
-                style: Theme.of(ctx)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: AppColors.muted),
-              ),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(ctx, _CheckoutChoice.guest),
-                child: const Text('Continue as guest'),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: () => Navigator.pop(ctx, _CheckoutChoice.login),
-                child: const Text('Log in or create an account'),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'An account saves your details, booking history and favourites.',
-                textAlign: TextAlign.center,
-                style: Theme.of(ctx)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: AppColors.muted),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(bookingWizardControllerProvider(slug));
+    final controller =
+        ref.read(bookingWizardControllerProvider(widget.slug).notifier);
     final service = state.selectedService;
-    final staff = state.selectedStaff;
     final date = state.selectedDate;
     final time = state.selectedTime;
     if (service == null || date == null || time == null) {
       return const Center(child: Text('Missing booking details'));
     }
+    final business = widget.data.business;
 
-    final deposit = service.effectiveDepositAmount;
-
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _row('✦', service.name,
-                        sub: formatCurrency(service.price, service.currency)),
-                    _row('◈', staff?.name ?? 'Any Available Pro'),
-                    _row('📅', DateTimeFormatters.fullDate(date.toUtc(), 'UTC')),
-                    _row('🕐', time),
-                    const Divider(height: 24),
-                    _row('○', '${state.firstName} ${state.lastName}'.trim(),
-                        sub: state.phone),
-                    if (state.email.isNotEmpty) _row('@', state.email),
-                    if (state.notes.isNotEmpty) _row('✎', state.notes),
-                  ],
-                ),
-              ),
-            ),
-            if (service.depositRequired && deposit != null) ...[
+    return Column(
+      children: [
+        SafeArea(
+          bottom: false,
+          child: _PushHeader(
+            title: 'Confirm booking',
+            onBack: () => controller.goToStep(BookingWizardStep.schedule),
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+            children: [
+              _summaryCard(context, service, business.name, date, time,
+                  state.selectedStaff?.name, business.address),
+              const SizedBox(height: 20),
+              const Text('Your details',
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink)),
               const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFFDE68A)),
-                ),
-                child: Text(
-                  'Deposit required: ${formatCurrency(deposit, currency)}. Your '
-                  'booking will be held as pending until the deposit is paid; '
-                  '$businessName will contact you to arrange payment.',
-                  style: const TextStyle(color: Color(0xFF92400E), fontSize: 13),
-                ),
-              ),
-            ],
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.sageLight,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
-                  const Text(
-                    'Cancellation Policy',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                  Expanded(
+                    child: _Field(
+                      label: 'First name',
+                      controller: _firstName,
+                      onChanged: (v) =>
+                          controller.updateDetails(firstName: v),
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    _cancellationPolicyText,
-                    style: TextStyle(fontSize: 12, color: AppColors.muted),
-                  ),
-                  const SizedBox(height: 8),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    value: state.policyAccepted,
-                    onChanged: (v) => ref
-                        .read(bookingWizardControllerProvider(slug).notifier)
-                        .setPolicyAccepted(v ?? false),
-                    title: const Text(
-                      'I accept the cancellation and no-show policy',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _Field(
+                      label: 'Last name',
+                      controller: _lastName,
+                      onChanged: (v) => controller.updateDetails(lastName: v),
                     ),
                   ),
                 ],
               ),
-            ),
-            if (state.phoneConflict) ...[
               const SizedBox(height: 12),
-              const Text(
-                'This phone number is linked to a different account at this '
-                'business. Please use a different number.',
-                style: TextStyle(color: AppColors.danger),
+              _Field(
+                label: 'Phone',
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                hint: kPhoneHint,
+                onChanged: (v) => controller.updateDetails(phone: v),
+              ),
+              const SizedBox(height: 12),
+              _Field(
+                label: 'WhatsApp · optional, same as phone if blank',
+                controller: _whatsapp,
+                keyboardType: TextInputType.phone,
+                hint: kWhatsAppHint,
+                onChanged: (v) => controller.updateDetails(whatsapp: v),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline,
+                      size: 18, color: AppColors.sage),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "No account needed — we'll send your confirmation and a "
+                      'reminder by text.',
+                      style: const TextStyle(
+                          fontSize: 13.5, color: AppColors.muted),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              _dividerLabel('or save your details'),
+              const SizedBox(height: 14),
+              _socialRow(context),
+              const SizedBox(height: 16),
+              _policyCard(state.policyAccepted,
+                  (v) => controller.setPolicyAccepted(v)),
+              if (service.depositRequired &&
+                  service.effectiveDepositAmount != null) ...[
+                const SizedBox(height: 12),
+                _depositNote(service, business.currency, business.name),
+              ],
+              if (state.phoneConflict) ...[
+                const SizedBox(height: 12),
+                const Text(
+                  'This phone number is linked to a different account at this '
+                  'business. Please use a different number.',
+                  style: TextStyle(color: AppColors.danger),
+                ),
+              ],
+              if (state.conflictMessage != null) ...[
+                const SizedBox(height: 12),
+                Text(state.conflictMessage!,
+                    style: const TextStyle(color: AppColors.danger)),
+              ],
+              if (state.errorMessage != null) ...[
+                const SizedBox(height: 12),
+                Text(state.errorMessage!,
+                    style: const TextStyle(color: AppColors.danger)),
+              ],
+            ],
+          ),
+        ),
+        _StickyFooter(
+          label:
+              'Confirm booking · ${formatCurrency(service.price, business.currency)}',
+          busy: state.isSubmitting,
+          onPressed: state.canConfirm ? _confirm : null,
+        ),
+      ],
+    );
+  }
+
+  Widget _summaryCard(
+    BuildContext context,
+    Service service,
+    String businessName,
+    DateTime date,
+    String time,
+    String? proName,
+    String? address,
+  ) {
+    final visual = CategoryVisual.of(widget.data.business.category);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.parchment),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: visual.gradient,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(visual.icon, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(businessName,
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.ink)),
+                    const SizedBox(height: 2),
+                    Text('${service.name} · ${service.durationMinutes} min',
+                        style: const TextStyle(
+                            fontSize: 13, color: AppColors.muted)),
+                  ],
+                ),
               ),
             ],
-            if (state.conflictMessage != null) ...[
-              const SizedBox(height: 12),
-              Text(state.conflictMessage!,
-                  style: const TextStyle(color: AppColors.danger)),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 14),
+            child: Divider(color: AppColors.divider, height: 1),
+          ),
+          _summaryRow(Icons.calendar_today_outlined,
+              '${DateFormat('EEE, d MMM').format(date)} · ${_fmtTime(time)}'),
+          const SizedBox(height: 10),
+          _summaryRow(Icons.person_outline, 'with ${proName ?? 'any pro'}'),
+          if ((address ?? '').isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _summaryRow(Icons.location_on_outlined, address!),
+          ],
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 14),
+            child: Divider(color: AppColors.divider, height: 1),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Total · pay in person',
+                  style: TextStyle(fontSize: 14, color: AppColors.muted)),
+              Text(formatCurrency(service.price, service.currency),
+                  style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink)),
             ],
-            if (state.errorMessage != null) ...[
-              const SizedBox(height: 12),
-              Text(state.errorMessage!,
-                  style: const TextStyle(color: AppColors.danger)),
-            ],
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: state.isSubmitting || !state.policyAccepted
-                    ? null
-                    : () => _confirm(context, ref),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: service.depositRequired
-                      ? AppColors.terracotta
-                      : AppColors.sage,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryRow(IconData icon, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: AppColors.sage),
+        const SizedBox(width: 10),
+        Expanded(
+            child: Text(text,
+                style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.ink))),
+      ],
+    );
+  }
+
+  Widget _dividerLabel(String text) {
+    return Row(
+      children: [
+        const Expanded(child: Divider(color: AppColors.parchment)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(text,
+              style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+        ),
+        const Expanded(child: Divider(color: AppColors.parchment)),
+      ],
+    );
+  }
+
+  Widget _socialRow(BuildContext context) {
+    Widget tile(IconData icon, String label, Color color) {
+      return Expanded(
+        child: GestureDetector(
+          onTap: () => context.push(RoutePaths.login),
+          child: Container(
+            height: 62,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.parchment),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 20, color: color),
+                const SizedBox(height: 4),
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        tile(Icons.apple, 'Apple', AppColors.ink),
+        tile(Icons.g_mobiledata, 'Google', const Color(0xFF4285F4)),
+        tile(Icons.mail_outline, 'Email', AppColors.sageDark),
+        tile(Icons.smartphone, 'Phone', AppColors.ink),
+      ],
+    );
+  }
+
+  Widget _policyCard(bool accepted, ValueChanged<bool> onChanged) {
+    return GestureDetector(
+      onTap: () => onChanged(!accepted),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.sageLight,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.sageTintBorder),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: accepted ? AppColors.sage : AppColors.white,
+                borderRadius: BorderRadius.circular(7),
+                border: Border.all(
+                    color: accepted ? AppColors.sage : AppColors.parchment),
+              ),
+              child: accepted
+                  ? const Icon(Icons.check, size: 16, color: Colors.white)
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                        text: 'Cancellation policy — ',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, color: AppColors.ink)),
+                    TextSpan(
+                        text: '$_cancellationPolicyText I agree.',
+                        style: TextStyle(color: AppColors.muted)),
+                  ],
                 ),
-                child: state.isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Text(
-                        service.depositRequired
-                            ? 'Hold My Spot — Pay Deposit Later'
-                            : 'Confirm Booking',
-                      ),
+                style: TextStyle(fontSize: 13, height: 1.35),
               ),
             ),
           ],
@@ -674,47 +1153,66 @@ class _ReviewStep extends ConsumerWidget {
     );
   }
 
-  Widget _row(String icon, String label, {String? sub}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(width: 24, child: Text(icon)),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label),
-                if (sub != null)
-                  Text(
-                    sub,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.muted,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
+  Widget _depositNote(Service service, String currency, String businessName) {
+    final deposit = service.effectiveDepositAmount!;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.terracottaTint,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.terracottaTintBorder),
+      ),
+      child: Text(
+        'Deposit ${formatCurrency(deposit, currency)} — your booking is held '
+        'as pending until paid; $businessName will arrange payment.',
+        style: const TextStyle(fontSize: 13, color: AppColors.terracottaDeep),
       ),
     );
   }
 }
 
-class _ConfirmationStep extends ConsumerWidget {
-  final String slug;
-  final String businessName;
-  final String? businessAddress;
-  final String timezone;
-
-  const _ConfirmationStep({
-    required this.slug,
-    required this.businessName,
-    this.businessAddress,
-    required this.timezone,
+class _Field extends StatelessWidget {
+  const _Field({
+    required this.label,
+    required this.controller,
+    required this.onChanged,
+    this.keyboardType,
+    this.hint,
   });
+
+  final String label;
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+  final TextInputType? keyboardType;
+  final String? hint;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          onChanged: onChanged,
+          decoration: InputDecoration(hintText: hint),
+        ),
+      ],
+    );
+  }
+}
+
+// ── C07 · Confirmed ───────────────────────────────────────────────────────
+
+class _ConfirmedScreen extends ConsumerWidget {
+  const _ConfirmedScreen({required this.slug, required this.data});
+  final String slug;
+  final BusinessProfileData data;
 
   static String _isoDate(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-'
@@ -724,6 +1222,8 @@ class _ConfirmationStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(bookingWizardControllerProvider(slug));
+    final controller = ref.read(bookingWizardControllerProvider(slug).notifier);
+    final business = data.business;
     final service = state.selectedService;
     final date = state.selectedDate;
     final time = state.selectedTime;
@@ -732,144 +1232,233 @@ class _ConfirmationStep extends ConsumerWidget {
     final reference = (apptId != null && apptId.length >= 8)
         ? apptId.substring(0, 8).toUpperCase()
         : apptId?.toUpperCase();
-    final dateLabel =
-        date != null ? DateFormat('EEE, MMM d, y').format(date) : '';
+    final signedIn = ref.watch(authStatusProvider) == AuthStatus.authenticated;
 
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            // Success animation
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 550),
-              curve: Curves.elasticOut,
-              builder: (context, v, child) =>
-                  Transform.scale(scale: v, child: child),
-              child: Container(
-                width: 76,
-                height: 76,
-                decoration: const BoxDecoration(
-                    color: AppColors.sage, shape: BoxShape.circle),
-                child:
-                    const Icon(Icons.check_rounded, color: Colors.white, size: 42),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text('Booking confirmed',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 4),
-            Text(
-              'Your appointment with $businessName is booked.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: AppColors.muted),
-            ),
-            const SizedBox(height: 20),
-
-            // Details
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.parchment),
-              ),
-              child: Column(
-                children: [
-                  if (service != null)
-                    _DetailRow(Icons.spa_outlined, service.name),
-                  if (date != null && time != null)
-                    _DetailRow(Icons.event_outlined, '$dateLabel  ·  $time'),
-                  if (staff != null)
-                    _DetailRow(Icons.person_outline, staff.name),
-                  if (businessAddress != null && businessAddress!.isNotEmpty)
-                    _DetailRow(Icons.place_outlined, businessAddress!),
-                  if (reference != null)
-                    _DetailRow(Icons.confirmation_number_outlined,
-                        'Booking ref $reference'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Reminder info
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
               children: [
-                const Icon(Icons.notifications_none,
-                    size: 18, color: AppColors.muted),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    "We'll send a reminder before your appointment to the "
-                    'contact details you provided.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: AppColors.muted),
+                Center(
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 550),
+                    curve: Curves.elasticOut,
+                    builder: (c, v, child) =>
+                        Transform.scale(scale: v, child: child),
+                    child: Container(
+                      width: 92,
+                      height: 92,
+                      decoration: const BoxDecoration(
+                          color: AppColors.sage, shape: BoxShape.circle),
+                      child: const Icon(Icons.check,
+                          color: Colors.white, size: 48),
+                    ),
                   ),
+                ),
+                const SizedBox(height: 20),
+                const Text('Booking confirmed',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink)),
+                const SizedBox(height: 8),
+                Text(
+                  'Your appointment with ${business.name} is set. See you soon!',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 15, height: 1.4, color: AppColors.muted),
+                ),
+                const SizedBox(height: 24),
+                _detailsCard(service, staff, date, time, business.address,
+                    reference),
+                const SizedBox(height: 14),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.notifications_none,
+                        size: 18, color: AppColors.muted),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "We'll remind you before your appointment on the "
+                        'details you gave.',
+                        style: const TextStyle(
+                            fontSize: 13.5, color: AppColors.muted),
+                      ),
+                    ),
+                  ],
+                ),
+                if (!signedIn) ...[
+                  const SizedBox(height: 16),
+                  _signUpNudge(context),
+                ],
+                const SizedBox(height: 20),
+                _outlinedButton(
+                  icon: Icons.event_available_outlined,
+                  label: 'Add to calendar',
+                  onPressed: (service == null || date == null || time == null)
+                      ? null
+                      : () {
+                          final start = businessLocalToUtc(
+                            date: _isoDate(date),
+                            time: time,
+                            timezone: business.timezone,
+                          );
+                          final end = start.add(
+                              Duration(minutes: service.durationMinutes));
+                          addAppointmentToCalendar(
+                            title: '${service.name} at ${business.name}',
+                            startUtc: start,
+                            endUtc: end,
+                            location: business.address,
+                            description: reference != null
+                                ? 'Booking reference $reference'
+                                : null,
+                          );
+                        },
+                ),
+                const SizedBox(height: 10),
+                _outlinedButton(
+                  label: 'Book another',
+                  onPressed: () => controller.bookAnother(),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.event_available_outlined, size: 18),
-                label: const Text('Add to calendar'),
-                onPressed: (service == null || date == null || time == null)
-                    ? null
-                    : () {
-                        final start = businessLocalToUtc(
-                          date: _isoDate(date),
-                          time: time,
-                          timezone: timezone,
-                        );
-                        final end = start
-                            .add(Duration(minutes: service.durationMinutes));
-                        addAppointmentToCalendar(
-                          title: '${service.name} at $businessName',
-                          startUtc: start,
-                          endUtc: end,
-                          location: businessAddress,
-                          description: reference != null
-                              ? 'Booking reference $reference'
-                              : null,
-                        );
-                      },
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => ref
-                    .read(bookingWizardControllerProvider(slug).notifier)
-                    .bookAnother(),
-                child: const Text('Book another appointment'),
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
+          ),
+          SafeArea(
+            top: false,
+            minimum: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+            child: SizedBox(
+              height: 54,
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  final authed = ref.read(authStatusProvider) ==
-                      AuthStatus.authenticated;
-                  context.go(
-                      authed ? RoutePaths.bookings : RoutePaths.discover);
-                },
-                child: const Text('Done'),
+                onPressed: () => context.go(
+                    signedIn ? RoutePaths.bookings : RoutePaths.discover),
+                child: const Text('Done',
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w700)),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailsCard(
+    Service? service,
+    StaffProfile? staff,
+    DateTime? date,
+    String? time,
+    String? address,
+    String? reference,
+  ) {
+    final rows = <Widget>[
+      if (service != null)
+        _row(Icons.local_offer_outlined,
+            '${service.name} · with ${staff?.name ?? 'any pro'}'),
+      if (date != null && time != null)
+        _row(Icons.calendar_today_outlined,
+            '${DateFormat('EEE, d MMM').format(date)} · ${_fmtTime(time)}'),
+      if ((address ?? '').isNotEmpty)
+        _row(Icons.location_on_outlined, address!),
+      if (reference != null)
+        _row(Icons.confirmation_number_outlined, 'Booking ref\n$reference'),
+    ];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.parchment),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0) const Divider(color: AppColors.divider, height: 1),
+            rows[i],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _row(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: AppColors.sage),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(text,
+                style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.ink)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _signUpNudge(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.sageLight,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.bookmark_border, color: AppColors.shoriBlue),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text('Create an account to reschedule or cancel in a tap.',
+                style: TextStyle(fontSize: 14, color: AppColors.ink)),
+          ),
+          GestureDetector(
+            onTap: () => context.push(RoutePaths.customerRegister),
+            child: const Text('Sign up',
+                style: TextStyle(
+                    fontWeight: FontWeight.w800, color: AppColors.sageDark)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _outlinedButton({
+    IconData? icon,
+    required String label,
+    required VoidCallback? onPressed,
+  }) {
+    return SizedBox(
+      height: 52,
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          backgroundColor: AppColors.white,
+          side: const BorderSide(color: AppColors.parchment),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 18, color: AppColors.ink),
+              const SizedBox(width: 8),
+            ],
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.ink)),
           ],
         ),
       ),
@@ -877,25 +1466,15 @@ class _ConfirmationStep extends ConsumerWidget {
   }
 }
 
-class _DetailRow extends StatelessWidget {
-  const _DetailRow(this.icon, this.text);
-  final IconData icon;
-  final String text;
+// ── Helpers ───────────────────────────────────────────────────────────────
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: AppColors.sage),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
-          ),
-        ],
-      ),
-    );
-  }
+String _fmtTime(String hhmm) {
+  final parts = hhmm.split(':');
+  final h = int.parse(parts[0]);
+  final ampm = h >= 12 ? 'PM' : 'AM';
+  final hour = h % 12 == 0 ? 12 : h % 12;
+  return '$hour:${parts[1]} $ampm';
 }
+
+bool _sameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;

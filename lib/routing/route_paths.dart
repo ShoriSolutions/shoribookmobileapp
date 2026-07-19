@@ -57,5 +57,10 @@ class RoutePaths {
   /// Owner-only preview of their own public marketplace profile.
   static String previewBusiness(String slug) => '/preview-business/$slug';
   static String bookingWizard(String slug) => '/book/$slug';
+
+  /// Booking flow opened straight onto a chosen service (skips the
+  /// service-picker step) — used by the tap-to-book service rows.
+  static String bookingWizardService(String slug, String serviceId) =>
+      '/book/$slug?service=$serviceId';
   static String bookingDetail(String id) => '/bookings/$id';
 }

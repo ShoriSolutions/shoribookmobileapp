@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/supabase/supabase_providers.dart';
+import '../../../core/utils/open_now.dart';
 import '../../../models/availability_models.dart';
 import '../../../models/business.dart';
 import '../../../models/service.dart';
@@ -35,6 +36,26 @@ final searchResultsProvider = FutureProvider.autoDispose<List<Business>>((
   return ref
       .watch(marketplaceRepositoryProvider)
       .search(query: query, category: category);
+});
+
+/// Map of business id -> whether it's open right now, for the current
+/// search results. Only businesses whose open/closed state is known (they
+/// have hours on record) appear; callers hide the chip for the rest.
+/// Loaded separately from [searchResultsProvider] so the list paints
+/// immediately and the status chips fill in a moment later.
+final marketplaceOpenNowProvider =
+    FutureProvider.autoDispose<Map<String, bool>>((ref) async {
+  final businesses = await ref.watch(searchResultsProvider.future);
+  if (businesses.isEmpty) return const {};
+  final hoursByBiz = await ref
+      .watch(marketplaceRepositoryProvider)
+      .fetchHoursForBusinessIds(businesses.map((b) => b.id).toList());
+  final result = <String, bool>{};
+  for (final b in businesses) {
+    final open = isOpenNow(hoursByBiz[b.id] ?? const [], b.timezone);
+    if (open != null) result[b.id] = open;
+  }
+  return result;
 });
 
 class BusinessProfileData {

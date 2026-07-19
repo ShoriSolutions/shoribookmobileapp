@@ -8,21 +8,24 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/directions.dart';
-import '../../../core/utils/timezone_offsets.dart';
+import '../../../core/utils/open_now.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../core/widgets/osm_map.dart';
-import '../../../core/widgets/photo_viewer.dart';
-import '../../../models/availability_models.dart';
+import '../../../models/business.dart';
 import '../../../models/service.dart';
 import '../../../routing/route_paths.dart';
 import '../../favorites/presentation/widgets/favorite_button.dart';
 import '../application/marketplace_providers.dart';
+import 'widgets/category_visuals.dart';
 
+/// C04 · Business profile — booking-first: gradient hero, name + status
+/// chips, WhatsApp/Call, about, a tap-to-book services list and a sticky
+/// Book bar. Every service row jumps straight into the booking flow.
 class BusinessProfileScreen extends ConsumerWidget {
   final String slug;
 
   /// When true this is the owner previewing their own public page; the
-  /// "Book" action is disabled and a preview banner is shown.
+  /// booking actions are disabled and a preview banner is shown.
   final bool isPreview;
 
   const BusinessProfileScreen({
@@ -35,459 +38,412 @@ class BusinessProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dataAsync = ref.watch(businessProfileProvider(slug));
 
-    return Scaffold(
-      body: dataAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, st) => Center(
+    return dataAsync.when(
+      loading: () => const Scaffold(
+          body: Center(child: CircularProgressIndicator())),
+      error: (err, st) => Scaffold(
+        body: Center(
           child: ErrorRetryView(
             message: 'Could not load this business.',
             onRetry: () => ref.invalidate(businessProfileProvider(slug)),
           ),
         ),
-        data: (data) {
-          if (data == null) {
-            return const Center(child: Text('Business not found'));
-          }
-          final business = data.business;
-          final isOpenNow = _computeIsOpenNow(data.hours, business.timezone);
-          final hasCoords =
-              business.latitude != null && business.longitude != null;
+      ),
+      data: (data) {
+        if (data == null) {
+          return const Scaffold(body: Center(child: Text('Business not found')));
+        }
+        return _Loaded(slug: slug, data: data, isPreview: isPreview);
+      },
+    );
+  }
+}
 
-          return CustomScrollView(
-            slivers: [
-              SliverAppBar(
-                pinned: true,
-                expandedHeight: 200,
-                backgroundColor: AppColors.cream,
-                foregroundColor: AppColors.ink,
-                automaticallyImplyLeading: false,
-                leading: context.canPop()
-                    ? Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back),
-                          color: Colors.white,
-                          style: IconButton.styleFrom(
-                            backgroundColor: Colors.black38,
-                          ),
-                          onPressed: () => context.pop(),
-                        ),
-                      )
-                    : null,
-                actions: [
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: IconButton(
-                      icon: const Icon(Icons.share_outlined),
-                      color: Colors.white,
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.black38,
-                      ),
-                      onPressed: () => Share.share(
-                        'Check out ${business.name} on ShoriBooks: '
-                        'https://betterbooking.app/business/${business.slug}',
-                      ),
-                    ),
-                  ),
+class _Loaded extends StatelessWidget {
+  const _Loaded({
+    required this.slug,
+    required this.data,
+    required this.isPreview,
+  });
+
+  final String slug;
+  final BusinessProfileData data;
+  final bool isPreview;
+
+  @override
+  Widget build(BuildContext context) {
+    final business = data.business;
+    final visual = CategoryVisual.of(business.category);
+    final open = isOpenNow(data.hours, business.timezone);
+    final hasCoords =
+        business.latitude != null && business.longitude != null;
+    final canBook = !isPreview && business.bookingEnabled;
+    final minPrice = data.services.isEmpty
+        ? null
+        : data.services.map((s) => s.price).reduce((a, b) => a < b ? a : b);
+
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: [
+          _hero(context, business, visual),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(business.name,
+                      style: const TextStyle(
+                          fontSize: 23,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.ink)),
+                  const SizedBox(height: 10),
+                  _chips(business, open),
+                  const SizedBox(height: 16),
+                  _contactActions(business),
+                  if ((business.description ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Text(business.description!,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            height: 1.45,
+                            color: AppColors.muted)),
+                  ],
+                  if (isPreview) ...[
+                    const SizedBox(height: 16),
+                    _previewBanner(),
+                  ],
+                  const SizedBox(height: 20),
                 ],
-                flexibleSpace: FlexibleSpaceBar(
-                  background: business.coverImageUrl != null
-                      ? GestureDetector(
-                          onTap: () => openPhotoViewer(
-                              context, [business.coverImageUrl!]),
-                          child: CachedNetworkImage(
-                            imageUrl: business.coverImageUrl!,
-                            fit: BoxFit.cover,
-                          ),
-                        )
-                      : Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [AppColors.ink, AppColors.sageDark],
-                            ),
-                          ),
-                        ),
-                ),
               ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  business.name,
-                                  style: Theme.of(context).textTheme.headlineMedium,
-                                ),
-                                const SizedBox(height: 6),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 6,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  children: [
-                                    if (business.category != null)
-                                      _Pill(
-                                        label: business.category!.replaceAll(
-                                          '_',
-                                          ' ',
-                                        ),
-                                        color: AppColors.parchment,
-                                        textColor: AppColors.muted,
-                                      ),
-                                    _Pill(
-                                      label: isOpenNow ? 'Open now' : 'Closed',
-                                      color: isOpenNow
-                                          ? const Color(0xFFDCFCE7)
-                                          : const Color(0xFFF3F4F6),
-                                      textColor: isOpenNow
-                                          ? const Color(0xFF15803D)
-                                          : const Color(0xFF374151),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          FavoriteButton(business: business),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          if (business.whatsappNumber != null)
-                            _ContactButton(
-                              label: 'WhatsApp',
-                              color: const Color(0xFF25D366),
-                              onTap: () => launchUrl(
-                                Uri.parse(
-                                  'https://wa.me/${business.whatsappNumber!.replaceAll(RegExp(r'[^0-9+]'), '')}',
-                                ),
-                                mode: LaunchMode.externalApplication,
-                              ),
-                            ),
-                          if (business.phone != null)
-                            _ContactButton(
-                              label: 'Call',
-                              color: AppColors.sage,
-                              onTap: () =>
-                                  launchUrl(Uri.parse('tel:${business.phone}')),
-                            ),
-                          if (business.email != null)
-                            _ContactButton(
-                              label: 'Email',
-                              color: AppColors.parchment,
-                              textColor: AppColors.ink,
-                              onTap: () => launchUrl(
-                                Uri.parse('mailto:${business.email}'),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      if (isPreview)
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppColors.sageLight,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            '👀 Preview — this is how your public profile looks '
-                            'to customers.',
-                            style: TextStyle(color: AppColors.sageDark),
-                          ),
-                        ),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: (isPreview || !business.bookingEnabled)
-                              ? null
-                              : () => context.push(
-                                  RoutePaths.bookingWizard(business.slug),
-                                ),
-                          child: Text(
-                            isPreview
-                                ? 'Booking (disabled in preview)'
-                                : business.bookingEnabled
-                                    ? '📅 Book an Appointment'
-                                    : 'Not accepting bookings',
-                          ),
-                        ),
-                      ),
-                      if ((business.description ?? '').isNotEmpty) ...[
-                        const SizedBox(height: 20),
-                        _SectionCard(
-                          title: 'About',
-                          child: Text(business.description!),
-                        ),
-                      ],
-                      if (business.galleryUrls.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        _SectionCard(
-                          title: 'Photos',
-                          child: SizedBox(
-                            height: 120,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: business.galleryUrls.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(width: 8),
-                              itemBuilder: (c, i) => GestureDetector(
-                                onTap: () => openPhotoViewer(
-                                  c,
-                                  business.galleryUrls,
-                                  initialIndex: i,
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: CachedNetworkImage(
-                                    imageUrl: business.galleryUrls[i],
-                                    width: 120,
-                                    height: 120,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                      if (data.services.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        _ServicesSection(
-                          services: data.services,
-                          currency: business.currency,
-                        ),
-                      ],
-                      if (data.hours.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        _HoursSection(hours: data.hours),
-                      ],
-                      if ((business.address ?? '').isNotEmpty ||
-                          business.googleMapsUrl != null ||
-                          hasCoords) ...[
-                        const SizedBox(height: 16),
-                        _SectionCard(
-                          title: 'Location',
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if ((business.address ?? '').isNotEmpty)
-                                Text('📍 ${business.address}'),
-                              if (hasCoords) ...[
-                                const SizedBox(height: 10),
-                                MapPreview(
-                                  point: LatLng(
-                                    business.latitude!,
-                                    business.longitude!,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton.icon(
-                                    onPressed: () => launchUrl(
-                                      directionsUrl(
-                                        business.latitude!,
-                                        business.longitude!,
-                                      ),
-                                      mode: LaunchMode.externalApplication,
-                                    ),
-                                    icon: const Icon(
-                                      Icons.directions,
-                                      color: Colors.white,
-                                    ),
-                                    label: const Text('Get directions'),
-                                  ),
-                                ),
-                              ],
-                              if (business.googleMapsUrl != null) ...[
-                                const SizedBox(height: 8),
-                                TextButton(
-                                  onPressed: () => launchUrl(
-                                    Uri.parse(business.googleMapsUrl!),
-                                    mode: LaunchMode.externalApplication,
-                                  ),
-                                  child: const Text('View on Google Maps →'),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                      if (data.staff.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        _SectionCard(
-                          title: 'Meet the Team',
-                          child: Wrap(
-                            spacing: 16,
-                            runSpacing: 12,
-                            children: [
-                              for (final s in data.staff)
-                                SizedBox(
-                                  width: 140,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 20,
-                                        backgroundColor: AppColors.sageLight,
-                                        foregroundColor: AppColors.sageDark,
-                                        backgroundImage:
-                                            s.profileImageUrl != null
-                                            ? NetworkImage(s.profileImageUrl!)
-                                            : null,
-                                        child: s.profileImageUrl == null
-                                            ? Text(
-                                                s.name.isNotEmpty
-                                                    ? s.name[0].toUpperCase()
-                                                    : '?',
-                                              )
-                                            : null,
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        s.name,
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.bodyMedium,
-                                      ),
-                                      if (s.role != null)
-                                        Text(
-                                          s.role!,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.copyWith(
-                                                color: AppColors.muted,
-                                              ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 32),
-                    ],
-                  ),
-                ),
+            ),
+          ),
+          if (data.services.isNotEmpty)
+            _servicesSliver(context, business, canBook)
+          else
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Text('No services available yet.',
+                    style: TextStyle(color: AppColors.muted)),
               ),
-            ],
-          );
-        },
+            ),
+          if (hasCoords || (business.address ?? '').isNotEmpty)
+            SliverToBoxAdapter(
+              child: _locationSection(context, business, hasCoords),
+            ),
+          if (data.staff.isNotEmpty)
+            SliverToBoxAdapter(child: _teamSection(context, data)),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ],
+      ),
+      bottomNavigationBar: (canBook && data.services.isNotEmpty)
+          ? _bookBar(context, business, minPrice)
+          : null,
+    );
+  }
+
+  // ── Hero ───────────────────────────────────────────────────────────────
+  Widget _hero(BuildContext context, Business business, CategoryVisual visual) {
+    return SliverAppBar(
+      pinned: true,
+      expandedHeight: 210,
+      backgroundColor: AppColors.cream,
+      foregroundColor: AppColors.ink,
+      automaticallyImplyLeading: false,
+      leadingWidth: 64,
+      leading: context.canPop()
+          ? Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: _HeroCircleButton(
+                icon: Icons.arrow_back,
+                onTap: () => context.pop(),
+              ),
+            )
+          : null,
+      actions: [
+        _HeroCircleButton(
+          icon: Icons.ios_share,
+          onTap: () => Share.share(
+            'Check out ${business.name} on ShoriBooks: '
+            'https://betterbooking.app/business/${business.slug}',
+          ),
+        ),
+        const SizedBox(width: 8),
+        Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: FavoriteButton(business: business),
+        ),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        background: business.coverImageUrl != null
+            ? CachedNetworkImage(
+                imageUrl: business.coverImageUrl!,
+                fit: BoxFit.cover,
+                errorWidget: (c, u, e) => _heroGradient(visual),
+              )
+            : _heroGradient(visual),
       ),
     );
   }
 
-  bool _computeIsOpenNow(List<BusinessHours> hours, String timezone) {
-    final local = utcToBusinessLocal(DateTime.now().toUtc(), timezone);
-    // BusinessHours.dayOfWeek: 0=Sunday..6=Saturday; DateTime.weekday:
-    // 1=Monday..7=Sunday — converting to the 0=Sunday convention below.
-    final dayOfWeek = local.weekday % 7;
-    final todayEntry = hours.where((h) => h.dayOfWeek == dayOfWeek);
-    if (todayEntry.isEmpty) return false;
-    final entry = todayEntry.first;
-    if (entry.isClosed || entry.openTime == null || entry.closeTime == null) {
-      return false;
-    }
-    final nowMin = local.hour * 60 + local.minute;
-    final openParts = entry.openTime!.split(':');
-    final closeParts = entry.closeTime!.split(':');
-    final openMin = int.parse(openParts[0]) * 60 + int.parse(openParts[1]);
-    final closeMin = int.parse(closeParts[0]) * 60 + int.parse(closeParts[1]);
-    return nowMin >= openMin && nowMin < closeMin;
-  }
-}
-
-class _Pill extends StatelessWidget {
-  final String label;
-  final Color color;
-  final Color textColor;
-
-  const _Pill({
-    required this.label,
-    required this.color,
-    required this.textColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _heroGradient(CategoryVisual visual) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(gradient: visual.gradient),
+      alignment: Alignment.center,
+      child: Icon(visual.icon, color: Colors.white, size: 64),
+    );
+  }
+
+  Widget _chips(Business business, bool? open) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        if (business.category != null)
+          _Pill(
+            label: BusinessCategory.labelFor(business.category).split(' / ').first,
+            bg: AppColors.parchment,
+            fg: AppColors.muted,
+          ),
+        if (open != null)
+          _Pill(
+            label: open ? 'Open now' : 'Closed',
+            bg: open ? AppColors.successBg : AppColors.closedBg,
+            fg: open ? AppColors.successText : AppColors.closedText,
+          ),
+        if ((business.address ?? '').isNotEmpty)
+          _Pill(
+            label: business.address!,
+            bg: AppColors.fieldMuted,
+            fg: AppColors.muted,
+            icon: Icons.location_on_outlined,
+          ),
+      ],
+    );
+  }
+
+  Widget _contactActions(Business business) {
+    final hasWhatsApp = business.whatsappNumber != null;
+    final hasPhone = business.phone != null;
+    if (!hasWhatsApp && !hasPhone) return const SizedBox.shrink();
+    return Row(
+      children: [
+        if (hasWhatsApp)
+          Expanded(
+            child: _ActionButton(
+              icon: Icons.chat_bubble_outline,
+              label: 'WhatsApp',
+              bg: AppColors.whatsapp,
+              fg: Colors.white,
+              onTap: () => launchUrl(
+                Uri.parse(
+                    'https://wa.me/${business.whatsappNumber!.replaceAll(RegExp(r'[^0-9+]'), '')}'),
+                mode: LaunchMode.externalApplication,
+              ),
+            ),
+          ),
+        if (hasWhatsApp && hasPhone) const SizedBox(width: 12),
+        if (hasPhone)
+          Expanded(
+            child: _ActionButton(
+              icon: Icons.call_outlined,
+              label: 'Call',
+              bg: AppColors.sageLight,
+              fg: AppColors.sageDark,
+              onTap: () => launchUrl(Uri.parse('tel:${business.phone}')),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _previewBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(999),
+        color: AppColors.sageLight,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.sageTintBorder),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: textColor,
+      child: const Text(
+        '👀 Preview — this is how your public profile looks to customers.',
+        style: TextStyle(color: AppColors.sageDark, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  // ── Services ─────────────────────────────────────────────────────────
+  Widget _servicesSliver(
+      BuildContext context, Business business, bool canBook) {
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+      sliver: SliverMainAxisGroup(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                const Text('Services',
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink)),
+                Text(canBook ? 'Tap to book' : 'Services',
+                    style: const TextStyle(
+                        fontSize: 13.5, color: AppColors.muted)),
+              ],
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 12)),
+          SliverList.separated(
+            itemCount: data.services.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (c, i) => _ServiceRow(
+              service: data.services[i],
+              currency: business.currency,
+              enabled: canBook,
+              onTap: canBook
+                  ? () => context.push(RoutePaths.bookingWizardService(
+                      business.slug, data.services[i].id))
+                  : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bookBar(BuildContext context, Business business, double? minPrice) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.cream,
+        boxShadow: [
+          BoxShadow(
+              color: Color(0x0D1E1B16), blurRadius: 18, offset: Offset(0, -6)),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+        child: SizedBox(
+          height: 54,
+          child: ElevatedButton(
+            onPressed: () =>
+                context.push(RoutePaths.bookingWizard(business.slug)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Book appointment',
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w700)),
+                if (minPrice != null) ...[
+                  const SizedBox(width: 8),
+                  Text('· from ${formatCurrency(minPrice, business.currency)}',
+                      style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white70)),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
-}
 
-class _ContactButton extends StatelessWidget {
-  final String label;
-  final Color color;
-  final Color textColor;
-  final VoidCallback onTap;
-
-  const _ContactButton({
-    required this.label,
-    required this.color,
-    this.textColor = Colors.white,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: textColor,
-      ),
-      child: Text(label),
-    );
-  }
-}
-
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final Widget child;
-
-  const _SectionCard({required this.title, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+  // ── Secondary sections (kept for real data) ──────────────────────────
+  Widget _locationSection(
+      BuildContext context, Business business, bool hasCoords) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      child: _Card(
+        title: 'Location',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 10),
-            child,
+            if ((business.address ?? '').isNotEmpty)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.location_on_outlined,
+                      size: 18, color: AppColors.sage),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(business.address!)),
+                ],
+              ),
+            if (hasCoords) ...[
+              const SizedBox(height: 12),
+              MapPreview(
+                point: LatLng(business.latitude!, business.longitude!),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => launchUrl(
+                    directionsUrl(business.latitude!, business.longitude!),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  icon: const Icon(Icons.directions_outlined, size: 18),
+                  label: const Text('Get directions'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _teamSection(BuildContext context, BusinessProfileData data) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: _Card(
+        title: 'Meet the team',
+        child: Wrap(
+          spacing: 16,
+          runSpacing: 12,
+          children: [
+            for (final s in data.staff)
+              SizedBox(
+                width: 88,
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 26,
+                      backgroundColor: AppColors.sageLight,
+                      foregroundColor: AppColors.sageDark,
+                      backgroundImage: s.profileImageUrl != null
+                          ? NetworkImage(s.profileImageUrl!)
+                          : null,
+                      child: s.profileImageUrl == null
+                          ? Text(
+                              s.name.isNotEmpty ? s.name[0].toUpperCase() : '?',
+                              style: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w700))
+                          : null,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(s.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 13)),
+                    if (s.role != null)
+                      Text(s.role!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 11.5, color: AppColors.muted)),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
@@ -495,105 +451,200 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-class _ServicesSection extends StatelessWidget {
-  final List<Service> services;
-  final String currency;
+// ── Pieces ─────────────────────────────────────────────────────────────
 
-  const _ServicesSection({required this.services, required this.currency});
+class _ServiceRow extends StatelessWidget {
+  const _ServiceRow({
+    required this.service,
+    required this.currency,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final Service service;
+  final String currency;
+  final bool enabled;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return _SectionCard(
-      title: 'Services',
-      child: Column(
-        children: [
-          for (int i = 0; i < services.length; i++)
-            Padding(
-              padding: EdgeInsets.only(top: i > 0 ? 12 : 0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          services[i].name,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                        if (services[i].durationMinutes > 0)
-                          Text(
-                            '${services[i].durationMinutes} min',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: AppColors.muted),
-                          ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    formatCurrency(services[i].price, currency),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.sageDark,
-                    ),
-                  ),
-                ],
+    return Material(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.parchment),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(service.name,
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.ink)),
+                    if (service.durationMinutes > 0) ...[
+                      const SizedBox(height: 2),
+                      Text('${service.durationMinutes} min'
+                          '${service.depositRequired ? ' · deposit' : ''}',
+                          style: const TextStyle(
+                              fontSize: 13, color: AppColors.muted)),
+                    ],
+                  ],
+                ),
               ),
-            ),
+              Text(formatCurrency(service.price, currency),
+                  style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.sageDark)),
+              if (enabled) ...[
+                const SizedBox(width: 6),
+                const Icon(Icons.chevron_right, color: AppColors.faint),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill({
+    required this.label,
+    required this.bg,
+    required this.fg,
+    this.icon,
+  });
+
+  final String label;
+  final Color bg;
+  final Color fg;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 13, color: fg),
+            const SizedBox(width: 4),
+          ],
+          Text(label,
+              style:
+                  TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: fg)),
         ],
       ),
     );
   }
 }
 
-class _HoursSection extends StatelessWidget {
-  final List<BusinessHours> hours;
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.bg,
+    required this.fg,
+    required this.onTap,
+  });
 
-  const _HoursSection({required this.hours});
-
-  static const _order = [1, 2, 3, 4, 5, 6, 0]; // Mon..Sun
+  final IconData icon;
+  final String label;
+  final Color bg;
+  final Color fg;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return _SectionCard(
-      title: 'Business Hours',
+    return SizedBox(
+      height: 52,
+      child: Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 19, color: fg),
+              const SizedBox(width: 8),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 15.5, fontWeight: FontWeight.w700, color: fg)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Card extends StatelessWidget {
+  const _Card({required this.title, required this.child});
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.parchment),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final dow in _order)
-            Builder(
-              builder: (context) {
-                final entry = hours.where((h) => h.dayOfWeek == dow);
-                final e = entry.isNotEmpty ? entry.first : null;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(weekdayLabels[dow]),
-                      Text(
-                        (e == null || e.isClosed)
-                            ? 'Closed'
-                            : '${_fmt(e.openTime)} – ${_fmt(e.closeTime)}',
-                        style: const TextStyle(color: AppColors.muted),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink)),
+          const SizedBox(height: 12),
+          child,
         ],
       ),
     );
   }
+}
 
-  String _fmt(String? time) {
-    if (time == null) return '';
-    final parts = time.split(':');
-    final h = int.parse(parts[0]);
-    final m = parts[1];
-    final ampm = h >= 12 ? 'PM' : 'AM';
-    final hour = h % 12 == 0 ? 12 : h % 12;
-    return '$hour:$m $ampm';
+class _HeroCircleButton extends StatelessWidget {
+  const _HeroCircleButton({required this.icon, required this.onTap});
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.38),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, size: 20, color: Colors.white),
+      ),
+    );
   }
 }

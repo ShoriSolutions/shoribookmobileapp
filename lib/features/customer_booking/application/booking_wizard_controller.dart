@@ -130,29 +130,46 @@ class BookingWizardController extends AutoDisposeFamilyNotifier<
     }
   }
 
+  /// Choose a service and move to the combined schedule screen (C05).
+  /// Called both from the in-flow service picker and from a business
+  /// profile's tap-to-book row (via the screen's initial-service preselect).
   void selectService(Service service) {
     state = state.copyWith(
       selectedService: service,
-      step: BookingWizardStep.staff,
+      clearSelectedStaff: true,
+      clearSelectedTime: true,
+      step: BookingWizardStep.schedule,
     );
   }
 
+  /// Jump back to the service picker (the "Change" affordance on C05).
+  void changeService() {
+    state = state.copyWith(step: BookingWizardStep.service);
+  }
+
+  /// Pick a pro (null = "Any"). Clears the chosen time since availability
+  /// depends on the pro. Stays on the schedule screen.
   void selectStaff(StaffProfile? staff) {
     state = staff == null
-        ? state.copyWith(clearSelectedStaff: true, step: BookingWizardStep.date)
-        : state.copyWith(selectedStaff: staff, step: BookingWizardStep.date);
+        ? state.copyWith(clearSelectedStaff: true, clearSelectedTime: true)
+        : state.copyWith(selectedStaff: staff, clearSelectedTime: true);
   }
 
+  /// Pick a date; clears the chosen time. Stays on the schedule screen.
   void selectDate(DateTime date) {
-    state = state.copyWith(
-      selectedDate: date,
-      selectedTime: null,
-      step: BookingWizardStep.time,
-    );
+    state = state.copyWith(selectedDate: date, clearSelectedTime: true);
   }
 
+  /// Pick a time slot. Stays on the schedule screen.
   void selectTime(String time) {
-    state = state.copyWith(selectedTime: time, step: BookingWizardStep.details);
+    state = state.copyWith(selectedTime: time);
+  }
+
+  /// C05 → C06.
+  void continueToConfirm() {
+    if (!state.canContinueFromSchedule) return;
+    state = state.copyWith(
+        step: BookingWizardStep.confirm, clearError: true, clearConflict: true);
   }
 
   void updateDetails({
@@ -171,11 +188,6 @@ class BookingWizardController extends AutoDisposeFamilyNotifier<
       email: email,
       notes: notes,
     );
-  }
-
-  void continueToReview() {
-    if (!state.canContinueFromDetails) return;
-    state = state.copyWith(step: BookingWizardStep.review);
   }
 
   void setPolicyAccepted(bool value) {

@@ -493,7 +493,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/book/:slug',
-        builder: (c, s) => BookingWizardScreen(slug: s.pathParameters['slug']!),
+        builder: (c, s) => BookingWizardScreen(
+          slug: s.pathParameters['slug']!,
+          initialServiceId: s.uri.queryParameters['service'],
+        ),
       ),
 
       // ── Customer/marketplace shell ───────────────────────────────────────

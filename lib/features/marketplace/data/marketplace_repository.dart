@@ -113,6 +113,29 @@ class MarketplaceRepository {
     }
   }
 
+  /// Weekly hours for several businesses in one query, grouped by
+  /// business id — used to compute "Open now" on marketplace lists
+  /// without an N+1 fetch per card.
+  Future<Map<String, List<BusinessHours>>> fetchHoursForBusinessIds(
+    List<String> businessIds,
+  ) async {
+    if (businessIds.isEmpty) return {};
+    try {
+      final data = await _client
+          .from('business_hours')
+          .select()
+          .inFilter('business_id', businessIds);
+      final result = <String, List<BusinessHours>>{};
+      for (final row in (data as List).cast<Map<String, dynamic>>()) {
+        final biz = row['business_id'] as String;
+        (result[biz] ??= []).add(BusinessHours.fromJson(row));
+      }
+      return result;
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   Future<List<BusinessHours>> fetchBusinessHours(String businessId) async {
     try {
       final data = await _client
