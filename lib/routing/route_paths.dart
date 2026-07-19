@@ -41,6 +41,7 @@ class RoutePaths {
   static const settings = '/settings';
   static const subscriptionRequired = '/subscription-required';
   static const trialStarted = '/trial-started';
+  static const subscription = '/subscription';
 
   static String clientDetail(String id) => '/clients/$id';
   static String clientEdit(String id) => '/clients/$id/edit';
