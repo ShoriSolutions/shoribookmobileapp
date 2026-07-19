@@ -281,6 +281,31 @@ class _BusinessProfileEditScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.sageLight,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.sageTintBorder),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.storefront_outlined,
+                              size: 18, color: AppColors.sageDark),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'This is your public listing — the cover, logo and '
+                              'details customers see in the marketplace.',
+                              style: TextStyle(
+                                  fontSize: 13, color: AppColors.sageDark),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     if (!canManage)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
