@@ -59,6 +59,22 @@ class BusinessProfileScreen extends ConsumerWidget {
   }
 }
 
+/// Opens the native share sheet for a business, passing a
+/// [sharePositionOrigin] (required on iPad, harmless on iPhone) computed
+/// from the tapped button so the sheet anchors correctly instead of
+/// silently failing.
+Future<void> _shareBusiness(BuildContext context, Business business) async {
+  final box = context.findRenderObject() as RenderBox?;
+  final origin = box != null && box.hasSize
+      ? box.localToGlobal(Offset.zero) & box.size
+      : const Rect.fromLTWH(0, 0, 1, 1);
+  await Share.share(
+    'Check out ${business.name} on ShoriBooks: '
+    'https://betterbooking.app/business/${business.slug}',
+    sharePositionOrigin: origin,
+  );
+}
+
 class _Loaded extends StatelessWidget {
   const _Loaded({
     required this.slug,
@@ -162,11 +178,10 @@ class _Loaded extends StatelessWidget {
             )
           : null,
       actions: [
-        _HeroCircleButton(
-          icon: Icons.ios_share,
-          onTap: () => Share.share(
-            'Check out ${business.name} on ShoriBooks: '
-            'https://betterbooking.app/business/${business.slug}',
+        Builder(
+          builder: (ctx) => _HeroCircleButton(
+            icon: Icons.ios_share,
+            onTap: () => _shareBusiness(ctx, business),
           ),
         ),
         const SizedBox(width: 8),

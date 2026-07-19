@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/staff_profile.dart';
 import '../../../routing/route_paths.dart';
+import '../../app_mode/application/app_mode_provider.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
 import '../application/staff_providers.dart';
@@ -13,12 +16,39 @@ import '../application/staff_providers.dart';
 class StaffListScreen extends ConsumerWidget {
   const StaffListScreen({super.key});
 
+  Future<void> _makeSelfAvailable(BuildContext context, WidgetRef ref) async {
+    final membership = ref.read(activeMembershipProvider).valueOrNull;
+    if (membership == null) return;
+    final name = ref.read(myProfileProvider).valueOrNull?.fullName ?? 'Me';
+    try {
+      await ref.read(staffRepositoryProvider).addSelfAsStaff(
+            businessId: membership.business.id,
+            memberId: membership.membershipId,
+            name: name,
+          );
+      ref.invalidate(staffListProvider);
+      ref.invalidate(activeMembershipProvider);
+      if (context.mounted) {
+        showAppSnackBar(context,
+            message: "You're now bookable. Set your hours under Availability.");
+      }
+    } catch (e) {
+      if (context.mounted) {
+        showAppSnackBar(context,
+            message: AppException.from(e).message, isError: true);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final staffAsync = ref.watch(staffListProvider);
     final membership = ref.watch(activeMembershipProvider).valueOrNull;
     final canManage =
         membership != null && can(membership.role, Permission.manageStaff);
+    // Owner/admin who isn't yet a bookable pro (no staff profile linked to
+    // their membership) can add themselves.
+    final canAddSelf = canManage && membership.staffProfileId == null;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Staff')),
@@ -47,26 +77,82 @@ class StaffListScreen extends ConsumerWidget {
             ],
           ),
           data: (staff) {
-            if (staff.isEmpty) {
-              return ListView(
-                children: const [
-                  SizedBox(height: 60),
-                  EmptyState(
-                    icon: '◈',
-                    title: 'No staff added yet',
-                    message: 'Add the people who work at your business.',
-                  ),
-                ],
-              );
-            }
-            return ListView.separated(
+            return ListView(
               padding: const EdgeInsets.all(16),
-              itemCount: staff.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, i) => _StaffTile(staff: staff[i]),
+              children: [
+                if (canAddSelf)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _SelfAvailabilityCard(
+                      onTap: () => _makeSelfAvailable(context, ref),
+                    ),
+                  ),
+                if (staff.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 40),
+                    child: EmptyState(
+                      icon: '👥',
+                      title: 'No staff added yet',
+                      message: 'Add the people who work at your business.',
+                    ),
+                  )
+                else
+                  for (final s in staff)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _StaffTile(staff: s),
+                    ),
+              ],
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+/// Prompt for an owner/admin who isn't yet a bookable pro to add
+/// themselves so customers can book with them and they show as on duty.
+class _SelfAvailabilityCard extends StatelessWidget {
+  const _SelfAvailabilityCard({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.sageLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.sageTintBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Take bookings yourself',
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.sageDark)),
+          const SizedBox(height: 2),
+          const Text(
+            'Add yourself as a bookable pro so customers can book with you '
+            'and you show as on duty.',
+            style: TextStyle(fontSize: 13, color: AppColors.muted),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton.icon(
+              onPressed: onTap,
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.sage),
+              icon: const Icon(Icons.person_add_alt, size: 18),
+              label: const Text('Make myself available',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ),
+        ],
       ),
     );
   }

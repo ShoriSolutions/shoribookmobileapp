@@ -33,6 +33,28 @@ class StaffRepository {
     }
   }
 
+  /// Creates a bookable staff profile for the owner/admin themselves,
+  /// linked to their membership via member_id so it shows as "you" and
+  /// resolves onto [ActiveMembership.staffProfileId]. Used by the
+  /// "make yourself available" action.
+  Future<void> addSelfAsStaff({
+    required String businessId,
+    required String memberId,
+    required String name,
+  }) async {
+    try {
+      await _client.from('staff_profiles').insert({
+        'business_id': businessId,
+        'member_id': memberId,
+        'name': name.trim().isEmpty ? 'Me' : name.trim(),
+        'is_active': true,
+        'is_bookable': true,
+      });
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   Future<void> create(StaffProfile staff, String businessId) async {
     try {
       await _client
