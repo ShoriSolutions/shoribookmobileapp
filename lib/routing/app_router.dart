@@ -40,6 +40,8 @@ import '../features/marketplace/presentation/discover_screen.dart';
 import '../features/more/presentation/more_screen.dart';
 import '../features/notifications/presentation/notification_preferences_screen.dart';
 import '../features/notifications/presentation/notification_settings_screen.dart';
+import '../features/onboarding/application/onboarding_providers.dart';
+import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/my_bookings/presentation/booking_detail_screen.dart';
 import '../features/my_bookings/presentation/my_bookings_screen.dart';
 import '../features/reports/presentation/reports_screen.dart';
@@ -180,6 +182,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (authStatus == AuthStatus.unauthenticated) {
+        // First-run intro: shown once before the marketplace. Allowed to
+        // reach login/register from it (so returning users can sign in).
+        final seenOnboarding = ref.read(onboardingSeenProvider);
+        if (!seenOnboarding &&
+            loc != RoutePaths.onboarding &&
+            !_preAuthRoutes.contains(loc) &&
+            loc != RoutePaths.support) {
+          return RoutePaths.onboarding;
+        }
+        if (loc == RoutePaths.onboarding) {
+          return seenOnboarding ? RoutePaths.discover : null;
+        }
         if (_preAuthRoutes.contains(loc)) return null;
         if (_isCustomerModePath(loc)) return null;
         // Public help — reachable from the Guest Profile without an account.
@@ -291,6 +305,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: RoutePaths.onboarding,
+        pageBuilder: (c, s) => _fadeThroughPage(s, const OnboardingScreen()),
+      ),
       GoRoute(
         path: RoutePaths.splash,
         pageBuilder: (c, s) => _fadeThroughPage(s, const SplashScreen()),
@@ -564,6 +582,7 @@ class GoRouterRefreshNotifier extends ChangeNotifier {
     ref.listen(myProfileProvider, (_, __) => notifyListeners());
     ref.listen(activeMembershipProvider, (_, __) => notifyListeners());
     ref.listen(passwordRecoveryProvider, (_, __) => notifyListeners());
+    ref.listen(onboardingSeenProvider, (_, __) => notifyListeners());
     // Hold the branded splash for a minimum moment on cold start so its
     // fade-in can play fully even when auth resolves instantly. Fires one
     // redirect re-evaluation when the window elapses.

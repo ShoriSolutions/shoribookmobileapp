@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'core/env/env.dart';
+import 'features/onboarding/application/onboarding_providers.dart';
+import 'features/onboarding/data/onboarding_prefs.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,5 +20,14 @@ Future<void> main() async {
     publishableKey: Env.supabaseAnonKey,
   );
 
-  runApp(const ProviderScope(child: ShoriBooksApp()));
+  // Load the first-run flag before the router's redirect reads it, so a
+  // returning session goes straight to the marketplace with no intro flash.
+  final onboardingSeen = await OnboardingPrefs().seen();
+
+  runApp(
+    ProviderScope(
+      overrides: [onboardingSeenProvider.overrideWith((ref) => onboardingSeen)],
+      child: const ShoriBooksApp(),
+    ),
+  );
 }
