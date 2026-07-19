@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -8,18 +7,21 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/timezone_offsets.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_retry_view.dart';
+import '../../../models/appointment.dart';
 import '../../../models/business.dart';
+import '../../../models/staff_profile.dart';
 import '../../../routing/route_paths.dart';
-import '../../appointments/presentation/widgets/appointment_card.dart';
 import '../../booking_link/presentation/booking_share_sheet.dart';
 import '../../business_context/application/active_business_provider.dart';
-import '../../business_context/application/permissions.dart';
+import '../../staff/application/staff_providers.dart';
 import '../../subscription/application/subscription_providers.dart';
 import '../../subscription/presentation/subscription_modal.dart';
 import '../application/dashboard_controller.dart';
 import '../application/dashboard_prefs.dart';
 import '../data/dashboard_stats.dart';
 
+/// V04 · Home dashboard — greeting + trial banner, today's report cards,
+/// on-duty staff and the next appointments.
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
@@ -27,75 +29,70 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final membership = ref.watch(activeMembershipProvider).valueOrNull;
     final dataAsync = ref.watch(dashboardDataProvider);
-
     if (membership == null) return const SizedBox.shrink();
     final business = membership.business;
-    final timezone = business.timezone;
+    final tz = business.timezone;
 
     _maybeShowLaunchPromo(context, ref);
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => showBookingShareSheet(context, business),
-        backgroundColor: AppColors.sage,
-        foregroundColor: Colors.white,
-        tooltip: 'Share booking link',
-        child: const Icon(Icons.share),
-      ),
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
           onRefresh: () => ref.refresh(dashboardDataProvider.future),
           child: dataAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, st) => ListView(
-              children: [
-                const SizedBox(height: 80),
-                ErrorRetryView(
-                  message: 'Could not load your dashboard.',
-                  onRetry: () => ref.invalidate(dashboardDataProvider),
-                ),
-              ],
-            ),
+            error: (err, st) => ListView(children: [
+              const SizedBox(height: 80),
+              ErrorRetryView(
+                message: 'Could not load your dashboard.',
+                onRetry: () => ref.invalidate(dashboardDataProvider),
+              ),
+            ]),
             data: (data) => ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
               children: [
-                _HeroHeader(
-                  business: business,
-                  stats: data.stats,
-                  timezone: timezone,
-                  canViewReports:
-                      can(membership.role, Permission.viewReports),
-                ),
-                const SizedBox(height: 8),
+                _header(context, business, tz),
+                if (business.subscriptionStatus == 'trialing') ...[
+                  const SizedBox(height: 12),
+                  _trialBanner(context, business),
+                ],
+                const SizedBox(height: 22),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Spacer(),
-                    TextButton.icon(
-                      onPressed: () =>
-                          _showCustomizeSheet(context),
-                      icon: const Icon(Icons.tune, size: 18),
-                      label: const Text('Customize'),
+                    Text('Today · ${DateFormat('EEE d MMM').format(utcToBusinessLocal(DateTime.now().toUtc(), tz))}',
+                        style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.ink)),
+                    GestureDetector(
+                      onTap: () => _showCustomizeSheet(context),
+                      child: const Text('Edit cards',
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.sageDark)),
                     ),
                   ],
                 ),
-                _StatCards(
-                  stats: data.stats,
-                  enabled: ref.watch(dashboardStatsPrefsProvider),
-                ),
-                const SizedBox(height: 20),
-                _QuickActions(
-                  canManage: can(membership.role, Permission.manageClients) ||
-                      membership.role.value == 'STAFF',
-                  canViewClients: canViewClientContact(membership.role),
-                  slug: business.slug,
-                ),
+                const SizedBox(height: 12),
+                _statGrid(data.stats, business.currency),
                 const SizedBox(height: 24),
-                Text(
-                  "Today's appointments",
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 10),
+                const Text('On duty',
+                    style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink)),
+                const SizedBox(height: 12),
+                _OnDutyRow(),
+                const SizedBox(height: 24),
+                const Text('Next up',
+                    style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink)),
+                const SizedBox(height: 12),
                 if (data.todayAppointments.isEmpty)
                   const EmptyState(
                     icon: '📅',
@@ -103,18 +100,16 @@ class DashboardScreen extends ConsumerWidget {
                     message: 'New bookings will show up here as they come in.',
                   )
                 else
-                  ...data.todayAppointments.map(
-                    (a) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: AppointmentCard(
-                        appointment: a,
-                        timezone: timezone,
-                        onTap: () => context.push(
-                          RoutePaths.appointmentDetailPath(a.id),
-                        ),
+                  for (final a in data.todayAppointments)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _NextUpRow(
+                        appt: a,
+                        tz: tz,
+                        onTap: () => context
+                            .push(RoutePaths.appointmentDetailPath(a.id)),
                       ),
                     ),
-                  ),
               ],
             ),
           ),
@@ -122,143 +117,331 @@ class DashboardScreen extends ConsumerWidget {
       ),
     );
   }
-}
 
-class _HeroHeader extends StatelessWidget {
-  final Business business;
-  final DashboardStats stats;
-  final String timezone;
-  final bool canViewReports;
-
-  const _HeroHeader({
-    required this.business,
-    required this.stats,
-    required this.timezone,
-    required this.canViewReports,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final now = utcToBusinessLocal(DateTime.now().toUtc(), timezone);
+  Widget _header(BuildContext context, Business business, String tz) {
+    final now = utcToBusinessLocal(DateTime.now().toUtc(), tz);
     final greeting = now.hour < 12
         ? 'Good morning'
         : now.hour < 17
             ? 'Good afternoon'
             : 'Good evening';
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.sageDark, AppColors.sage],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.sageDark.withValues(alpha: 0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(greeting,
+                  style: const TextStyle(fontSize: 14, color: AppColors.muted)),
+              const SizedBox(height: 2),
+              Text(business.name,
+                  style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                      color: AppColors.ink)),
+            ],
           ),
-        ],
+        ),
+        const SizedBox(width: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.parchment),
+          ),
+          child: IconButton(
+            icon: const Icon(Icons.ios_share, color: AppColors.ink, size: 20),
+            onPressed: () => showBookingShareSheet(context, business),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _trialBanner(BuildContext context, Business business) {
+    final daysLeft = business.trialEndsAt
+        ?.difference(DateTime.now())
+        .inDays
+        .clamp(0, 99);
+    return GestureDetector(
+      onTap: () => showSubscriptionModal(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.terracottaTint,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.terracottaTintBorder),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.hourglass_empty,
+                size: 18, color: AppColors.terracottaDeep),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                daysLeft != null
+                    ? 'Trial · $daysLeft days left'
+                    : 'Free trial active',
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.terracottaDeep),
+              ),
+            ),
+            const Text('Upgrade',
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.terracottaDeep)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statGrid(DashboardStats stats, String currency) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.55,
+      children: [
+        _StatCard(
+            value: '${stats.bookingsToday}',
+            label: 'Bookings today',
+            color: AppColors.ink),
+        _StatCard(
+            value: formatCurrency(stats.revenueToday, currency),
+            label: 'Revenue',
+            color: AppColors.sageDark),
+        _StatCard(
+            value: '${stats.completedToday}',
+            label: 'Completed',
+            color: AppColors.ink),
+        _StatCard(
+            value: '${stats.noShowsToday}',
+            label: 'No-show',
+            color: AppColors.danger),
+      ],
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard(
+      {required this.value, required this.label, required this.color});
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.parchment),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      greeting,
-                      style: const TextStyle(color: Colors.white70, fontSize: 13),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      business.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              if (canViewReports)
-                TextButton(
-                  onPressed: () => context.push(RoutePaths.reports),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: Colors.white.withValues(alpha: 0.18),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                  ),
-                  child: const Text('Reports'),
-                ),
-            ],
-          ),
-          Text(
-            DateFormat('EEEE, MMM d').format(now),
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-          const SizedBox(height: 22),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Revenue today',
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      formatCurrency(stats.revenueToday, business.currency),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 30,
-                        fontWeight: FontWeight.w800,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '${stats.bookingsToday}',
+          Text(value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                  color: color)),
+          const SizedBox(height: 4),
+          Text(label,
+              style: const TextStyle(fontSize: 14, color: AppColors.muted)),
+        ],
+      ),
+    );
+  }
+}
+
+class _OnDutyRow extends ConsumerWidget {
+  static const _colors = [AppColors.sage, AppColors.terracotta, AppColors.shoriBlue];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final staffAsync = ref.watch(staffListProvider);
+    final staff = (staffAsync.valueOrNull ?? const <StaffProfile>[])
+        .where((s) => s.isBookable)
+        .toList();
+    return SizedBox(
+      height: 82,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (var i = 0; i < staff.length; i++)
+            _avatar(staff[i], _colors[i % _colors.length]),
+          _add(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _avatar(StaffProfile s, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 14),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: color,
+            foregroundColor: color == AppColors.shoriBlue
+                ? AppColors.ink
+                : Colors.white,
+            backgroundImage:
+                s.profileImageUrl != null ? NetworkImage(s.profileImageUrl!) : null,
+            child: s.profileImageUrl == null
+                ? Text(s.name.isNotEmpty ? s.name[0].toUpperCase() : '?',
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const Text(
-                    'bookings',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                ],
-              ),
-            ],
+                        fontSize: 20, fontWeight: FontWeight.w700))
+                : null,
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            width: 64,
+            child: Text(s.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
           ),
         ],
       ),
     );
+  }
+
+  Widget _add(BuildContext context) {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () => context.push(RoutePaths.staff),
+          child: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.fieldMuted,
+              shape: BoxShape.circle,
+              border: Border.all(
+                  color: AppColors.parchment, style: BorderStyle.solid),
+            ),
+            child: const Icon(Icons.add, color: AppColors.muted),
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text('Add',
+            style: TextStyle(fontSize: 12.5, color: AppColors.muted)),
+      ],
+    );
+  }
+}
+
+class _NextUpRow extends StatelessWidget {
+  const _NextUpRow({required this.appt, required this.tz, required this.onTap});
+  final Appointment appt;
+  final String tz;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final local = utcToBusinessLocal(appt.startTime, tz);
+    final (label, bg, fg) = _status(appt);
+    return Material(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.parchment),
+          ),
+          child: Row(
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(DateFormat('h:mm').format(local),
+                      style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.ink)),
+                  Text(DateFormat('a').format(local),
+                      style:
+                          const TextStyle(fontSize: 12, color: AppColors.muted)),
+                ],
+              ),
+              const SizedBox(width: 12),
+              Container(width: 1, height: 40, color: AppColors.divider),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(appt.customerName ?? 'Client',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.ink)),
+                    const SizedBox(height: 1),
+                    Text(
+                      [appt.serviceName, appt.staffName]
+                          .where((s) => s != null && s.isNotEmpty)
+                          .join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 13, color: AppColors.muted),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                    color: bg, borderRadius: BorderRadius.circular(999)),
+                child: Text(label,
+                    style: TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w700, color: fg)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  (String, Color, Color) _status(Appointment a) {
+    switch (a.status) {
+      case AppointmentStatus.pending:
+        return ('Pending', AppColors.terracottaTint, AppColors.terracottaDeep);
+      case AppointmentStatus.completed:
+        return ('Completed', AppColors.closedBg, AppColors.closedText);
+      case AppointmentStatus.cancelled:
+        return ('Cancelled', AppColors.closedBg, AppColors.closedText);
+      case AppointmentStatus.noShow:
+        return ('No-show', const Color(0xFFF7ECE9), AppColors.danger);
+      default:
+        return ('Confirmed', AppColors.successBg, AppColors.successText);
+    }
   }
 }
 
@@ -276,11 +459,14 @@ void _showCustomizeSheet(BuildContext context) {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Show on Home', style: Theme.of(ctx).textTheme.titleLarge),
+                Text('Extra stats', style: Theme.of(ctx).textTheme.titleLarge),
                 const SizedBox(height: 4),
                 Text(
-                  'Choose which stats appear on your dashboard.',
-                  style: Theme.of(ctx).textTheme.bodySmall
+                  'Bookings, revenue, completed and no-show always show. '
+                  'Toggle any extras to track.',
+                  style: Theme.of(ctx)
+                      .textTheme
+                      .bodySmall
                       ?.copyWith(color: AppColors.muted),
                 ),
                 const SizedBox(height: 8),
@@ -302,223 +488,14 @@ void _showCustomizeSheet(BuildContext context) {
   );
 }
 
-class _StatCards extends StatelessWidget {
-  final DashboardStats stats;
-  final Set<String> enabled;
-
-  const _StatCards({required this.stats, required this.enabled});
-
-  @override
-  Widget build(BuildContext context) {
-    final defs = <String, (IconData, Color, String)>{
-      'completed': (
-        Icons.check_circle_outline,
-        AppColors.sage,
-        '${stats.completedToday}',
-      ),
-      'noShows': (
-        Icons.person_off_outlined,
-        AppColors.danger,
-        '${stats.noShowsToday}',
-      ),
-      'cancelled': (
-        Icons.cancel_outlined,
-        AppColors.terracotta,
-        '${stats.cancelledToday}',
-      ),
-      'pendingDeposits': (
-        Icons.account_balance_wallet_outlined,
-        AppColors.sageDark,
-        '${stats.pendingDepositsCount}',
-      ),
-      'staffOnDuty': (
-        Icons.badge_outlined,
-        AppColors.sage,
-        '${stats.staffOnDuty}/${stats.staffTotal}',
-      ),
-    };
-    final items = [
-      for (final entry in dashboardStatCards.entries)
-        if (enabled.contains(entry.key))
-          (
-            defs[entry.key]!.$1,
-            entry.value,
-            defs[entry.key]!.$3,
-            defs[entry.key]!.$2,
-          ),
-    ];
-
-    if (items.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Text(
-          'No stats selected. Tap Customize to choose what shows here.',
-          style: Theme.of(context).textTheme.bodySmall
-              ?.copyWith(color: AppColors.muted),
-        ),
-      );
-    }
-
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      childAspectRatio: 2.5,
-      children: [
-        for (final it in items)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: it.$4.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(it.$1, size: 20, color: it.$4),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          it.$3,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          it.$2,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: AppColors.muted),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _QuickActions extends StatelessWidget {
-  final bool canManage;
-  final bool canViewClients;
-  final String slug;
-
-  const _QuickActions({
-    required this.canManage,
-    required this.canViewClients,
-    required this.slug,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: [
-        if (canManage)
-          _ActionChip(
-            icon: '＋',
-            label: 'Add Booking',
-            onTap: () => context.push(RoutePaths.bookingNew),
-          ),
-        _ActionChip(
-          icon: '⊞',
-          label: 'View Calendar',
-          onTap: () => context.go(RoutePaths.calendar),
-        ),
-        _ActionChip(
-          icon: '⎘',
-          label: 'Copy Booking Link',
-          onTap: () async {
-            final url = 'https://betterbooking.app/book/$slug';
-            await Clipboard.setData(ClipboardData(text: url));
-            if (context.mounted) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Link copied')));
-            }
-          },
-        ),
-        if (canViewClients)
-          _ActionChip(
-            icon: '○',
-            label: 'View Clients',
-            onTap: () => context.go(RoutePaths.clients),
-          ),
-      ],
-    );
-  }
-}
-
-class _ActionChip extends StatelessWidget {
-  final String icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _ActionChip({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppColors.sageLight,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(icon, style: const TextStyle(fontSize: 14)),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: AppColors.sageDark,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // Shows the subscription promo once per app launch for business owners who
-// haven't chosen "Don't show again". Scheduled after the first frame so it
-// slides up over the settled dashboard.
+// haven't chosen "Don't show again".
 bool _launchPromoShown = false;
 
 void _maybeShowLaunchPromo(BuildContext context, WidgetRef ref) {
   if (_launchPromoShown) return;
   _launchPromoShown = true;
   WidgetsBinding.instance.addPostFrameCallback((_) async {
-    // Skip if the business is already subscribed or on a trial.
     final status = ref
         .read(activeMembershipProvider)
         .valueOrNull
