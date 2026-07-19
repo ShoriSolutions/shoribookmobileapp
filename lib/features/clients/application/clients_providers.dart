@@ -18,21 +18,31 @@ final clientsListProvider = FutureProvider.autoDispose<List<Customer>>((
 
 final clientSearchQueryProvider = StateProvider<String>((ref) => '');
 
+/// Client list filter: 'all' | 'regulars' | 'new' | 'flagged'. The latter
+/// three match the corresponding tag on the customer.
+final clientFilterProvider = StateProvider<String>((ref) => 'all');
+
 final filteredClientsProvider = Provider.autoDispose<AsyncValue<List<Customer>>>(
   (ref) {
     final query = ref.watch(clientSearchQueryProvider).trim().toLowerCase();
+    final filter = ref.watch(clientFilterProvider);
     final clientsAsync = ref.watch(clientsListProvider);
-    if (query.isEmpty) return clientsAsync;
-    return clientsAsync.whenData(
-      (clients) => clients
-          .where(
-            (c) =>
+    return clientsAsync.whenData((clients) {
+      var list = clients;
+      if (filter != 'all') {
+        final tag = filter == 'regulars' ? 'regular' : filter;
+        list = list.where((c) => c.tags.contains(tag)).toList();
+      }
+      if (query.isNotEmpty) {
+        list = list
+            .where((c) =>
                 c.fullName.toLowerCase().contains(query) ||
                 c.phone.toLowerCase().contains(query) ||
-                (c.email ?? '').toLowerCase().contains(query),
-          )
-          .toList(),
-    );
+                (c.email ?? '').toLowerCase().contains(query))
+            .toList();
+      }
+      return list;
+    });
   },
 );
 

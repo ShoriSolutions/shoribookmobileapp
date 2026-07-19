@@ -11,6 +11,8 @@ import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
 import '../application/services_providers.dart';
 
+/// V10 · Services — grouped by category with a count, price and duration,
+/// deposit tag, and hidden services dimmed. Tap a row to edit.
 class ServicesListScreen extends ConsumerWidget {
   const ServicesListScreen({super.key});
 
@@ -22,65 +24,114 @@ class ServicesListScreen extends ConsumerWidget {
         membership != null && can(membership.role, Permission.manageServices);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Services')),
-      floatingActionButton: canManage
-          ? FloatingActionButton(
-              backgroundColor: AppColors.terracotta,
-              onPressed: () => context.push(RoutePaths.serviceNew),
-              child: const Icon(Icons.add, color: Colors.white),
-            )
-          : null,
-      body: RefreshIndicator(
-        onRefresh: () => ref.refresh(servicesListProvider.future),
-        child: servicesAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, st) => ListView(
-            children: [
-              const SizedBox(height: 80),
-              ErrorRetryView(
-                message: 'Could not load services.',
-                onRetry: () => ref.invalidate(servicesListProvider),
-              ),
-            ],
-          ),
-          data: (services) {
-            if (services.isEmpty) {
-              return ListView(
-                children: const [
-                  SizedBox(height: 60),
-                  EmptyState(
-                    icon: '✦',
-                    title: 'No services yet',
-                    message: 'Add the services your business offers.',
-                  ),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Services',
+                      style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                          color: AppColors.ink)),
+                  if (canManage)
+                    GestureDetector(
+                      onTap: () => context.push(RoutePaths.serviceNew),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: const BoxDecoration(
+                            color: AppColors.sage, shape: BoxShape.circle),
+                        child: const Icon(Icons.add, color: Colors.white),
+                      ),
+                    ),
                 ],
-              );
-            }
-            return ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: services.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, i) => _ServiceTile(
-                service: services[i],
-                canManage: canManage,
               ),
-            );
-          },
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () => ref.refresh(servicesListProvider.future),
+                child: servicesAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, st) => ListView(children: [
+                    const SizedBox(height: 80),
+                    ErrorRetryView(
+                      message: 'Could not load services.',
+                      onRetry: () => ref.invalidate(servicesListProvider),
+                    ),
+                  ]),
+                  data: (services) {
+                    if (services.isEmpty) {
+                      return ListView(children: const [
+                        SizedBox(height: 60),
+                        EmptyState(
+                          icon: '🏷️',
+                          title: 'No services yet',
+                          message: 'Add the services your business offers.',
+                        ),
+                      ]);
+                    }
+                    // Group by category (uncategorised last).
+                    final groups = <String, List<Service>>{};
+                    for (final s in services) {
+                      final key = (s.category ?? '').trim().isEmpty
+                          ? 'Services'
+                          : s.category!.trim();
+                      (groups[key] ??= []).add(s);
+                    }
+                    return ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                      children: [
+                        for (final entry in groups.entries) ...[
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+                            child: Text(
+                              '${entry.key}  ·  ${entry.value.length}',
+                              style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.3,
+                                  color: AppColors.faint),
+                            ),
+                          ),
+                          for (final s in entry.value)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _ServiceTile(
+                                  service: s, canManage: canManage),
+                            ),
+                        ],
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _ServiceTile extends ConsumerWidget {
+class _ServiceTile extends StatelessWidget {
   final Service service;
   final bool canManage;
 
   const _ServiceTile({required this.service, required this.canManage});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: canManage
@@ -88,47 +139,78 @@ class _ServiceTile extends ConsumerWidget {
             : null,
         child: Opacity(
           opacity: service.isActive ? 1 : 0.5,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.parchment),
+            ),
             child: Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        service.name,
-                        style: Theme.of(context).textTheme.titleMedium,
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(service.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.ink)),
+                          ),
+                          if (!service.isActive) ...[
+                            const SizedBox(width: 8),
+                            _pill('Hidden', AppColors.closedBg,
+                                AppColors.closedText),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 2),
-                      Text(
-                        '${service.durationMinutes} min · ${formatCurrency(service.price, service.currency)}'
-                        '${service.depositRequired ? ' · deposit required' : ''}',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
+                      Row(
+                        children: [
+                          Text('${service.durationMinutes} min',
+                              style: const TextStyle(
+                                  fontSize: 13, color: AppColors.muted)),
+                          if (service.depositRequired) ...[
+                            const SizedBox(width: 8),
+                            _pill('Deposit', AppColors.terracottaTint,
+                                AppColors.terracottaDeep),
+                          ],
+                        ],
                       ),
                     ],
                   ),
                 ),
-                if (!service.isActive)
-                  const Padding(
-                    padding: EdgeInsets.only(right: 8),
-                    child: Text(
-                      'Inactive',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.muted,
-                      ),
-                    ),
-                  ),
-                if (canManage) const Icon(Icons.chevron_right, color: AppColors.muted),
+                const SizedBox(width: 8),
+                Text(formatCurrency(service.price, service.currency),
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink)),
+                if (canManage) ...[
+                  const SizedBox(width: 6),
+                  const Icon(Icons.chevron_right, color: AppColors.faint),
+                ],
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _pill(String label, Color bg, Color fg) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
+      child: Text(label,
+          style:
+              TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg)),
     );
   }
 }
