@@ -53,6 +53,7 @@ class RoutePaths {
   static const categories = '/categories';
   static const bookings = '/bookings';
   static const favorites = '/favorites';
+  static const notificationsFeed = '/notifications-feed';
   static const account = '/account';
 
   static String businessProfile(String slug) => '/business/$slug';

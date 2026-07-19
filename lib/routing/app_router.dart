@@ -42,6 +42,7 @@ import '../features/marketplace/presentation/search_map_screen.dart';
 import '../features/more/presentation/more_screen.dart';
 import '../features/notifications/presentation/notification_preferences_screen.dart';
 import '../features/notifications/presentation/notification_settings_screen.dart';
+import '../features/notifications/presentation/notifications_feed_screen.dart';
 import '../features/onboarding/application/onboarding_providers.dart';
 import '../features/onboarding/presentation/onboarding_screen.dart';
 import '../features/my_bookings/presentation/booking_detail_screen.dart';
@@ -78,6 +79,7 @@ bool _isCustomerModePath(String path) {
       path.startsWith('${RoutePaths.bookings}/') ||
       path == RoutePaths.favorites ||
       path.startsWith('${RoutePaths.favorites}/') ||
+      path == RoutePaths.notificationsFeed ||
       path == RoutePaths.account ||
       path.startsWith('${RoutePaths.account}/') ||
       path.startsWith('/business/') ||
@@ -585,6 +587,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.favorites,
         builder: (c, s) => const FavoritesScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.notificationsFeed,
+        builder: (c, s) => const NotificationsFeedScreen(),
       ),
     ],
   );

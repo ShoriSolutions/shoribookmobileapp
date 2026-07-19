@@ -145,7 +145,7 @@ class CustomerProfileScreen extends ConsumerWidget {
         _MenuRow(
           icon: Icons.notifications_none,
           title: 'Notifications',
-          onTap: () => context.push(RoutePaths.support),
+          onTap: () => context.push(RoutePaths.notificationsFeed),
         ),
       ]),
       const SizedBox(height: 20),
@@ -232,7 +232,7 @@ class CustomerProfileScreen extends ConsumerWidget {
         _MenuRow(
           icon: Icons.notifications_none,
           title: 'Notifications',
-          onTap: () => context.push(RoutePaths.notificationPreferences),
+          onTap: () => context.push(RoutePaths.notificationsFeed),
         ),
       ]),
       const SizedBox(height: 20),
