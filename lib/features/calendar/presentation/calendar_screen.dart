@@ -4,154 +4,269 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/date_time_formatters.dart';
 import '../../../core/utils/timezone_offsets.dart';
+import '../../../models/appointment.dart';
 import '../../../models/availability_models.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../routing/route_paths.dart';
-import '../../appointments/presentation/widgets/appointment_card.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
 import '../application/calendar_providers.dart';
 
-class CalendarScreen extends ConsumerStatefulWidget {
+/// V05 · Calendar — month grid + the selected day's agenda (colored left
+/// bar per booking) with a terracotta FAB to add manually.
+class CalendarScreen extends ConsumerWidget {
   const CalendarScreen({super.key});
 
   @override
-  ConsumerState<CalendarScreen> createState() => _CalendarScreenState();
-}
-
-class _CalendarScreenState extends ConsumerState<CalendarScreen> {
-  bool _showMonthGrid = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(selectedCalendarDateProvider);
     final apptsAsync = ref.watch(calendarAppointmentsProvider);
     final blocks = ref.watch(calendarBlockedTimesProvider).valueOrNull ??
         const <BlockedTime>[];
     final specialDay = ref.watch(calendarSpecialDayProvider).valueOrNull;
     final membership = ref.watch(activeMembershipProvider).valueOrNull;
+    final tz = membership?.business.timezone ?? 'America/Barbados';
+
+    void setDate(DateTime d) =>
+        ref.read(selectedCalendarDateProvider.notifier).state = d;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Calendar'),
-        actions: [
-          IconButton(
-            icon: Icon(_showMonthGrid ? Icons.view_agenda_outlined : Icons.calendar_month_outlined),
-            onPressed: () => setState(() => _showMonthGrid = !_showMonthGrid),
-          ),
-        ],
-      ),
       floatingActionButton:
           membership != null && canCreateOrEditBooking(membership.role)
-          ? FloatingActionButton(
-              backgroundColor: AppColors.terracotta,
-              onPressed: () => context.push(RoutePaths.bookingNew),
-              child: const Icon(Icons.add, color: Colors.white),
-            )
-          : null,
-      body: Column(
-        children: [
-          if (_showMonthGrid)
-            TableCalendar(
-              firstDay: DateTime.now().subtract(const Duration(days: 365)),
-              lastDay: DateTime.now().add(const Duration(days: 365)),
-              focusedDay: selectedDate,
-              selectedDayPredicate: (day) => isSameDay(day, selectedDate),
-              onDaySelected: (selected, focused) {
-                ref.read(selectedCalendarDateProvider.notifier).state = selected;
-              },
-              calendarStyle: const CalendarStyle(
-                selectedDecoration: BoxDecoration(
-                  color: AppColors.sage,
-                  shape: BoxShape.circle,
-                ),
-                todayDecoration: BoxDecoration(
-                  color: AppColors.sageLight,
-                  shape: BoxShape.circle,
-                ),
-                todayTextStyle: TextStyle(color: AppColors.ink),
+              ? FloatingActionButton(
+                  backgroundColor: AppColors.terracotta,
+                  foregroundColor: Colors.white,
+                  onPressed: () => context.push(RoutePaths.bookingNew),
+                  child: const Icon(Icons.add),
+                )
+              : null,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Calendar',
+                      style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                          color: AppColors.ink)),
+                  GestureDetector(
+                    onTap: () => setDate(DateTime.now()),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.sageLight,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const Text('Today',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.sageDark)),
+                    ),
+                  ),
+                ],
               ),
-              headerStyle: const HeaderStyle(
-                formatButtonVisible: false,
-                titleCentered: true,
-              ),
-            )
-          else
-            _DateStrip(
-              selectedDate: selectedDate,
-              timezone: membership?.business.timezone ?? 'America/Barbados',
-              onChanged: (d) =>
-                  ref.read(selectedCalendarDateProvider.notifier).state = d,
             ),
-          const Divider(height: 1),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => ref.refresh(calendarAppointmentsProvider.future),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppColors.parchment),
+                ),
+                child: TableCalendar<void>(
+                  firstDay: DateTime.now().subtract(const Duration(days: 365)),
+                  lastDay: DateTime.now().add(const Duration(days: 365)),
+                  focusedDay: selectedDate,
+                  selectedDayPredicate: (d) => isSameDay(d, selectedDate),
+                  onDaySelected: (selected, focused) => setDate(selected),
+                  calendarStyle: const CalendarStyle(
+                    selectedDecoration: BoxDecoration(
+                        color: AppColors.sage, shape: BoxShape.circle),
+                    todayDecoration: BoxDecoration(
+                        color: AppColors.sageLight, shape: BoxShape.circle),
+                    todayTextStyle: TextStyle(
+                        color: AppColors.sageDark, fontWeight: FontWeight.w700),
+                    weekendTextStyle: TextStyle(color: AppColors.ink),
+                    outsideTextStyle: TextStyle(color: AppColors.faint),
+                  ),
+                  headerStyle: const HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                    titleTextStyle: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
               child: apptsAsync.when(
                 loading: () =>
                     const Center(child: CircularProgressIndicator()),
-                error: (err, st) => ListView(
-                  children: [
-                    const SizedBox(height: 80),
-                    ErrorRetryView(
-                      message: 'Could not load appointments.',
-                      onRetry: () =>
-                          ref.invalidate(calendarAppointmentsProvider),
-                    ),
-                  ],
+                error: (err, st) => ErrorRetryView(
+                  message: 'Could not load appointments.',
+                  onRetry: () =>
+                      ref.invalidate(calendarAppointmentsProvider),
                 ),
                 data: (appts) {
-                  final tz =
-                      membership?.business.timezone ?? 'America/Barbados';
-                  if (appts.isEmpty &&
-                      blocks.isEmpty &&
-                      specialDay == null) {
-                    return ListView(
-                      children: const [
-                        SizedBox(height: 60),
-                        EmptyState(
-                          icon: '📅',
-                          title: 'Nothing this day',
-                          message: 'No appointments or blocked time. '
-                              'Pick another date, or add a booking.',
+                  return RefreshIndicator(
+                    onRefresh: () =>
+                        ref.refresh(calendarAppointmentsProvider.future),
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                      children: [
+                        Text(
+                          '${DateFormat('EEE, d MMM').format(selectedDate)} · '
+                          '${appts.length} booking${appts.length == 1 ? '' : 's'}',
+                          style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.ink),
                         ),
-                      ],
-                    );
-                  }
-                  return ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      if (specialDay != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _SpecialDayCard(day: specialDay),
-                        ),
-                      for (final b in blocks)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _BlockedCard(block: b, timezone: tz),
-                        ),
-                      for (final a in appts)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: AppointmentCard(
-                            appointment: a,
-                            timezone: tz,
-                            onTap: () => context.push(
-                              RoutePaths.appointmentDetailPath(a.id),
-                            ),
+                        const SizedBox(height: 12),
+                        if (specialDay != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _SpecialDayCard(day: specialDay),
                           ),
-                        ),
-                    ],
+                        for (final b in blocks)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _BlockedCard(block: b, timezone: tz),
+                          ),
+                        if (appts.isEmpty && blocks.isEmpty && specialDay == null)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 40),
+                            child: EmptyState(
+                              icon: '📅',
+                              title: 'Nothing this day',
+                              message: 'No appointments or blocked time.',
+                            ),
+                          )
+                        else
+                          for (final a in appts)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _AgendaRow(
+                                appt: a,
+                                tz: tz,
+                                onTap: () => context.push(
+                                    RoutePaths.appointmentDetailPath(a.id)),
+                              ),
+                            ),
+                      ],
+                    ),
                   );
                 },
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AgendaRow extends StatelessWidget {
+  const _AgendaRow({required this.appt, required this.tz, required this.onTap});
+  final Appointment appt;
+  final String tz;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final local = utcToBusinessLocal(appt.startTime, tz);
+    final duration = appt.endTime.difference(appt.startTime).inMinutes;
+    final depositDue = appt.depositRequired && !appt.depositPaid;
+    final barColor = depositDue ? AppColors.terracotta : AppColors.sage;
+    return Material(
+      color: AppColors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.parchment),
           ),
-        ],
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  width: 4,
+                  decoration: BoxDecoration(
+                    color: barColor,
+                    borderRadius: const BorderRadius.horizontal(
+                        left: Radius.circular(16)),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(DateFormat('h:mm').format(local),
+                                style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.ink)),
+                            Text('$duration min',
+                                style: const TextStyle(
+                                    fontSize: 12, color: AppColors.muted)),
+                          ],
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(appt.customerName ?? 'Client',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontSize: 15.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.ink)),
+                              const SizedBox(height: 1),
+                              Text(
+                                [appt.serviceName, appt.staffName]
+                                    .where((s) => s != null && s.isNotEmpty)
+                                    .join(' · '),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 13, color: AppColors.muted),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -176,18 +291,13 @@ class _SpecialDayCard extends StatelessWidget {
     final status = day.isClosed
         ? 'Closed all day'
         : 'Special hours: ${_time(day.customOpenTime)} – ${_time(day.customCloseTime)}';
-
     return Card(
       color: AppColors.sageLight,
       child: ListTile(
-        leading: Icon(
-          day.isClosed ? Icons.event_busy : Icons.event_available,
-          color: AppColors.sageDark,
-        ),
-        title: const Text(
-          'Special day',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
+        leading: Icon(day.isClosed ? Icons.event_busy : Icons.event_available,
+            color: AppColors.sageDark),
+        title: const Text('Special day',
+            style: TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(day.note == null ? status : '$status · ${day.note}'),
       ),
     );
@@ -210,72 +320,14 @@ class _BlockedCard extends StatelessWidget {
     final timeStr = sameDay
         ? '${DateFormat('h:mm a').format(start)} – ${DateFormat('h:mm a').format(end)}'
         : '${DateFormat('MMM d, h:mm a').format(start)} – ${DateFormat('MMM d, h:mm a').format(end)}';
-
     return Card(
       color: AppColors.parchment,
       child: ListTile(
         leading: const Icon(Icons.block, color: AppColors.muted),
-        title: const Text(
-          'Blocked',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
+        title:
+            const Text('Blocked', style: TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(
-          block.reason == null ? timeStr : '$timeStr · ${block.reason}',
-        ),
-      ),
-    );
-  }
-}
-
-class _DateStrip extends StatelessWidget {
-  final DateTime selectedDate;
-  final String timezone;
-  final ValueChanged<DateTime> onChanged;
-
-  const _DateStrip({
-    required this.selectedDate,
-    required this.timezone,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left),
-            onPressed: () =>
-                onChanged(selectedDate.subtract(const Duration(days: 1))),
-          ),
-          Expanded(
-            child: InkWell(
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: selectedDate,
-                  firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                  lastDate: DateTime.now().add(const Duration(days: 365)),
-                );
-                if (picked != null) onChanged(picked);
-              },
-              child: Center(
-                child: Text(
-                  DateTimeFormatters.relativeDayLabel(
-                    '${selectedDate.year.toString().padLeft(4, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
-                    timezone,
-                  ),
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right),
-            onPressed: () => onChanged(selectedDate.add(const Duration(days: 1))),
-          ),
-        ],
+            block.reason == null ? timeStr : '$timeStr · ${block.reason}'),
       ),
     );
   }

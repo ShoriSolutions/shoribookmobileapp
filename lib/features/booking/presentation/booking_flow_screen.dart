@@ -61,59 +61,110 @@ class BookingFlowScreen extends ConsumerWidget {
     final state = ref.watch(bookingFormControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Add booking')),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _SectionTitle('Client'),
-            const _ClientSection(),
-            const SizedBox(height: 20),
-            const _SectionTitle('Service'),
-            const _ServiceSection(),
-            const SizedBox(height: 20),
-            const _SectionTitle('Staff'),
-            const _StaffSection(),
-            const SizedBox(height: 20),
-            const _SectionTitle('Date & time'),
-            const _DateTimeSection(),
-            const SizedBox(height: 20),
-            const _SectionTitle('Price & deposit'),
-            const _PriceDepositSection(),
-            const SizedBox(height: 20),
-            const _SectionTitle('Booking source'),
-            const _BookingSourceSection(),
-            const SizedBox(height: 20),
-            const _SectionTitle('Notes'),
-            const _NotesSection(),
-            const SizedBox(height: 24),
-            if (state.errorMessage != null && state.conflicts == null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  state.errorMessage!,
-                  style: const TextStyle(color: AppColors.danger),
-                ),
-              ),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: state.canSubmit && !state.isSubmitting
-                    ? () => _save(context, ref)
-                    : null,
-                child: state.isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Save booking'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 20, 0),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.close, color: AppColors.ink),
+                    onPressed: () => context.pop(),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text('New booking',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.ink)),
+                ],
               ),
             ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
+              child: Text('Add a booking from a DM, call or walk-in.',
+                  style: TextStyle(fontSize: 14, color: AppColors.muted)),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                children: const [
+                  _SectionTitle('Client'),
+                  _ClientSection(),
+                  SizedBox(height: 20),
+                  _SectionTitle('Service'),
+                  _ServiceSection(),
+                  SizedBox(height: 20),
+                  _SectionTitle('Staff'),
+                  _StaffSection(),
+                  SizedBox(height: 20),
+                  _SectionTitle('Date & time'),
+                  _DateTimeSection(),
+                  SizedBox(height: 20),
+                  _SectionTitle('Price & deposit'),
+                  _PriceDepositSection(),
+                  SizedBox(height: 20),
+                  _SectionTitle('Booking source'),
+                  _BookingSourceSection(),
+                  SizedBox(height: 20),
+                  _SectionTitle('Notes'),
+                  _NotesSection(),
+                ],
+              ),
+            ),
+            if (state.errorMessage != null && state.conflicts == null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Text(state.errorMessage!,
+                    style: const TextStyle(color: AppColors.danger)),
+              ),
+            _StickyFooter(
+              busy: state.isSubmitting,
+              onPressed: state.canSubmit && !state.isSubmitting
+                  ? () => _save(context, ref)
+                  : null,
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StickyFooter extends StatelessWidget {
+  const _StickyFooter({required this.busy, required this.onPressed});
+  final bool busy;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.cream,
+        boxShadow: [
+          BoxShadow(
+              color: Color(0x0D1E1B16), blurRadius: 18, offset: Offset(0, -6)),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+        child: SizedBox(
+          height: 54,
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: onPressed,
+            child: busy
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
+                : const Text('Create booking',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          ),
         ),
       ),
     );
@@ -129,7 +180,12 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Text(label, style: Theme.of(context).textTheme.titleMedium),
+      child: Text(label.toUpperCase(),
+          style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.7,
+              color: AppColors.faint)),
     );
   }
 }
