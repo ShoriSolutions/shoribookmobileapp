@@ -3,10 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snackbar.dart';
+import '../../../core/widgets/shori_logo.dart';
 import '../../../routing/route_paths.dart';
+import 'widgets/auth_field.dart';
+import 'widgets/social_auth_button.dart';
 import '../application/login_controller.dart';
-import 'widgets/auth_wave_header.dart';
 
+/// C14 · Log in — never a wall. "Continue as guest" stays top-right;
+/// email + password, forgot-password by deep link, and optional
+/// Apple/Google sign-in.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -27,11 +32,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  void _guest() => context.canPop() ? context.pop() : context.go(RoutePaths.discover);
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final ok = await ref
-        .read(loginControllerProvider.notifier)
-        .signIn(
+    final ok = await ref.read(loginControllerProvider.notifier).signIn(
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
@@ -41,12 +46,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       showAppSnackBar(context, message: error.toString(), isError: true);
       return;
     }
-    // Pop back to whatever pushed this screen (e.g. the booking wizard's
-    // "sign in to book" prompt) so its state survives; if login was the
-    // root route instead, go(splash) re-triggers the redirect logic to
-    // land on the right mode's home once auth state settles. Deliberately
-    // not relying on the redirect to navigate away from here — see the
-    // comment in app_router.dart's customer-mode branch.
     if (context.canPop()) {
       context.pop();
     } else {
@@ -60,126 +59,168 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final isLoading = loginState.isLoading;
 
     return Scaffold(
-      body: Column(
-        children: [
-          const AuthWaveHeader(height: 180),
-          Expanded(
-            child: SafeArea(
-              top: false,
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 28,
-                    vertical: 28,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.close, color: AppColors.ink),
+                      onPressed: _guest,
+                    ),
+                    TextButton(
+                      onPressed: _guest,
+                      child: const Text('Continue as guest',
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.muted)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: 76,
+                  height: 76,
+                  decoration: BoxDecoration(
+                    color: AppColors.sageLight,
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Welcome back',
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Log in to manage your business',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: AppColors.muted),
-                        ),
-                        const SizedBox(height: 32),
-                        TextFormField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          autofillHints: const [AutofillHints.email],
-                          decoration: const InputDecoration(
-                            labelText: 'Email address',
-                            hintText: 'you@example.com',
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Enter your email';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          autofillHints: const [AutofillHints.password],
-                          decoration: InputDecoration(
-                            labelText: 'Password',
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_outlined
-                                    : Icons.visibility_off_outlined,
-                                color: AppColors.muted,
-                              ),
-                              onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword,
-                              ),
-                            ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Enter your password';
-                            }
-                            return null;
-                          },
-                          onFieldSubmitted: (_) => _submit(),
-                        ),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () =>
-                                context.push(RoutePaths.forgotPassword),
-                            child: const Text('Forgot password?'),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: isLoading ? null : _submit,
-                            child: isLoading
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Text('Log in'),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Center(
-                          child: TextButton(
-                            onPressed: () => context.push(RoutePaths.register),
-                            child: const Text('New here? Create an account'),
-                          ),
-                        ),
-                        Center(
-                          child: TextButton(
-                            // Customers don't need to log in — let anyone who
-                            // lands here go straight to the marketplace.
-                            onPressed: () => context.go(RoutePaths.discover),
-                            child: const Text('Continue as a customer instead'),
-                          ),
-                        ),
-                      ],
+                  alignment: Alignment.center,
+                  child: const ShoriLogo(markSize: 44, showWordmark: false),
+                ),
+                const SizedBox(height: 20),
+                const Text('Welcome back',
+                    style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                        color: AppColors.ink)),
+                const SizedBox(height: 6),
+                const Text('Log in to sync your bookings and favourites.',
+                    style: TextStyle(fontSize: 15, color: AppColors.muted)),
+                const SizedBox(height: 28),
+                AuthField(
+                  label: 'Email',
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
+                  hintText: 'you@example.com',
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Enter your email' : null,
+                ),
+                const SizedBox(height: 16),
+                AuthField(
+                  label: 'Password',
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  autofillHints: const [AutofillHints.password],
+                  onFieldSubmitted: (_) => _submit(),
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Enter your password' : null,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: AppColors.muted),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => context.push(RoutePaths.forgotPassword),
+                    child: const Text('Forgot password?',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.sageDark)),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : _submit,
+                    child: isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : const Text('Log in',
+                            style: TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const _OrDivider(),
+                const SizedBox(height: 16),
+                SocialAuthButton(
+                  provider: SocialProvider.apple,
+                  onTap: () => _comingSoon('Apple'),
+                ),
+                const SizedBox(height: 12),
+                SocialAuthButton(
+                  provider: SocialProvider.google,
+                  onTap: () => _comingSoon('Google'),
+                ),
+                const SizedBox(height: 20),
+                Center(
+                  child: GestureDetector(
+                    onTap: () => context.push(RoutePaths.register),
+                    child: const Text.rich(
+                      TextSpan(children: [
+                        TextSpan(
+                            text: 'New here? ',
+                            style: TextStyle(color: AppColors.muted)),
+                        TextSpan(
+                            text: 'Create account',
+                            style: TextStyle(
+                                color: AppColors.sageDark,
+                                fontWeight: FontWeight.w800)),
+                      ]),
+                      style: TextStyle(fontSize: 14.5),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
+    );
+  }
+
+  void _comingSoon(String provider) {
+    showAppSnackBar(context,
+        message: '$provider sign-in is coming soon. Use email for now.');
+  }
+}
+
+class _OrDivider extends StatelessWidget {
+  const _OrDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        Expanded(child: Divider(color: AppColors.parchment)),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12),
+          child: Text('or', style: TextStyle(color: AppColors.muted)),
+        ),
+        Expanded(child: Divider(color: AppColors.parchment)),
+      ],
     );
   }
 }
