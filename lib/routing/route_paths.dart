@@ -49,6 +49,8 @@ class RoutePaths {
 
   // Customer/marketplace mode
   static const discover = '/discover';
+  static const search = '/search';
+  static const categories = '/categories';
   static const bookings = '/bookings';
   static const favorites = '/favorites';
   static const account = '/account';

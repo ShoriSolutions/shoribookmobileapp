@@ -28,17 +28,29 @@ class BottomNavShell extends StatelessWidget {
           index,
           initialLocation: index == navigationShell.currentIndex,
         ),
+        selectedItemColor: AppColors.sageDark,
+        unselectedItemColor: AppColors.faint,
+        selectedLabelStyle:
+            const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
+        unselectedLabelStyle:
+            const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500),
         items: [
           for (final item in items)
             BottomNavigationBarItem(
-              icon: Text(
-                item.icon,
-                style: const TextStyle(fontSize: 18, color: AppColors.muted),
-              ),
-              activeIcon: Text(
-                item.icon,
-                style: const TextStyle(fontSize: 18, color: AppColors.sage),
-              ),
+              icon: item.iconData != null
+                  ? Icon(item.iconData, size: 23)
+                  : Text(
+                      item.icon,
+                      style:
+                          const TextStyle(fontSize: 18, color: AppColors.faint),
+                    ),
+              activeIcon: item.iconData != null
+                  ? Icon(item.activeIconData ?? item.iconData, size: 23)
+                  : Text(
+                      item.icon,
+                      style: const TextStyle(
+                          fontSize: 18, color: AppColors.sageDark),
+                    ),
               label: item.label,
             ),
         ],

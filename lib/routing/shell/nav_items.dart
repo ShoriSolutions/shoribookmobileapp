@@ -1,13 +1,24 @@
+import 'package:flutter/material.dart';
 import '../../models/business_role.dart';
 
 /// A destination in either the bottom nav or the "More" menu. Mirrors
-/// the web's DashboardShell.tsx NAV_ITEMS + minRole pattern.
+/// the web's DashboardShell.tsx NAV_ITEMS + minRole pattern. [iconData]
+/// is the Lucide-style line icon used by the customer tab bar; the older
+/// [icon] glyph is kept for the vendor menu rows.
 class NavItem {
   final String label;
   final String icon;
+  final IconData? iconData;
+  final IconData? activeIconData;
   final BusinessRole? minRole; // null = all roles
 
-  const NavItem({required this.label, required this.icon, this.minRole});
+  const NavItem({
+    required this.label,
+    this.icon = '',
+    this.iconData,
+    this.activeIconData,
+    this.minRole,
+  });
 
   bool visibleFor(BusinessRole role) =>
       minRole == null || role.atLeast(minRole!);
@@ -36,12 +47,27 @@ const moreMenuItems = [
   NavItem(label: 'Help & Support', icon: '☂'),
 ];
 
-/// Customer/marketplace mode's bottom tab bar — no role concept applies
-/// here (customer authorization is identity-based, not role-based), so
-/// every item is visible to every customer session.
+/// Customer/marketplace mode's bottom tab bar — Home · Search · Categories
+/// · Bookings · Profile (per the marketplace-first handoff). No role
+/// concept applies here (customer authorization is identity-based), so
+/// every item is visible to every customer session. Favourites moved
+/// under Profile.
 const customerBottomNavItems = [
-  NavItem(label: 'Discover', icon: '⊙'),
-  NavItem(label: 'My Bookings', icon: '▤'),
-  NavItem(label: 'Favorites', icon: '♡'),
-  NavItem(label: 'Profile', icon: '◐'),
+  NavItem(
+      label: 'Home',
+      iconData: Icons.home_outlined,
+      activeIconData: Icons.home),
+  NavItem(label: 'Search', iconData: Icons.search),
+  NavItem(
+      label: 'Categories',
+      iconData: Icons.grid_view_outlined,
+      activeIconData: Icons.grid_view),
+  NavItem(
+      label: 'Bookings',
+      iconData: Icons.calendar_today_outlined,
+      activeIconData: Icons.calendar_today),
+  NavItem(
+      label: 'Profile',
+      iconData: Icons.person_outline,
+      activeIconData: Icons.person),
 ];

@@ -36,7 +36,9 @@ import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/deposits/presentation/deposits_list_screen.dart';
 import '../features/favorites/presentation/favorites_screen.dart';
 import '../features/marketplace/presentation/business_profile_screen.dart';
+import '../features/marketplace/presentation/categories_screen.dart';
 import '../features/marketplace/presentation/discover_screen.dart';
+import '../features/marketplace/presentation/search_map_screen.dart';
 import '../features/more/presentation/more_screen.dart';
 import '../features/notifications/presentation/notification_preferences_screen.dart';
 import '../features/notifications/presentation/notification_settings_screen.dart';
@@ -70,6 +72,8 @@ const _preAuthRoutes = {
 bool _isCustomerModePath(String path) {
   return path == RoutePaths.discover ||
       path.startsWith('${RoutePaths.discover}/') ||
+      path == RoutePaths.search ||
+      path == RoutePaths.categories ||
       path == RoutePaths.bookings ||
       path.startsWith('${RoutePaths.bookings}/') ||
       path == RoutePaths.favorites ||
@@ -538,6 +542,22 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: RoutePaths.search,
+                builder: (c, s) => const SearchMapScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.categories,
+                builder: (c, s) => const CategoriesScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: RoutePaths.bookings,
                 builder: (c, s) => const MyBookingsScreen(),
                 routes: [
@@ -553,20 +573,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: RoutePaths.favorites,
-                builder: (c, s) => const FavoritesScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
                 path: RoutePaths.account,
                 builder: (c, s) => const CustomerProfileScreen(),
               ),
             ],
           ),
         ],
+      ),
+
+      // Favourites moved out of the tab bar (reached from Profile).
+      GoRoute(
+        path: RoutePaths.favorites,
+        builder: (c, s) => const FavoritesScreen(),
       ),
     ],
   );

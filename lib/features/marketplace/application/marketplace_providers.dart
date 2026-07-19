@@ -58,6 +58,13 @@ final marketplaceOpenNowProvider =
   return result;
 });
 
+/// Count of discoverable businesses per category value, for the
+/// Categories tab's "N nearby" labels.
+final categoryCountsProvider =
+    FutureProvider.autoDispose<Map<String, int>>((ref) async {
+  return ref.watch(marketplaceRepositoryProvider).fetchCategoryCounts();
+});
+
 class BusinessProfileData {
   final Business business;
   final List<Service> services;

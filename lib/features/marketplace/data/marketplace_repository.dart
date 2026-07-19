@@ -44,6 +44,27 @@ class MarketplaceRepository {
     }
   }
 
+  /// Count of discoverable businesses per category value, for the
+  /// Categories screen's "N nearby" labels.
+  Future<Map<String, int>> fetchCategoryCounts() async {
+    try {
+      final data = await _client
+          .from('businesses')
+          .select('category')
+          .eq('booking_enabled', true)
+          .neq('status', 'not_accepting_bookings');
+      final counts = <String, int>{};
+      for (final row in (data as List).cast<Map<String, dynamic>>()) {
+        final cat = row['category'] as String?;
+        if (cat == null || cat.isEmpty) continue;
+        counts[cat] = (counts[cat] ?? 0) + 1;
+      }
+      return counts;
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   Future<Business?> fetchBySlug(String slug) async {
     try {
       final data = await _client
