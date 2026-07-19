@@ -106,6 +106,8 @@ class Appointment {
   final String? businessWhatsapp;
   final String? businessCategory;
   final String? businessAddress;
+  final double? businessLatitude;
+  final double? businessLongitude;
 
   const Appointment({
     required this.id,
@@ -145,6 +147,8 @@ class Appointment {
     this.businessWhatsapp,
     this.businessCategory,
     this.businessAddress,
+    this.businessLatitude,
+    this.businessLongitude,
   });
 
   bool get isActive =>
@@ -209,6 +213,8 @@ class Appointment {
       businessWhatsapp: business?['whatsapp_number'] as String?,
       businessCategory: business?['category'] as String?,
       businessAddress: business?['address'] as String?,
+      businessLatitude: (business?['latitude'] as num?)?.toDouble(),
+      businessLongitude: (business?['longitude'] as num?)?.toDouble(),
     );
   }
 }
@@ -243,5 +249,5 @@ const String customerAppointmentSelectColumns = '''
   booking_source, internal_notes, created_at, updated_at,
   services ( name ),
   staff_profiles ( name, role ),
-  businesses ( name, logo_url, slug, timezone, phone, whatsapp_number, category, address )
+  businesses ( name, logo_url, slug, timezone, phone, whatsapp_number, category, address, latitude, longitude )
 ''';
