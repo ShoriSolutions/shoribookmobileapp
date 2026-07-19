@@ -151,6 +151,30 @@ class _NotificationSettingsScreenState
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.sageLight,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.sageTintBorder),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.chat_bubble_outline,
+                        size: 18, color: AppColors.sageDark),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Reminders are sent free over WhatsApp, with SMS as a '
+                        'fallback.',
+                        style:
+                            TextStyle(fontSize: 13, color: AppColors.sageDark),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Text('Channels', style: Theme.of(context).textTheme.titleMedium),
               Card(
                 child: Column(
