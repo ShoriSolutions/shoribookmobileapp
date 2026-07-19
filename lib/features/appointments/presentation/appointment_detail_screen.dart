@@ -73,6 +73,11 @@ class AppointmentDetailScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               _ClientCard(appointment: appt),
               const SizedBox(height: 12),
+              _ContactRow(
+                phone: appt.customerPhone,
+                whatsapp: appt.customerPhone,
+              ),
+              const SizedBox(height: 12),
               _DetailsCard(appointment: appt, timezone: tz),
               if (appt.depositRequired) ...[
                 const SizedBox(height: 12),
@@ -292,49 +297,130 @@ class _ClientCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final phone = appointment.customerPhone;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    appointment.customerName?.trim().isNotEmpty == true
-                        ? appointment.customerName!
-                        : 'Walk-in client',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  if (phone != null && phone.isNotEmpty)
-                    Text(
-                      phone,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
-                    ),
+    final name = appointment.customerName?.trim().isNotEmpty == true
+        ? appointment.customerName!
+        : 'Walk-in client';
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.parchment),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 26,
+            backgroundColor: AppColors.sage,
+            foregroundColor: Colors.white,
+            child: Text(name[0].toUpperCase(),
+                style: const TextStyle(
+                    fontSize: 20, fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name,
+                    style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink)),
+                if (phone != null && phone.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(phone,
+                      style: const TextStyle(
+                          fontSize: 14, color: AppColors.muted)),
                 ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// V06 · WhatsApp + Call actions under the client card.
+class _ContactRow extends StatelessWidget {
+  const _ContactRow({required this.phone, required this.whatsapp});
+  final String? phone;
+  final String? whatsapp;
+
+  @override
+  Widget build(BuildContext context) {
+    final wa = whatsapp ?? phone;
+    if ((phone == null || phone!.isEmpty) && (wa == null || wa.isEmpty)) {
+      return const SizedBox.shrink();
+    }
+    return Row(
+      children: [
+        if (wa != null && wa.isNotEmpty)
+          Expanded(
+            child: _ContactButton(
+              icon: Icons.chat_bubble_outline,
+              label: 'Message',
+              bg: AppColors.whatsapp,
+              fg: Colors.white,
+              onTap: () => launchUrl(
+                Uri.parse(
+                    'https://wa.me/${wa.replaceAll(RegExp(r'[^0-9+]'), '')}'),
+                mode: LaunchMode.externalApplication,
               ),
             ),
-            if (phone != null && phone.isNotEmpty) ...[
-              IconButton.filledTonal(
-                onPressed: () => launchUrl(Uri.parse('tel:$phone')),
-                icon: const Icon(Icons.call_outlined),
-              ),
+          ),
+        if (wa != null && wa.isNotEmpty && phone != null && phone!.isNotEmpty)
+          const SizedBox(width: 12),
+        if (phone != null && phone!.isNotEmpty)
+          Expanded(
+            child: _ContactButton(
+              icon: Icons.call_outlined,
+              label: 'Call',
+              bg: AppColors.sageLight,
+              fg: AppColors.sageDark,
+              onTap: () => launchUrl(Uri.parse('tel:$phone')),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ContactButton extends StatelessWidget {
+  const _ContactButton({
+    required this.icon,
+    required this.label,
+    required this.bg,
+    required this.fg,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final Color bg;
+  final Color fg;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 50,
+      child: Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: fg),
               const SizedBox(width: 8),
-              IconButton.filledTonal(
-                onPressed: () {
-                  final digits = phone.replaceAll(RegExp(r'[^0-9+]'), '');
-                  launchUrl(
-                    Uri.parse('https://wa.me/$digits'),
-                    mode: LaunchMode.externalApplication,
-                  );
-                },
-                icon: const Icon(Icons.chat_outlined),
-              ),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w700, color: fg)),
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -538,28 +624,57 @@ class _StatusActions extends StatelessWidget {
     if (!appointment.isActive) {
       return const SizedBox.shrink();
     }
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+    return Column(
       children: [
-        if (appointment.status == AppointmentStatus.pending)
-          ElevatedButton(
-            onPressed: () => onSetStatus(AppointmentStatus.confirmed),
-            child: const Text('Confirm'),
+        if (appointment.status == AppointmentStatus.pending) ...[
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: () => onSetStatus(AppointmentStatus.confirmed),
+              child: const Text('Confirm booking',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
           ),
-        ElevatedButton(
-          onPressed: () => onSetStatus(AppointmentStatus.completed),
-          style: ElevatedButton.styleFrom(backgroundColor: AppColors.sage),
-          child: const Text('Mark completed'),
+          const SizedBox(height: 12),
+        ],
+        Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: () => onSetStatus(AppointmentStatus.completed),
+                  style:
+                      ElevatedButton.styleFrom(backgroundColor: AppColors.sage),
+                  child: const Text('Mark complete',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: SizedBox(
+                height: 52,
+                child: OutlinedButton(
+                  onPressed: () => onSetStatus(AppointmentStatus.noShow),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.danger,
+                    side: const BorderSide(color: Color(0xFFECCDC4)),
+                  ),
+                  child: const Text('No-show',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ),
+          ],
         ),
-        OutlinedButton(
-          onPressed: () => onSetStatus(AppointmentStatus.noShow),
-          style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
-          child: const Text('No-show'),
-        ),
-        OutlinedButton(
+        const SizedBox(height: 8),
+        TextButton(
           onPressed: () => onSetStatus(AppointmentStatus.cancelled),
-          child: const Text('Cancel appointment'),
+          style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+          child: const Text('Cancel appointment',
+              style: TextStyle(fontWeight: FontWeight.w700)),
         ),
       ],
     );
