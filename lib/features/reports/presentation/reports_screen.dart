@@ -19,105 +19,207 @@ class ReportsScreen extends ConsumerWidget {
         ref.watch(activeMembershipProvider).valueOrNull?.business.currency;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Reports')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Wrap(
-              spacing: 8,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Reports',
+                      style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                          color: AppColors.ink)),
+                  _PeriodChip(range: range, ref: ref),
+                ],
+              ),
+            ),
+            Expanded(
+              child: summaryAsync.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (err, st) => ErrorRetryView(
+                  message: 'Could not load reports.',
+                  onRetry: () => ref.invalidate(reportSummaryProvider),
+                ),
+                data: (summary) {
+                  final avgTicket = summary.totalAppointments > 0
+                      ? summary.totalRevenue / summary.totalAppointments
+                      : 0.0;
+                  final noShowRate = summary.totalAppointments > 0
+                      ? (summary.noShowCount / summary.totalAppointments * 100)
+                          .round()
+                      : 0;
+                  return ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                    children: [
+                      // Revenue card
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppColors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: AppColors.parchment),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Revenue · ${range.label}',
+                                style: const TextStyle(
+                                    fontSize: 14, color: AppColors.muted)),
+                            const SizedBox(height: 6),
+                            Text(
+                              formatCurrency(summary.totalRevenue, currency),
+                              style: const TextStyle(
+                                  fontSize: 34,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -1,
+                                  color: AppColors.ink),
+                            ),
+                            if (summary.revenueByDay.isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                height: 150,
+                                child: _RevenueLineChart(
+                                    summary: summary, currency: currency),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      GridView.count(
+                        crossAxisCount: 2,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childAspectRatio: 1.55,
+                        children: [
+                          _Tile('Bookings', '${summary.totalAppointments}',
+                              AppColors.ink),
+                          _Tile('Avg ticket',
+                              formatCurrency(avgTicket, currency),
+                              AppColors.ink),
+                          _Tile('Completed', '${summary.completedCount}',
+                              AppColors.sageDark),
+                          _Tile('No-show rate', '$noShowRate%',
+                              AppColors.danger),
+                        ],
+                      ),
+                      if (summary.topServices.isNotEmpty) ...[
+                        const SizedBox(height: 24),
+                        const Text('Top services',
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.ink)),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: AppColors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.parchment),
+                          ),
+                          child: Column(
+                            children: [
+                              for (var i = 0;
+                                  i < summary.topServices.length;
+                                  i++) ...[
+                                if (i > 0)
+                                  const Divider(
+                                      height: 1, color: AppColors.divider),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 14),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(summary.topServices[i].name,
+                                            style: const TextStyle(
+                                                fontSize: 15.5,
+                                                fontWeight: FontWeight.w700,
+                                                color: AppColors.ink)),
+                                      ),
+                                      Text('${summary.topServices[i].count}',
+                                          style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.muted)),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PeriodChip extends StatelessWidget {
+  const _PeriodChip({required this.range, required this.ref});
+  final ReportRange range;
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        final picked = await showModalBottomSheet<ReportRange>(
+          context: context,
+          showDragHandle: true,
+          builder: (ctx) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 for (final r in ReportRange.values)
-                  ChoiceChip(
-                    label: Text(r.label),
-                    selected: range == r,
-                    onSelected: (_) =>
-                        ref.read(reportRangeProvider.notifier).state = r,
+                  ListTile(
+                    title: Text(r.label),
+                    trailing: r == range
+                        ? const Icon(Icons.check, color: AppColors.sage)
+                        : null,
+                    onTap: () => Navigator.pop(ctx, r),
                   ),
               ],
             ),
           ),
-          Expanded(
-            child: summaryAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, st) => ErrorRetryView(
-                message: 'Could not load reports.',
-                onRetry: () => ref.invalidate(reportSummaryProvider),
-              ),
-              data: (summary) => ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 1.7,
-                    children: [
-                      _Tile('Total bookings', '${summary.totalAppointments}'),
-                      _Tile('Completed', '${summary.completedCount}'),
-                      _Tile('Revenue', formatCurrency(summary.totalRevenue, currency)),
-                      _Tile(
-                        'Deposits collected',
-                        formatCurrency(summary.depositsCollected, currency),
-                      ),
-                      _Tile('Cancelled', '${summary.cancelledCount}'),
-                      _Tile('No-shows', '${summary.noShowCount}'),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  if (summary.revenueByDay.isNotEmpty) ...[
-                    Text(
-                      'Revenue trend',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 180,
-                      child: _RevenueLineChart(
-                        summary: summary,
-                        currency: currency,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                  if (summary.appointmentsByDay.isNotEmpty &&
-                      summary.appointmentsByDay.length <= 31) ...[
-                    Text(
-                      'Bookings by day',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(height: 160, child: _BookingsBarChart(summary: summary)),
-                    const SizedBox(height: 24),
-                  ],
-                  if (summary.topServices.isNotEmpty) ...[
-                    Text(
-                      'Top services',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 10),
-                    for (final s in summary.topServices)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          children: [
-                            Expanded(child: Text(s.name)),
-                            Text(
-                              '${s.count}',
-                              style: const TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                  const SizedBox(height: 24),
-                ],
-              ),
-            ),
-          ),
-        ],
+        );
+        if (picked != null) {
+          ref.read(reportRangeProvider.notifier).state = picked;
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.sageLight,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(range.label,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w700, color: AppColors.sageDark)),
+            const Icon(Icons.keyboard_arrow_down,
+                size: 18, color: AppColors.sageDark),
+          ],
+        ),
       ),
     );
   }
@@ -126,35 +228,35 @@ class ReportsScreen extends ConsumerWidget {
 class _Tile extends StatelessWidget {
   final String label;
   final String value;
+  final Color color;
 
-  const _Tile(this.label, this.value);
+  const _Tile(this.label, this.value, this.color);
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.muted),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.parchment),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
+              style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                  color: color)),
+          const SizedBox(height: 4),
+          Text(label,
+              style: const TextStyle(fontSize: 14, color: AppColors.muted)),
+        ],
       ),
     );
   }
@@ -254,48 +356,6 @@ class _RevenueLineChart extends StatelessWidget {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BookingsBarChart extends StatelessWidget {
-  final ReportSummary summary;
-
-  const _BookingsBarChart({required this.summary});
-
-  @override
-  Widget build(BuildContext context) {
-    final days = summary.appointmentsByDay;
-    final maxCount = days
-        .map((d) => d.count)
-        .fold<int>(1, (a, b) => a > b ? a : b);
-
-    return BarChart(
-      BarChartData(
-        maxY: (maxCount + 1).toDouble(),
-        gridData: const FlGridData(show: false),
-        borderData: FlBorderData(show: false),
-        titlesData: const FlTitlesData(
-          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        ),
-        barGroups: [
-          for (int i = 0; i < days.length; i++)
-            BarChartGroupData(
-              x: i,
-              barRods: [
-                BarChartRodData(
-                  toY: days[i].count.toDouble(),
-                  color: AppColors.sage,
-                  width: 12,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ],
-            ),
         ],
       ),
     );
