@@ -9,6 +9,11 @@ import '../../business_context/application/active_business_provider.dart';
 /// The currently-selected agenda date, defaulting to "today". Kept as
 /// plain UI state (not persisted) since re-opening the app should
 /// always land back on today.
+/// Owner/admin filter for the calendar agenda: a staff_profile id to show
+/// only that staff's bookings, or null for everyone. (STAFF users are
+/// already scoped to their own bookings at the query level.)
+final calendarStaffFilterProvider = StateProvider<String?>((ref) => null);
+
 final selectedCalendarDateProvider = StateProvider<DateTime>((ref) {
   return DateTime.now();
 });

@@ -12,6 +12,7 @@ import '../../../core/widgets/error_retry_view.dart';
 import '../../../routing/route_paths.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
+import '../../staff/application/staff_providers.dart';
 import '../application/calendar_providers.dart';
 
 /// V05 · Calendar — month grid + the selected day's agenda (colored left
@@ -28,6 +29,9 @@ class CalendarScreen extends ConsumerWidget {
     final specialDay = ref.watch(calendarSpecialDayProvider).valueOrNull;
     final membership = ref.watch(activeMembershipProvider).valueOrNull;
     final tz = membership?.business.timezone ?? 'America/Barbados';
+    final staffFilter = ref.watch(calendarStaffFilterProvider);
+    final canFilterStaff =
+        membership != null && membership.role.value != 'STAFF';
 
     void setDate(DateTime d) =>
         ref.read(selectedCalendarDateProvider.notifier).state = d;
@@ -112,6 +116,10 @@ class CalendarScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            if (canFilterStaff) ...[
+              const SizedBox(height: 12),
+              _StaffFilterRow(selectedId: staffFilter),
+            ],
             const SizedBox(height: 16),
             Expanded(
               child: apptsAsync.when(
@@ -122,7 +130,12 @@ class CalendarScreen extends ConsumerWidget {
                   onRetry: () =>
                       ref.invalidate(calendarAppointmentsProvider),
                 ),
-                data: (appts) {
+                data: (allAppts) {
+                  final appts = staffFilter == null
+                      ? allAppts
+                      : allAppts
+                          .where((a) => a.staffProfileId == staffFilter)
+                          .toList();
                   return RefreshIndicator(
                     onRefresh: () =>
                         ref.refresh(calendarAppointmentsProvider.future),
@@ -176,6 +189,60 @@ class CalendarScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Owner/admin filter to view one staff member's day (or All).
+class _StaffFilterRow extends ConsumerWidget {
+  const _StaffFilterRow({required this.selectedId});
+  final String? selectedId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final staff = (ref.watch(staffListProvider).valueOrNull ?? const [])
+        .where((s) => s.isActive)
+        .toList();
+    if (staff.isEmpty) return const SizedBox.shrink();
+
+    void set(String? id) =>
+        ref.read(calendarStaffFilterProvider.notifier).state = id;
+
+    return SizedBox(
+      height: 34,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        children: [
+          _chip('All staff', selectedId == null, () => set(null)),
+          const SizedBox(width: 8),
+          for (final s in staff) ...[
+            _chip(s.name, selectedId == s.id, () => set(s.id)),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(String label, bool selected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.sage : AppColors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+              color: selected ? AppColors.sage : AppColors.parchment),
+        ),
+        child: Text(label,
+            style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: selected ? Colors.white : AppColors.muted)),
       ),
     );
   }
