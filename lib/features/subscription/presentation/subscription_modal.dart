@@ -48,6 +48,7 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
   bool _productsRequested = false;
   String? _selectedId;
   String? _displayCurrency; // null = auto from the business's country
+  BillingPeriod _billing = BillingPeriod.monthly;
   bool _busy = false;
   String? _successMessage;
   StreamSubscription<List<PurchaseDetails>>? _purchaseSub;
@@ -101,7 +102,12 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
     }
   }
 
-  String _priceFor(SubscriptionPackage p, String currency) {
+  String _priceFor(SubscriptionPackage p, String currency, double discount) {
+    // Annual billing shows the discounted yearly total, derived dynamically.
+    if (_billing == BillingPeriod.yearly && p.priceAmount != null) {
+      final annual = annualAmount(p.priceAmount!, discount);
+      return CurrencyRates.format(annual, currency, from: p.currency);
+    }
     final repo = ref.read(subscriptionRepositoryProvider);
     final storeId = repo.storeProductId(p);
     final product = storeId == null ? null : _products[storeId];
@@ -315,6 +321,7 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
     final eligible = _eligibility?.isEligible ?? true;
     final primaryLabel = eligible ? 'Start Free Trial' : 'Subscribe';
     final currency = _resolveCurrency();
+    final discount = ref.watch(annualDiscountPercentProvider).valueOrNull ?? 20;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
@@ -373,7 +380,15 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
+
+          // Monthly / Yearly billing toggle with a configurable savings badge
+          _BillingToggle(
+            billing: _billing,
+            discountPercent: discount,
+            onChanged: (b) => setState(() => _billing = b),
+          ),
+          const SizedBox(height: 14),
 
           // Feature summary for the selected plan
           Container(
@@ -394,7 +409,9 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
               child: PricingCard(
                 package: packages[i],
                 selected: packages[i].id == selected.id,
-                priceText: _priceFor(packages[i], currency),
+                priceText: _priceFor(packages[i], currency, discount),
+                periodLabel:
+                    _billing == BillingPeriod.yearly ? '/year' : null,
                 onTap: () => setState(() => _selectedId = packages[i].id),
               ),
             ),
@@ -531,6 +548,81 @@ class _PressableScaleState extends State<_PressableScale> {
         scale: _down ? 0.97 : 1.0,
         duration: const Duration(milliseconds: 120),
         child: Opacity(opacity: enabled ? 1 : 0.7, child: widget.child),
+      ),
+    );
+  }
+}
+
+/// Monthly / Yearly billing switch. The Yearly side shows a dynamic
+/// "Save X%" badge from the configured annual discount.
+class _BillingToggle extends StatelessWidget {
+  const _BillingToggle({
+    required this.billing,
+    required this.discountPercent,
+    required this.onChanged,
+  });
+
+  final BillingPeriod billing;
+  final double discountPercent;
+  final ValueChanged<BillingPeriod> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          height: 44,
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: AppColors.parchment,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              _half('Monthly', billing == BillingPeriod.monthly,
+                  () => onChanged(BillingPeriod.monthly)),
+              _half('Yearly', billing == BillingPeriod.yearly,
+                  () => onChanged(BillingPeriod.yearly)),
+            ],
+          ),
+        ),
+        if (billing == BillingPeriod.yearly && discountPercent > 0) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColors.sageLight,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              'Save ${discountPercent.toStringAsFixed(0)}% with annual billing',
+              style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.sageDark),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _half(String label, bool active, VoidCallback onTap) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: active ? AppColors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Text(label,
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: active ? AppColors.ink : AppColors.muted)),
+        ),
       ),
     );
   }

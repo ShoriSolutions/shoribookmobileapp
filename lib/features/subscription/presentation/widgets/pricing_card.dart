@@ -12,6 +12,7 @@ class PricingCard extends StatelessWidget {
     required this.selected,
     required this.onTap,
     required this.priceText,
+    this.periodLabel,
   });
 
   final SubscriptionPackage package;
@@ -21,6 +22,10 @@ class PricingCard extends StatelessWidget {
   /// Resolved price string — the store's localized price if available,
   /// otherwise a formatted fallback from the DB.
   final String priceText;
+
+  /// Overrides the package's own period label (e.g. "/year" for annual
+  /// billing). Falls back to [SubscriptionPackage.periodLabel].
+  final String? periodLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +105,7 @@ class PricingCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        package.periodLabel,
+                        periodLabel ?? package.periodLabel,
                         style: Theme.of(context)
                             .textTheme
                             .bodySmall

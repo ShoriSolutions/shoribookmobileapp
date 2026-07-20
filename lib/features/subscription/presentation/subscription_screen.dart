@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_rates.dart';
 import '../../../core/widgets/app_snackbar.dart';
@@ -54,6 +55,26 @@ class SubscriptionScreen extends ConsumerWidget {
               ),
               child: Column(
                 children: [
+                  if (business != null)
+                    SwitchListTile(
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 16),
+                      title: const Text('Auto-renew',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                      subtitle: Text(
+                        business.autoRenew
+                            ? 'Renews automatically at the end of each period'
+                            : "Won't renew — access ends at the period end",
+                        style: const TextStyle(
+                            fontSize: 12.5, color: AppColors.muted),
+                      ),
+                      value: business.autoRenew,
+                      activeThumbColor: AppColors.sage,
+                      onChanged: (v) => _setAutoRenew(context, ref, business, v),
+                    ),
+                  if (business != null)
+                    const Divider(height: 1, color: AppColors.divider),
                   _row('Change plan',
                       onTap: () => showSubscriptionModal(context)),
                   const Divider(height: 1, color: AppColors.divider),
@@ -260,6 +281,26 @@ class SubscriptionScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _setAutoRenew(
+      BuildContext context, WidgetRef ref, Business business, bool value) async {
+    try {
+      await ref.read(subscriptionRepositoryProvider).setSubscriptionPrefs(
+            businessId: business.id,
+            autoRenew: value,
+          );
+      ref.invalidate(activeMembershipProvider);
+      if (context.mounted) {
+        showAppSnackBar(context,
+            message: value ? 'Auto-renew on' : 'Auto-renew off');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        showAppSnackBar(context,
+            message: AppException.from(e).message, isError: true);
+      }
+    }
   }
 
   Future<void> _cancel(BuildContext context) async {

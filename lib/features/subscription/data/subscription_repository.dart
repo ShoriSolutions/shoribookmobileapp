@@ -52,6 +52,25 @@ class SubscriptionRepository {
     }
   }
 
+  /// Persists the vendor's auto-renew / billing-period preference. The
+  /// actual renewal charge is performed by the app store (auto-renewable
+  /// IAP) or a payment-processor Edge Function — this only records intent.
+  Future<void> setSubscriptionPrefs({
+    required String businessId,
+    bool? autoRenew,
+    String? billingPeriod,
+  }) async {
+    try {
+      await _client.rpc('set_subscription_prefs', params: {
+        'p_business_id': businessId,
+        'p_auto_renew': autoRenew,
+        'p_billing_period': billingPeriod,
+      });
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   /// Grants the entitlement after a completed store purchase. (Production:
   /// move receipt verification to an Edge Function before granting.)
   Future<void> recordPurchase({

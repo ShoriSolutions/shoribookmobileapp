@@ -30,6 +30,9 @@ class Business {
   // 'none' | 'trialing' | 'trial_pending' | 'active' | 'past_due' | 'canceled'
   final String subscriptionStatus;
   final DateTime? trialEndsAt;
+  final bool autoRenew;
+  final String billingPeriod; // 'monthly' | 'yearly'
+  final DateTime? currentPeriodEnd;
   final String? countryCode; // ISO 3166-1 alpha-2, for price display currency
   final DateTime? nameCategoryLockedUntil;
   final String status;
@@ -69,6 +72,9 @@ class Business {
     this.maxSimultaneousBookings,
     this.subscriptionStatus = 'none',
     this.trialEndsAt,
+    this.autoRenew = true,
+    this.billingPeriod = 'monthly',
+    this.currentPeriodEnd,
     this.countryCode,
     this.nameCategoryLockedUntil,
     required this.status,
@@ -129,6 +135,11 @@ class Business {
     trialEndsAt: json['trial_ends_at'] == null
         ? null
         : DateTime.parse(json['trial_ends_at'] as String),
+    autoRenew: json['auto_renew'] as bool? ?? true,
+    billingPeriod: json['billing_period'] as String? ?? 'monthly',
+    currentPeriodEnd: json['current_period_end'] == null
+        ? null
+        : DateTime.parse(json['current_period_end'] as String),
     countryCode: json['country_code'] as String?,
     nameCategoryLockedUntil: json['name_category_locked_until'] == null
         ? null
@@ -177,6 +188,9 @@ class Business {
     'max_simultaneous_bookings': maxSimultaneousBookings,
     'subscription_status': subscriptionStatus,
     'trial_ends_at': trialEndsAt?.toIso8601String(),
+    'auto_renew': autoRenew,
+    'billing_period': billingPeriod,
+    'current_period_end': currentPeriodEnd?.toIso8601String(),
     'country_code': countryCode,
     'name_category_locked_until': nameCategoryLockedUntil?.toIso8601String(),
     'status': status,
