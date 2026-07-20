@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/greeting.dart';
 import '../../../core/utils/timezone_offsets.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_retry_view.dart';
@@ -11,6 +12,7 @@ import '../../../models/appointment.dart';
 import '../../../models/business.dart';
 import '../../../models/staff_profile.dart';
 import '../../../routing/route_paths.dart';
+import '../../app_mode/application/app_mode_provider.dart';
 import '../../booking_link/presentation/booking_share_sheet.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../staff/application/staff_providers.dart';
@@ -32,6 +34,10 @@ class DashboardScreen extends ConsumerWidget {
     if (membership == null) return const SizedBox.shrink();
     final business = membership.business;
     final tz = business.timezone;
+    final fullName = ref.watch(myProfileProvider).valueOrNull?.fullName;
+    final firstName = (fullName == null || fullName.trim().isEmpty)
+        ? null
+        : fullName.trim().split(' ').first;
 
     _maybeShowLaunchPromo(context, ref);
 
@@ -52,7 +58,7 @@ class DashboardScreen extends ConsumerWidget {
             data: (data) => ListView(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
               children: [
-                _header(context, business, tz),
+                _header(context, business, firstName),
                 if (business.subscriptionStatus == 'trialing') ...[
                   const SizedBox(height: 12),
                   _trialBanner(context, business),
@@ -118,13 +124,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _header(BuildContext context, Business business, String tz) {
-    final now = utcToBusinessLocal(DateTime.now().toUtc(), tz);
-    final greeting = now.hour < 12
-        ? 'Good morning'
-        : now.hour < 17
-            ? 'Good afternoon'
-            : 'Good evening';
+  Widget _header(BuildContext context, Business business, String? firstName) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -132,7 +132,7 @@ class DashboardScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(greeting,
+              Text(Greeting.full(name: firstName),
                   style: const TextStyle(fontSize: 14, color: AppColors.muted)),
               const SizedBox(height: 2),
               Text(business.name,
