@@ -52,6 +52,26 @@ class CustomerBookingRepository {
   /// the check_slot_available RPC, which enforces open hours, closures,
   /// manual blocks, buffer/overlap, and booking limits — the authoritative
   /// recheck before we attempt to create the appointment.
+  /// Whether this phone is blocked from booking with the business — a
+  /// polite pre-check before attempting to create the appointment (the DB
+  /// also enforces it via a trigger).
+  Future<bool> checkCustomerBlocked({
+    required String businessId,
+    required String phone,
+  }) async {
+    try {
+      final res = await _client.rpc('check_customer_blocked', params: {
+        'p_business_id': businessId,
+        'p_phone': phone,
+      });
+      return res as bool? ?? false;
+    } catch (_) {
+      // Never let a pre-check failure block a legitimate booking; the DB
+      // trigger remains the authoritative guard.
+      return false;
+    }
+  }
+
   Future<({bool available, String? reason})> checkSlotAvailable({
     required String businessId,
     required String serviceId,

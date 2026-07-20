@@ -271,6 +271,24 @@ class BookingWizardController extends AutoDisposeFamilyNotifier<
         return;
       }
 
+      // Blocked-customer guard (polite pre-check; the DB trigger is the
+      // authoritative backstop). Only this business is affected.
+      final blocked = await ref
+          .read(customerBookingRepositoryProvider)
+          .checkCustomerBlocked(
+            businessId: profileData.business.id,
+            phone: state.phone,
+          );
+      if (blocked) {
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage:
+              "Sorry — ${profileData.business.name} isn't accepting new "
+              'bookings from you right now. Please contact them directly.',
+        );
+        return;
+      }
+
       final startUtc = businessLocalToUtc(
         date: _isoDate(date),
         time: time,

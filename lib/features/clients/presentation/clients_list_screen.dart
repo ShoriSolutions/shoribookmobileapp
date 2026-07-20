@@ -18,6 +18,7 @@ class ClientsListScreen extends ConsumerWidget {
     ('regulars', 'Regulars'),
     ('new', 'New'),
     ('flagged', 'Flagged'),
+    ('blocked', 'Blocked'),
   ];
 
   static const _avatarColors = [
@@ -102,7 +103,7 @@ class ClientsListScreen extends ConsumerWidget {
                     _FilterChip(
                       label: f.$2,
                       selected: filter == f.$1,
-                      danger: f.$1 == 'flagged',
+                      danger: f.$1 == 'flagged' || f.$1 == 'blocked',
                       onTap: () =>
                           ref.read(clientFilterProvider.notifier).state = f.$1,
                     ),
@@ -262,7 +263,9 @@ class _ClientTile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (customer.tags.contains('flagged'))
+              if (customer.isBlocked)
+                _tag('Blocked', const Color(0xFFF7ECE9), AppColors.danger)
+              else if (customer.tags.contains('flagged'))
                 _tag('Flagged', const Color(0xFFF7ECE9), AppColors.danger)
               else if (customer.tags.contains('new'))
                 _tag('New', AppColors.closedBg, AppColors.closedText)

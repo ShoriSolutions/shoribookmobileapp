@@ -29,7 +29,9 @@ final filteredClientsProvider = Provider.autoDispose<AsyncValue<List<Customer>>>
     final clientsAsync = ref.watch(clientsListProvider);
     return clientsAsync.whenData((clients) {
       var list = clients;
-      if (filter != 'all') {
+      if (filter == 'blocked') {
+        list = list.where((c) => c.isBlocked).toList();
+      } else if (filter != 'all') {
         final tag = filter == 'regulars' ? 'regular' : filter;
         list = list.where((c) => c.tags.contains(tag)).toList();
       }

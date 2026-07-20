@@ -8,6 +8,8 @@ class Customer {
   final String? email;
   final String? notes;
   final List<String> tags;
+  final bool isBlocked;
+  final String? blockedReason;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -21,6 +23,8 @@ class Customer {
     this.email,
     this.notes,
     required this.tags,
+    this.isBlocked = false,
+    this.blockedReason,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -40,6 +44,8 @@ class Customer {
     tags:
         (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
         const [],
+    isBlocked: json['is_blocked'] as bool? ?? false,
+    blockedReason: json['blocked_reason'] as String?,
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),
   );

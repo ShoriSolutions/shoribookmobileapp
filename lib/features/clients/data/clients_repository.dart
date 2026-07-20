@@ -229,6 +229,22 @@ class ClientsRepository {
     }
   }
 
+  /// Blocks or unblocks a customer from future bookings with this business.
+  /// Server-side (set_customer_blocked) verifies OWNER/ADMIN and audit-logs
+  /// the action.
+  Future<void> setBlocked(String customerId, bool blocked,
+      {String? reason}) async {
+    try {
+      await _client.rpc('set_customer_blocked', params: {
+        'p_customer_id': customerId,
+        'p_blocked': blocked,
+        'p_reason': reason,
+      });
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   String _monthName(int month) => const [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',

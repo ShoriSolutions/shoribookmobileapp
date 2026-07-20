@@ -25,6 +25,8 @@ class ClientDetailScreen extends ConsumerWidget {
         can(membership.role, Permission.manageClients);
     final tz = membership?.business.timezone ?? 'America/Barbados';
 
+    final blocked = asyncData.valueOrNull?.customer.isBlocked ?? false;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Client'),
@@ -32,8 +34,28 @@ class ClientDetailScreen extends ConsumerWidget {
           if (canEdit)
             IconButton(
               icon: const Icon(Icons.edit_outlined),
-              onPressed: () =>
-                  context.push(RoutePaths.clientEdit(clientId)),
+              onPressed: () => context.push(RoutePaths.clientEdit(clientId)),
+            ),
+          if (canEdit)
+            PopupMenuButton<String>(
+              onSelected: (v) {
+                if (v == 'block') {
+                  _blockCustomer(context, ref);
+                } else if (v == 'unblock') {
+                  _setBlocked(context, ref, false);
+                }
+              },
+              itemBuilder: (ctx) => [
+                if (blocked)
+                  const PopupMenuItem(
+                      value: 'unblock', child: Text('Unblock customer'))
+                else
+                  const PopupMenuItem(
+                    value: 'block',
+                    child: Text('Block customer',
+                        style: TextStyle(color: AppColors.danger)),
+                  ),
+              ],
             ),
         ],
       ),
@@ -49,6 +71,41 @@ class ClientDetailScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              if (customer.isBlocked) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7ECE9),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFECCDC4)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.block, size: 18, color: AppColors.danger),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Blocked from future bookings',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.danger)),
+                            if ((customer.blockedReason ?? '').isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(customer.blockedReason!,
+                                  style: const TextStyle(
+                                      fontSize: 13, color: AppColors.danger)),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               Column(
                 children: [
                   CircleAvatar(
@@ -194,6 +251,72 @@ class ClientDetailScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Future<void> _blockCustomer(BuildContext context, WidgetRef ref) async {
+    final reasonController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Block this customer?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "They won't be able to make new bookings with your business. "
+              'Existing bookings are unaffected, and this only applies to you.',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                labelText: 'Reason (optional, private)',
+              ),
+              minLines: 1,
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('Block'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    await _setBlocked(context, ref, true,
+        reason: reasonController.text.trim().isEmpty
+            ? null
+            : reasonController.text.trim());
+  }
+
+  Future<void> _setBlocked(BuildContext context, WidgetRef ref, bool blocked,
+      {String? reason}) async {
+    try {
+      await ref
+          .read(clientsRepositoryProvider)
+          .setBlocked(clientId, blocked, reason: reason);
+      ref.invalidate(clientDetailProvider(clientId));
+      ref.invalidate(clientsListProvider);
+      if (context.mounted) {
+        showAppSnackBar(context,
+            message: blocked ? 'Customer blocked' : 'Customer unblocked');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        showAppSnackBar(context,
+            message: 'Could not update. Only owners/admins can block.',
+            isError: true);
+      }
+    }
   }
 }
 
