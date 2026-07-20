@@ -68,11 +68,29 @@ class SupportContent {
           'uses your device or location.',
     ),
     (
+      'Where do I manage my account?',
+      'Everything account-related lives in one place: More → Account & '
+          'security (vendors) or Profile → Account & security (customers). '
+          'From there you can edit your profile, change your password, switch '
+          'account, log out, or delete your account.',
+    ),
+    (
+      'How do I change my password?',
+      'Open Account & security → Change password. We email you a secure link '
+          'to set a new one — no need to remember the old password.',
+    ),
+    (
+      'How do I make myself bookable as the owner?',
+      'Go to More → Staff and tap "Make myself available". This adds you as a '
+          'bookable pro so clients can book with you and you show as On duty. '
+          'Set your own hours in More → Availability.',
+    ),
+    (
       'How do I delete my account?',
-      'Go to More → Delete account (or Profile → Delete account). You type '
-          'DELETE and confirm with a code we email you. Deletion is '
-          'permanent, and for a business owner it also removes the business '
-          'and all of its data.',
+      'Go to Account & security → Delete account (under More for vendors, or '
+          'Profile for customers). You type DELETE and confirm with a code we '
+          'email you. Deletion is permanent, and for a business owner it also '
+          'removes the business and all of its data.',
     ),
   ];
 

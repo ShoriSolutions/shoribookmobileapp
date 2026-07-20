@@ -238,12 +238,12 @@ class CustomerProfileScreen extends ConsumerWidget {
       const SizedBox(height: 20),
       _supportGroup(context),
       const SizedBox(height: 20),
-      const _GroupLabel('Account actions'),
+      const _GroupLabel('Account'),
       _MenuCard(rows: [
         _MenuRow(
-          icon: Icons.swap_horiz,
-          title: 'Switch account',
-          onTap: () => _signOut(context, ref, toLogin: true),
+          icon: Icons.manage_accounts_outlined,
+          title: 'Account & security',
+          onTap: () => context.push(RoutePaths.accountSettings),
         ),
         _MenuRow(
           icon: Icons.logout,
@@ -252,14 +252,6 @@ class CustomerProfileScreen extends ConsumerWidget {
           title: 'Sign out',
           danger: true,
           onTap: () => _confirmSignOut(context, ref),
-        ),
-        _MenuRow(
-          icon: Icons.delete_forever_outlined,
-          iconTint: const Color(0xFFF7ECE9),
-          iconColor: AppColors.danger,
-          title: 'Delete account',
-          danger: true,
-          onTap: () => context.push(RoutePaths.deleteAccount),
         ),
       ]),
     ];

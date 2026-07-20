@@ -39,6 +39,7 @@ class RoutePaths {
   static const support = '/support';
   static const deleteAccount = '/delete-account';
   static const settings = '/settings';
+  static const accountSettings = '/account-settings';
   static const subscriptionRequired = '/subscription-required';
   static const trialStarted = '/trial-started';
   static const subscription = '/subscription';

@@ -52,6 +52,7 @@ import '../features/my_bookings/presentation/my_bookings_screen.dart';
 import '../features/reports/presentation/reports_screen.dart';
 import '../features/services/presentation/service_form_screen.dart';
 import '../features/services/presentation/services_list_screen.dart';
+import '../features/settings/presentation/account_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/staff/presentation/invite_staff_screen.dart';
 import '../features/staff/presentation/staff_detail_screen.dart';
@@ -493,6 +494,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Neutral route — reachable from both the business "More" menu and
       // the customer profile, so it is intentionally not added to the
       // owner/customer mode-path lists.
+      GoRoute(
+        path: RoutePaths.accountSettings,
+        builder: (c, s) => const AccountScreen(),
+      ),
       GoRoute(
         path: RoutePaths.notificationSettings,
         builder: (c, s) => const NotificationSettingsScreen(),

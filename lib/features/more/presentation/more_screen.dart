@@ -110,6 +110,12 @@ class MoreScreen extends ConsumerWidget {
                   onTap: () => context.push(RoutePaths.subscription),
                 ),
               _MenuRow(
+                icon: Icons.manage_accounts_outlined,
+                title: 'Account & security',
+                subtitle: 'Profile, password, delete account',
+                onTap: () => context.push(RoutePaths.accountSettings),
+              ),
+              _MenuRow(
                 icon: Icons.help_outline,
                 title: 'Help & support',
                 onTap: () => context.push(RoutePaths.support),
