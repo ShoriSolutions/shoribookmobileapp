@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../models/service.dart';
 import '../../business_context/application/active_business_provider.dart';
+import '../../staff/application/staff_providers.dart';
 import '../application/services_providers.dart';
 
 class ServiceFormScreen extends ConsumerStatefulWidget {
@@ -33,6 +35,8 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
   bool _isLoading = false;
   bool _isLoadingExisting = false;
   Service? _existing;
+  // Staff assigned to this service (empty = any active staff can perform it).
+  Set<String> _assignedStaffIds = {};
 
   @override
   void initState() {
@@ -47,6 +51,10 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
           .read(servicesRepositoryProvider)
           .fetchById(widget.serviceId!);
       _existing = service;
+      _assignedStaffIds =
+          await ref.read(servicesRepositoryProvider).fetchAssignedStaffIds(
+                widget.serviceId!,
+              );
       _name.text = service.name;
       _description.text = service.description ?? '';
       _category.text = service.category ?? '';
@@ -111,11 +119,14 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
       );
 
       final repo = ref.read(servicesRepositoryProvider);
+      final String serviceId;
       if (_existing == null) {
-        await repo.create(service, membership.business.id);
+        serviceId = await repo.create(service, membership.business.id);
       } else {
-        await repo.update(_existing!.id, service, membership.business.id);
+        serviceId = _existing!.id;
+        await repo.update(serviceId, service, membership.business.id);
       }
+      await repo.setAssignedStaff(serviceId, _assignedStaffIds);
       ref.invalidate(servicesListProvider);
       if (mounted) context.pop();
     } catch (e) {
@@ -281,6 +292,17 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
                             ),
                           ),
                       ],
+                      const SizedBox(height: 20),
+                      _OfferedBySection(
+                        selected: _assignedStaffIds,
+                        onToggle: (id) => setState(() {
+                          if (_assignedStaffIds.contains(id)) {
+                            _assignedStaffIds.remove(id);
+                          } else {
+                            _assignedStaffIds.add(id);
+                          }
+                        }),
+                      ),
                       const SizedBox(height: 12),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
@@ -313,6 +335,116 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
                 ),
               ),
             ),
+    );
+  }
+}
+
+/// "Offered by" — pick which staff can perform this service. Selecting none
+/// means any active staff can perform it (matches the booking flow).
+class _OfferedBySection extends ConsumerWidget {
+  const _OfferedBySection({required this.selected, required this.onToggle});
+
+  final Set<String> selected;
+  final ValueChanged<String> onToggle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final staffAsync = ref.watch(staffListProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('OFFERED BY',
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.7,
+                color: AppColors.faint)),
+        const SizedBox(height: 4),
+        Text(
+          selected.isEmpty
+              ? 'Any active staff can perform this service.'
+              : 'Only the selected staff can be booked for this service.',
+          style: const TextStyle(fontSize: 12.5, color: AppColors.muted),
+        ),
+        const SizedBox(height: 10),
+        staffAsync.when(
+          loading: () => const LinearProgressIndicator(),
+          error: (_, __) => const Text('Could not load staff',
+              style: TextStyle(color: AppColors.muted)),
+          data: (staff) {
+            final bookable =
+                staff.where((s) => s.isActive && s.isBookable).toList();
+            if (bookable.isEmpty) {
+              return const Text('No bookable staff yet.',
+                  style: TextStyle(fontSize: 13, color: AppColors.muted));
+            }
+            return Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final s in bookable)
+                  _StaffChip(
+                    name: s.name,
+                    selected: selected.contains(s.id),
+                    onTap: () => onToggle(s.id),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _StaffChip extends StatelessWidget {
+  const _StaffChip({
+    required this.name,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String name;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.sage : AppColors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+              color: selected ? AppColors.sage : AppColors.parchment),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 11,
+              backgroundColor:
+                  selected ? Colors.white24 : AppColors.sageLight,
+              foregroundColor: selected ? Colors.white : AppColors.sageDark,
+              child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                      fontSize: 11, fontWeight: FontWeight.w700)),
+            ),
+            const SizedBox(width: 7),
+            Text(name,
+                style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? Colors.white : AppColors.ink)),
+            if (selected) ...[
+              const SizedBox(width: 6),
+              const Icon(Icons.check, size: 15, color: Colors.white),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

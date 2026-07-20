@@ -32,9 +32,47 @@ class ServicesRepository {
     }
   }
 
-  Future<void> create(Service service, String businessId) async {
+  /// Creates a service and returns its new id (needed to link staff).
+  Future<String> create(Service service, String businessId) async {
     try {
-      await _client.from('services').insert(service.toInsertJson(businessId));
+      final row = await _client
+          .from('services')
+          .insert(service.toInsertJson(businessId))
+          .select('id')
+          .single();
+      return row['id'] as String;
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
+  /// Staff profile ids assigned to a service (empty = any active staff can
+  /// perform it, matching the booking flow's serviceAssignedStaffIds logic).
+  Future<Set<String>> fetchAssignedStaffIds(String serviceId) async {
+    try {
+      final data = await _client
+          .from('service_staff')
+          .select('staff_profile_id')
+          .eq('service_id', serviceId);
+      return (data as List)
+          .map((e) => e['staff_profile_id'] as String)
+          .toSet();
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
+  /// Replaces the set of staff assigned to a service. An empty [staffIds]
+  /// clears all links (→ any active staff can perform it).
+  Future<void> setAssignedStaff(String serviceId, Set<String> staffIds) async {
+    try {
+      await _client.from('service_staff').delete().eq('service_id', serviceId);
+      if (staffIds.isNotEmpty) {
+        await _client.from('service_staff').insert([
+          for (final id in staffIds)
+            {'service_id': serviceId, 'staff_profile_id': id},
+        ]);
+      }
     } catch (e) {
       throw AppException.from(e);
     }
