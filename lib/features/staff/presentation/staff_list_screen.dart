@@ -194,7 +194,15 @@ class _StaffTile extends StatelessWidget {
                         staff.name,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      if (staff.role != null)
+                      if (staff.roles.isNotEmpty)
+                        Text(
+                          staff.roles.join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.muted),
+                        )
+                      else if (staff.role != null)
                         Text(
                           staff.role!,
                           style: Theme.of(context).textTheme.bodySmall

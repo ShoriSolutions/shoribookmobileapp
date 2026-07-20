@@ -3,7 +3,8 @@ class StaffProfile {
   final String businessId;
   final String? memberId;
   final String name;
-  final String? role;
+  final String? role; // legacy single role; kept in sync with roles.first
+  final List<String> roles; // job roles (Barber, Nail Tech, …)
   final String? bio;
   final String? profileImageUrl;
   final String? email;
@@ -19,6 +20,7 @@ class StaffProfile {
     this.memberId,
     required this.name,
     this.role,
+    this.roles = const [],
     this.bio,
     this.profileImageUrl,
     this.email,
@@ -35,6 +37,12 @@ class StaffProfile {
     memberId: json['member_id'] as String?,
     name: json['name'] as String,
     role: json['role'] as String?,
+    roles: (json['roles'] as List<dynamic>?)
+            ?.map((e) => e as String)
+            .toList() ??
+        (json['role'] != null && (json['role'] as String).trim().isNotEmpty
+            ? [json['role'] as String]
+            : const []),
     bio: json['bio'] as String?,
     profileImageUrl: json['profile_image_url'] as String?,
     email: json['email'] as String?,
@@ -48,7 +56,8 @@ class StaffProfile {
   Map<String, dynamic> toInsertJson(String businessId) => {
     'business_id': businessId,
     'name': name,
-    'role': role,
+    'role': roles.isNotEmpty ? roles.first : role,
+    'roles': roles,
     'bio': bio,
     'profile_image_url': profileImageUrl,
     'email': email,

@@ -88,7 +88,32 @@ class StaffDetailScreen extends ConsumerWidget {
                           staff.name,
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
-                        if (staff.role != null) Text(staff.role!),
+                        if (staff.roles.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                for (final r in staff.roles)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 9, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.sageLight,
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(r,
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.sageDark)),
+                                  ),
+                              ],
+                            ),
+                          )
+                        else if (staff.role != null)
+                          Text(staff.role!),
                       ],
                     ),
                   ),
@@ -156,9 +181,10 @@ class StaffDetailScreen extends ConsumerWidget {
     StaffProfile staff,
   ) async {
     final nameController = TextEditingController(text: staff.name);
-    final roleController = TextEditingController(text: staff.role ?? '');
+    final customRoleController = TextEditingController();
     final bioController = TextEditingController(text: staff.bio ?? '');
     final phoneController = TextEditingController(text: staff.phone ?? '');
+    final roles = {...staff.roles};
     bool isActive = staff.isActive;
     bool isBookable = staff.isBookable;
 
@@ -184,10 +210,54 @@ class StaffDetailScreen extends ConsumerWidget {
                   controller: nameController,
                   decoration: const InputDecoration(labelText: 'Name'),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: roleController,
-                  decoration: const InputDecoration(labelText: 'Role/title'),
+                const SizedBox(height: 16),
+                const Text('Job roles',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.muted)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final r in {..._suggestedRoles, ...roles})
+                      _RoleChip(
+                        label: r,
+                        selected: roles.contains(r),
+                        onTap: () => setState(() =>
+                            roles.contains(r) ? roles.remove(r) : roles.add(r)),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: customRoleController,
+                        decoration: const InputDecoration(
+                            labelText: 'Add a custom role'),
+                        onSubmitted: (_) {
+                          final v = customRoleController.text.trim();
+                          if (v.isNotEmpty) {
+                            setState(() => roles.add(v));
+                            customRoleController.clear();
+                          }
+                        },
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle, color: AppColors.sage),
+                      onPressed: () {
+                        final v = customRoleController.text.trim();
+                        if (v.isNotEmpty) {
+                          setState(() => roles.add(v));
+                          customRoleController.clear();
+                        }
+                      },
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -231,9 +301,8 @@ class StaffDetailScreen extends ConsumerWidget {
                           businessId: staff.businessId,
                           memberId: staff.memberId,
                           name: nameController.text.trim(),
-                          role: roleController.text.trim().isEmpty
-                              ? null
-                              : roleController.text.trim(),
+                          role: roles.isEmpty ? null : roles.first,
+                          roles: roles.toList(),
                           bio: bioController.text.trim().isEmpty
                               ? null
                               : bioController.text.trim(),
@@ -269,6 +338,63 @@ class StaffDetailScreen extends ConsumerWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Common job roles suggested to owners; they can also add custom ones.
+/// A base for future role-based permissions.
+const _suggestedRoles = <String>[
+  'Barber',
+  'Hair Stylist',
+  'Nail Technician',
+  'Lash Artist',
+  'Brow Artist',
+  'Esthetician',
+  'Massage Therapist',
+  'Makeup Artist',
+  'Personal Trainer',
+  'Receptionist',
+];
+
+class _RoleChip extends StatelessWidget {
+  const _RoleChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.sage : AppColors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+              color: selected ? AppColors.sage : AppColors.parchment),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (selected) ...[
+              const Icon(Icons.check, size: 15, color: Colors.white),
+              const SizedBox(width: 5),
+            ],
+            Text(label,
+                style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? Colors.white : AppColors.ink)),
+          ],
         ),
       ),
     );
