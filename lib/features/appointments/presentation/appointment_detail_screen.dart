@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/status_colors.dart';
+import '../../../core/time/time_zone_service.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_time_formatters.dart';
 import '../../../core/utils/timezone_offsets.dart';
@@ -453,12 +454,24 @@ class _DetailsCard extends StatelessWidget {
       ('Booking source', BookingSource.label(appointment.bookingSource)),
     ];
 
+    // Show the customer's local time when they booked from another zone —
+    // helps the vendor understand why reminders show a different time.
+    final custZone = appointment.customerTimezone;
+    final showCustomer = custZone != null &&
+        TimeZoneService.zonesDiffer(appointment.startTime, timezone, custZone);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             for (final r in rows) _InfoRow(label: r.$1, value: r.$2),
+            if (showCustomer)
+              _InfoRow(
+                label: "Customer's time",
+                value: '${TimeZoneService.time(appointment.startTime, custZone)}'
+                    ' · ${TimeZoneService.friendlyName(custZone)}',
+              ),
           ],
         ),
       ),

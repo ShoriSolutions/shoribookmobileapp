@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/time/customer_time_zone.dart';
+import '../../../core/time/time_zone_service.dart';
 import '../../../core/utils/calendar_export.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_time_formatters.dart';
@@ -139,6 +141,12 @@ class BookingDetailScreen extends ConsumerWidget {
           ),
           data: (appt) {
             final tz = appt.businessTimezone ?? 'America/Barbados';
+            // Customer-facing: show times in the viewer's local zone, with the
+            // business time alongside when they differ (DST-aware).
+            final custZone = ref.watch(customerTimeZoneProvider).valueOrNull;
+            final viewerZone = custZone ?? tz;
+            final tzDiffer = custZone != null &&
+                TimeZoneService.zonesDiffer(appt.startTime, tz, custZone);
             final visual = CategoryVisual.of(appt.businessCategory);
             final hasCoords = appt.businessLatitude != null &&
                 appt.businessLongitude != null;
@@ -234,8 +242,16 @@ class BookingDetailScreen extends ConsumerWidget {
                     children: [
                       _detailRow(
                           Icons.calendar_today_outlined,
-                          '${DateTimeFormatters.weekdayDate(appt.startTime, tz)} · '
-                          '${DateTimeFormatters.time(appt.startTime, tz)}'),
+                          '${DateTimeFormatters.weekdayDate(appt.startTime, viewerZone)} · '
+                          '${DateTimeFormatters.time(appt.startTime, viewerZone)}'),
+                      if (tzDiffer) ...[
+                        const Divider(color: AppColors.divider, height: 1),
+                        _detailRow(
+                            Icons.storefront_outlined,
+                            '${DateTimeFormatters.time(appt.startTime, tz)} · '
+                            '${TimeZoneService.friendlyName(tz)} time',
+                            muted: true),
+                      ],
                       const Divider(color: AppColors.divider, height: 1),
                       _detailRow(
                           Icons.access_time,
@@ -245,6 +261,17 @@ class BookingDetailScreen extends ConsumerWidget {
                       _detailRow(Icons.credit_card_outlined, 'Ref ${_ref(appt)}',
                           bold: true),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(
+                    tzDiffer
+                        ? 'Times are shown in your local time'
+                            ' (${TimeZoneService.friendlyName(viewerZone)}).'
+                        : 'Times are shown in your local time.',
+                    style: const TextStyle(fontSize: 12.5, color: AppColors.muted),
                   ),
                 ),
                 if (hasCoords) ...[
@@ -356,19 +383,20 @@ class BookingDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _detailRow(IconData icon, String text, {bool bold = false}) {
+  Widget _detailRow(IconData icon, String text,
+      {bool bold = false, bool muted = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: AppColors.sage),
+          Icon(icon, size: 20, color: muted ? AppColors.muted : AppColors.sage),
           const SizedBox(width: 12),
           Expanded(
             child: Text(text,
                 style: TextStyle(
-                    fontSize: 15.5,
+                    fontSize: muted ? 13.5 : 15.5,
                     fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
-                    color: AppColors.ink)),
+                    color: muted ? AppColors.muted : AppColors.ink)),
           ),
         ],
       ),
