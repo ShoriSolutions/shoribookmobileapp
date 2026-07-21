@@ -88,6 +88,7 @@ class Appointment {
   final String? customerName;
   final String? customerPhone;
   final String? customerEmail;
+  final String? customerTimezone; // IANA zone the customer booked from
   final String? notes;
   final String bookingSource;
   final String? internalNotes;
@@ -131,6 +132,7 @@ class Appointment {
     this.customerName,
     this.customerPhone,
     this.customerEmail,
+    this.customerTimezone,
     this.notes,
     required this.bookingSource,
     this.internalNotes,
@@ -197,6 +199,7 @@ class Appointment {
           (json['customer_phone'] as String?) ?? customer?['phone'] as String?,
       customerEmail:
           (json['customer_email'] as String?) ?? customer?['email'] as String?,
+      customerTimezone: json['customer_timezone'] as String?,
       notes: json['notes'] as String?,
       bookingSource: json['booking_source'] as String? ?? BookingSource.online,
       internalNotes: json['internal_notes'] as String?,
@@ -228,7 +231,7 @@ const String appointmentSelectColumns = '''
   deposit_required, deposit_amount, deposit_paid, deposit_status,
   payment_method, payment_reference, deposit_paid_at,
   cancellation_policy_accepted,
-  customer_name, customer_phone, customer_email, notes,
+  customer_name, customer_phone, customer_email, customer_timezone, notes,
   booking_source, internal_notes, created_at, updated_at,
   services ( name ),
   staff_profiles ( name, role ),
@@ -245,7 +248,7 @@ const String customerAppointmentSelectColumns = '''
   deposit_required, deposit_amount, deposit_paid, deposit_status,
   payment_method, payment_reference, deposit_paid_at,
   cancellation_policy_accepted,
-  customer_name, customer_phone, customer_email, notes,
+  customer_name, customer_phone, customer_email, customer_timezone, notes,
   booking_source, internal_notes, created_at, updated_at,
   services ( name ),
   staff_profiles ( name, role ),

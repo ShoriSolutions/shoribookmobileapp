@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/supabase/supabase_providers.dart';
+import '../../../core/time/customer_time_zone.dart';
 import '../../../core/utils/timezone_offsets.dart';
 import '../../../models/availability_models.dart';
 import '../../../models/service.dart';
@@ -341,6 +342,14 @@ class BookingWizardController extends AutoDisposeFamilyNotifier<
             await ref
                 .read(guestBookingsStoreProvider)
                 .add(id: apptId, phone: state.phone.trim());
+          }
+          // Stamp the customer's time zone on the booking (best-effort) so
+          // reminders and the vendor can show their local time.
+          if (apptId != null) {
+            final zone = await ref.read(customerTimeZoneProvider.future);
+            await ref
+                .read(customerBookingRepositoryProvider)
+                .setAppointmentCustomerTimezone(apptId, zone);
           }
           state = state.copyWith(
             isSubmitting: false,

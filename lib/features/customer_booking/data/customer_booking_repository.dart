@@ -52,6 +52,23 @@ class CustomerBookingRepository {
   /// the check_slot_available RPC, which enforces open hours, closures,
   /// manual blocks, buffer/overlap, and booking limits — the authoritative
   /// recheck before we attempt to create the appointment.
+  /// Records the customer's IANA time zone on a just-created appointment
+  /// (write-once, server-side). Best-effort — a failure never blocks the
+  /// booking, which is already saved.
+  Future<void> setAppointmentCustomerTimezone(
+    String appointmentId,
+    String timezone,
+  ) async {
+    try {
+      await _client.rpc('set_appointment_customer_timezone', params: {
+        'p_appointment_id': appointmentId,
+        'p_timezone': timezone,
+      });
+    } catch (_) {
+      // non-fatal
+    }
+  }
+
   /// Whether this phone is blocked from booking with the business — a
   /// polite pre-check before attempting to create the appointment (the DB
   /// also enforces it via a trigger).

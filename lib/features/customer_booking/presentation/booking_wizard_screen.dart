@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/time/customer_time_zone.dart';
+import '../../../core/time/time_zone_service.dart';
 import '../../../core/utils/calendar_export.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/input_hints.dart';
@@ -850,6 +852,10 @@ class _ConfirmScreenState extends ConsumerState<_ConfirmScreen> {
             children: [
               _summaryCard(context, service, business.name, date, time,
                   state.selectedStaff?.name, business.address),
+              if (_zonesDiffer(date, time)) ...[
+                const SizedBox(height: 12),
+                _tzNotice(business.timezone),
+              ],
               const SizedBox(height: 20),
               const Text('Your details',
                   style: TextStyle(
@@ -1007,8 +1013,7 @@ class _ConfirmScreenState extends ConsumerState<_ConfirmScreen> {
             padding: EdgeInsets.symmetric(vertical: 14),
             child: Divider(color: AppColors.divider, height: 1),
           ),
-          _summaryRow(Icons.calendar_today_outlined,
-              '${DateFormat('EEE, d MMM').format(date)} · ${_fmtTime(time)}'),
+          _scheduleRows(date, time),
           const SizedBox(height: 10),
           _summaryRow(Icons.person_outline, 'with ${proName ?? 'any pro'}'),
           if ((address ?? '').isNotEmpty) ...[
@@ -1050,6 +1055,104 @@ class _ConfirmScreenState extends ConsumerState<_ConfirmScreen> {
                     color: AppColors.ink))),
       ],
     );
+  }
+
+  /// The date/time line(s): a single line when the customer is in the
+  /// business's zone, or two clearly-labelled lines (Business time / Your
+  /// local time) when they differ — DST-aware via TimeZoneService.
+  Widget _scheduleRows(DateTime date, String time) {
+    final bizZone = widget.data.business.timezone;
+    final iso = '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+    final utc = businessLocalToUtc(date: iso, time: time, timezone: bizZone);
+    final custZone = ref.watch(customerTimeZoneProvider).valueOrNull;
+    final differ =
+        custZone != null && TimeZoneService.zonesDiffer(utc, bizZone, custZone);
+
+    if (!differ) {
+      return _summaryRow(
+          Icons.calendar_today_outlined, TimeZoneService.dateTime(utc, bizZone));
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _dualTime('Business time', TimeZoneService.dateTime(utc, bizZone),
+            '${TimeZoneService.friendlyName(bizZone)} time'),
+        const SizedBox(height: 10),
+        _dualTime('Your local time', TimeZoneService.dateTime(utc, custZone),
+            'your time'),
+      ],
+    );
+  }
+
+  Widget _dualTime(String label, String value, String zoneLabel) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.schedule, size: 18, color: AppColors.sage),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                      color: AppColors.muted)),
+              const SizedBox(height: 1),
+              Text('$value  ·  $zoneLabel',
+                  style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.ink)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Friendly, reassuring notice shown when the customer's zone differs from
+  /// the business's — never framed as an error.
+  Widget _tzNotice(String bizZone) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.sageLight,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.sageTintBorder),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.public, size: 18, color: AppColors.sageDark),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              "You're booking with a business in "
+              '${TimeZoneService.friendlyName(bizZone)}. We\'ve automatically '
+              'adjusted the appointment to your local time.',
+              style: const TextStyle(fontSize: 13, color: AppColors.sageDark),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// True when the chosen slot renders in a different zone for the customer.
+  bool _zonesDiffer(DateTime date, String time) {
+    final bizZone = widget.data.business.timezone;
+    final iso = '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+    final utc = businessLocalToUtc(date: iso, time: time, timezone: bizZone);
+    final custZone = ref.watch(customerTimeZoneProvider).valueOrNull;
+    return custZone != null &&
+        TimeZoneService.zonesDiffer(utc, bizZone, custZone);
   }
 
   Widget _dividerLabel(String text) {
