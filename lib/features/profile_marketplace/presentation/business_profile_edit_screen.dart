@@ -6,6 +6,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/time/time_zone_service.dart';
+import '../../../core/time/timezone_picker.dart';
 import '../../../core/utils/input_hints.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/osm_map.dart';
@@ -146,6 +148,29 @@ class _BusinessProfileEditScreenState
           message: AppException.from(e).message,
           isError: true,
         );
+      }
+    }
+  }
+
+  Future<void> _pickBusinessTimezone(Business business) async {
+    final picked = await showTimeZonePicker(
+      context,
+      currentOverride: business.timezone,
+      allowAutomatic: false,
+    );
+    if (picked == null || picked == kTimeZoneAuto || !mounted) return;
+    try {
+      await ref
+          .read(businessRepositoryProvider)
+          .setBusinessTimezone(business.id, picked);
+      ref.invalidate(activeMembershipProvider);
+      if (mounted) {
+        showAppSnackBar(context, message: 'Business time zone updated');
+      }
+    } catch (e) {
+      if (mounted) {
+        showAppSnackBar(context,
+            message: AppException.from(e).message, isError: true);
       }
     }
   }
@@ -340,6 +365,34 @@ class _BusinessProfileEditScreenState
                       onChanged: (canManage && !locked)
                           ? (v) => setState(() => _category = v)
                           : null,
+                    ),
+                    const SizedBox(height: 12),
+                    InkWell(
+                      onTap: canManage
+                          ? () => _pickBusinessTimezone(business)
+                          : null,
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Business time zone',
+                          helperText:
+                              'Appointment times are shown in this zone; DST '
+                              'is handled automatically.',
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${TimeZoneService.friendlyName(business.timezone)}'
+                                '  ·  ${business.timezone}',
+                                style: const TextStyle(
+                                    fontSize: 15, color: AppColors.ink),
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right,
+                                color: AppColors.muted),
+                          ],
+                        ),
+                      ),
                     ),
                     Padding(
                       padding: const EdgeInsets.only(top: 10),

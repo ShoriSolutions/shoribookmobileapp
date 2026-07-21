@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/time/customer_time_zone.dart';
+import '../../../core/time/time_zone_service.dart';
+import '../../../core/time/timezone_picker.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../routing/route_paths.dart';
@@ -63,6 +66,16 @@ class AccountScreen extends ConsumerWidget {
               ),
             ]),
             const SizedBox(height: 20),
+            const _GroupLabel('Preferences'),
+            _MenuCard(rows: [
+              _MenuRow(
+                icon: Icons.public,
+                title: 'Time zone',
+                subtitle: _tzSubtitle(ref),
+                onTap: () => _pickTimeZone(context, ref),
+              ),
+            ]),
+            const SizedBox(height: 20),
             const _GroupLabel('Account actions'),
             _MenuCard(rows: [
               _MenuRow(
@@ -92,6 +105,33 @@ class AccountScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  String _tzSubtitle(WidgetRef ref) {
+    final override = ref.watch(customerTimeZoneOverrideProvider).valueOrNull;
+    final effective = ref.watch(customerTimeZoneProvider).valueOrNull;
+    if (override == null) {
+      return effective == null
+          ? 'Automatically detected'
+          : 'Automatic · ${TimeZoneService.friendlyName(effective)}';
+    }
+    return TimeZoneService.friendlyName(override);
+  }
+
+  Future<void> _pickTimeZone(BuildContext context, WidgetRef ref) async {
+    final override = ref.read(customerTimeZoneOverrideProvider).valueOrNull;
+    final picked = await showTimeZonePicker(context, currentOverride: override);
+    if (picked == null || !context.mounted) return;
+    final zone = picked == kTimeZoneAuto ? null : picked;
+    await ref.read(customerTimeZonePrefsProvider).setOverride(zone);
+    ref.invalidate(customerTimeZoneOverrideProvider);
+    ref.invalidate(customerTimeZoneProvider);
+    if (context.mounted) {
+      showAppSnackBar(context,
+          message: zone == null
+              ? 'Using your device time zone'
+              : 'Time zone set to ${TimeZoneService.friendlyName(zone)}');
+    }
   }
 
   Future<void> _changePassword(

@@ -138,6 +138,18 @@ class BusinessRepository {
     }
   }
 
+  /// Sets the business's IANA time zone (OWNER/ADMIN enforced server-side).
+  Future<void> setBusinessTimezone(String businessId, String timezone) async {
+    try {
+      await _client.rpc('set_business_timezone', params: {
+        'p_business_id': businessId,
+        'p_timezone': timezone,
+      });
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   /// Saves the business's scheduling rules (buffer + booking limits) via
   /// the save_booking_rules RPC (OWNER/ADMIN enforced server-side). A null
   /// limit means "no limit".
