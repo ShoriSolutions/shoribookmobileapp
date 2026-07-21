@@ -1421,6 +1421,7 @@ class _ConfirmedScreen extends ConsumerWidget {
                             description: reference != null
                                 ? 'Booking reference $reference'
                                 : null,
+                            timeZone: business.timezone,
                           );
                         },
                 ),

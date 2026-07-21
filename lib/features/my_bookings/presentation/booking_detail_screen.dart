@@ -119,6 +119,7 @@ class BookingDetailScreen extends ConsumerWidget {
       endUtc: a.endTime,
       location: a.businessAddress,
       description: 'Booking reference ${_ref(a)}',
+      timeZone: a.businessTimezone,
     );
   }
 

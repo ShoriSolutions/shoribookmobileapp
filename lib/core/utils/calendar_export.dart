@@ -7,12 +7,19 @@ import 'package:share_plus/share_plus.dart';
 /// share sheet so the user can add it to whichever calendar they use.
 /// Deliberately uses an .ics file (no calendar permission / no extra native
 /// plugin) so it works the same on iOS and Android.
+///
+/// Times are written in **UTC** (the `Z` suffix), which every calendar app
+/// converts to the viewer's own local time — so the event appears at the
+/// correct wall-clock moment regardless of where it's imported. [timeZone]
+/// (the business's IANA zone) is attached as calendar metadata so the
+/// event also carries its "home" zone.
 Future<void> addAppointmentToCalendar({
   required String title,
   required DateTime startUtc,
   required DateTime endUtc,
   String? location,
   String? description,
+  String? timeZone,
 }) async {
   String fmt(DateTime d) => DateFormat("yyyyMMdd'T'HHmmss'Z'").format(d.toUtc());
   String esc(String s) => s
@@ -27,6 +34,8 @@ Future<void> addAppointmentToCalendar({
     'VERSION:2.0',
     'PRODID:-//ShoriBooks//Booking//EN',
     'CALSCALE:GREGORIAN',
+    if (timeZone != null && timeZone.trim().isNotEmpty)
+      'X-WR-TIMEZONE:${esc(timeZone)}',
     'BEGIN:VEVENT',
     'UID:${startUtc.microsecondsSinceEpoch}@shoribooks',
     'DTSTAMP:$stamp',
