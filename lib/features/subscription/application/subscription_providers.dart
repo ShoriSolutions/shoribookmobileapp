@@ -19,9 +19,6 @@ final subscriptionPackagesProvider =
   return ref.watch(subscriptionRepositoryProvider).fetchPackages();
 });
 
-/// Billing cadence the vendor is viewing/choosing.
-enum BillingPeriod { monthly, yearly }
-
 /// The annual-billing discount percent, read from app_config
 /// (annual_discount_percent) so promos are configurable server-side with
 /// no app change. Defaults to 20 if unset/unreachable.

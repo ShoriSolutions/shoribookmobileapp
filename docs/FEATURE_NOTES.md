@@ -12,6 +12,8 @@ what still needs backend or app-store configuration.
 | `20260719000001_client_blocking.sql` | `customers.is_blocked/blocked_reason/blocked_at`, `customer_block_log`, `set_customer_blocked` / `check_customer_blocked` RPCs, `trg_reject_blocked_customer` |
 | `20260719000002_app_config_annual_discount.sql` | `app_config` table + `annual_discount_percent` (default 20) |
 | `20260719000003_subscription_auto_renew.sql` | `businesses.auto_renew/billing_period/current_period_end`, `set_subscription_prefs` RPC |
+| `20260719000004_annual_store_products.sql` | `subscription_packages.store_product_id_{ios,android}_annual` |
+| `20260719000005_trial_reminder_log.sql` | `trial_reminder_log` (dedupe for trial-ending notices) |
 
 All migrations are additive + idempotent. Run in the Supabase SQL editor
 (make sure the button says **Run**, not "Run selected").
@@ -71,21 +73,29 @@ booking carries `staff_profile_id`.
 `auto_renew` + dates are stored, but **charging on renewal is store-managed**
 (auto-renewable IAP handles renewal/retry) or requires a payment-processor
 (e.g. Stripe) Edge Function. To complete:
-- **Store path:** create auto-renewable subscription products (monthly + a
-  separate **annual** product per tier — the app currently only queries
-  monthly product ids), and validate receipts in an Edge Function before
-  granting entitlement (`SubscriptionRepository.recordPurchase` has a TODO).
-- **Trial-ending reminders (7/3/1 day):** extend the existing
-  `process-reminders` Edge Function to enqueue trial-expiry notices from
-  `trial_ends_at`. The reminder plumbing already exists.
+- **Store path:** create the auto-renewable products and validate receipts in
+  an Edge Function before granting entitlement
+  (`SubscriptionRepository.recordPurchase` has a TODO).
 - **Failed-payment retry + graceful restriction:** the access gate already
   restricts on `hasActiveAccess`; a `past_due` grace window + retry schedule
   belongs in the billing Edge Function.
 
-### Annual purchase via IAP
-The Monthly/Yearly toggle computes/display annual pricing, and trial start
-(no charge) works on either. Buying an **annual** plan needs annual store
-product ids wired into `subscription_packages` + queried in the modal.
+### Annual purchase via IAP — wired; just add product ids
+The app now supports annual end-to-end: the model carries
+`store_product_id_{ios,android}_annual`, `SubscriptionRepository.storeProductId`
+takes a `BillingPeriod`, `queryProducts` fetches monthly + annual, and the
+modal's Yearly toggle uses the annual product for both price display and
+purchase. **Remaining:** create the annual auto-renewable products in App
+Store Connect / Play Console and put their ids in
+`subscription_packages.store_product_id_*_annual` (e.g.
+`com.shorisolutions.shoribook.solopro.annual`). Until set, Yearly shows the
+computed discounted price and the CTA explains annual isn't available yet.
+
+### Trial-ending reminders — implemented; deploy + schedule
+`process-reminders` now sends "trial ends in N days" emails at 7/3/1 days
+before `trial_ends_at` (auto-renew-aware copy), deduped via
+`trial_reminder_log`. **Remaining:** deploy the function + set `RESEND_API_KEY`,
+and keep the existing per-minute cron (the trial pass runs each invocation).
 
 ### Switch Accounts — true multi-session
 Current "Switch account" re-authenticates (sign out → login) and lives in

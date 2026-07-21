@@ -105,6 +105,73 @@ function renderTemplate(tpl: string, ctx: Record<string, string>): string {
   return tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => ctx[k] ?? "");
 }
 
+// ── Trial-ending reminders (7 / 3 / 1 days before trial_ends_at) ─────────────
+// Deduped via trial_reminder_log so each (business, offset) fires once.
+// deno-lint-ignore no-explicit-any
+async function processTrialReminders(supabase: any): Promise<number> {
+  const OFFSETS = [7, 3, 1];
+  const now = new Date();
+  let sent = 0;
+
+  for (const days of OFFSETS) {
+    const cutoff = new Date(now.getTime() + days * 86_400_000).toISOString();
+    const { data: bizs } = await supabase
+      .from("businesses")
+      .select("id, name, owner_id, trial_ends_at, auto_renew")
+      .eq("subscription_status", "trialing")
+      .gt("trial_ends_at", now.toISOString())
+      .lte("trial_ends_at", cutoff);
+
+    for (const b of bizs ?? []) {
+      // Already notified for this offset?
+      const { data: logged } = await supabase
+        .from("trial_reminder_log")
+        .select("id")
+        .eq("business_id", b.id)
+        .eq("days_before", days)
+        .maybeSingle();
+      if (logged) continue;
+
+      const { data: owner } = await supabase
+        .from("profiles")
+        .select("email, full_name")
+        .eq("id", b.owner_id)
+        .maybeSingle();
+      const email = owner?.email as string | undefined;
+      if (!email) continue; // no address; re-check next run once one exists
+
+      const name = (owner?.full_name as string | undefined)?.split(" ")[0] ??
+        "there";
+      const ends = new Date(b.trial_ends_at);
+      const endLabel = new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+      }).format(ends);
+      const dayWord = days === 1 ? "day" : "days";
+      const willRenew = b.auto_renew === true;
+      const subject = `Your ShoriBooks trial ends in ${days} ${dayWord}`;
+      const body = willRenew
+        ? `Hi ${name}, your free trial for ${b.name} ends ` +
+          `on ${endLabel} (${days} ${dayWord} away). Your plan will renew ` +
+          `automatically so there's nothing to do — manage or cancel anytime ` +
+          `in ShoriBooks under More → Subscription.`
+        : `Hi ${name}, your free trial for ${b.name} ends on ${endLabel} ` +
+          `(${days} ${dayWord} away). To keep your bookings, clients and ` +
+          `schedule, choose a plan in ShoriBooks under More → Subscription ` +
+          `before it ends.`;
+
+      const res = await sendEmail(email, subject, `<p>${escapeHtml(body)}</p>`);
+      if (res.ok) {
+        await supabase
+          .from("trial_reminder_log")
+          .insert({ business_id: b.id, days_before: days });
+        sent++;
+      }
+    }
+  }
+  return sent;
+}
+
 Deno.serve(async () => {
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -219,7 +286,10 @@ Deno.serve(async () => {
     processed++;
   }
 
-  return new Response(JSON.stringify({ processed }), {
+  // Trial-ending notices (7/3/1 days out), independent of the queue above.
+  const trialReminders = await processTrialReminders(supabase);
+
+  return new Response(JSON.stringify({ processed, trialReminders }), {
     headers: { "content-type": "application/json" },
   });
 });

@@ -100,17 +100,31 @@ class SubscriptionRepository {
 
   String get storeName => Platform.isIOS ? 'apple' : 'google';
 
-  /// The store product id for the current platform, if the package carries
-  /// one.
-  String? storeProductId(SubscriptionPackage p) =>
-      Platform.isIOS ? p.storeProductIdIos : p.storeProductIdAndroid;
+  /// The store product id for the current platform + billing period, if the
+  /// package carries one. Annual falls back to the monthly id when no annual
+  /// product is configured yet.
+  String? storeProductId(SubscriptionPackage p,
+      {BillingPeriod period = BillingPeriod.monthly}) {
+    if (period == BillingPeriod.yearly) {
+      return Platform.isIOS
+          ? p.storeProductIdIosAnnual
+          : p.storeProductIdAndroidAnnual;
+    }
+    return Platform.isIOS ? p.storeProductIdIos : p.storeProductIdAndroid;
+  }
 
   /// Looks up the store's live product details (localized price, etc.) for
   /// the given packages, keyed by store product id. Empty if the store is
   /// unavailable or none of the ids are configured yet.
   Future<Map<String, ProductDetails>> queryProducts(
       Iterable<SubscriptionPackage> packages) async {
-    final ids = packages.map(storeProductId).whereType<String>().toSet();
+    final ids = <String>{};
+    for (final p in packages) {
+      final monthly = storeProductId(p);
+      final annual = storeProductId(p, period: BillingPeriod.yearly);
+      if (monthly != null) ids.add(monthly);
+      if (annual != null) ids.add(annual);
+    }
     if (ids.isEmpty) return {};
     final resp = await _iap.queryProductDetails(ids);
     return {for (final pd in resp.productDetails) pd.id: pd};

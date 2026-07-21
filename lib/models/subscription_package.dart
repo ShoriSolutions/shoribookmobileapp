@@ -1,3 +1,6 @@
+/// Billing cadence the vendor is viewing/choosing.
+enum BillingPeriod { monthly, yearly }
+
 /// A subscription plan loaded dynamically from the subscription_packages
 /// table — nothing about pricing is hardcoded in the app. Carries the
 /// store product identifiers used to fetch the real localized price and
@@ -13,6 +16,8 @@ class SubscriptionPackage {
   final int trialDays;
   final String? storeProductIdIos;
   final String? storeProductIdAndroid;
+  final String? storeProductIdIosAnnual;
+  final String? storeProductIdAndroidAnnual;
   final bool isPopular;
   final int sortOrder;
 
@@ -27,6 +32,8 @@ class SubscriptionPackage {
     this.trialDays = 14,
     this.storeProductIdIos,
     this.storeProductIdAndroid,
+    this.storeProductIdIosAnnual,
+    this.storeProductIdAndroidAnnual,
     this.isPopular = false,
     this.sortOrder = 0,
   });
@@ -62,6 +69,9 @@ class SubscriptionPackage {
         trialDays: (json['trial_days'] as num?)?.toInt() ?? 14,
         storeProductIdIos: json['store_product_id_ios'] as String?,
         storeProductIdAndroid: json['store_product_id_android'] as String?,
+        storeProductIdIosAnnual: json['store_product_id_ios_annual'] as String?,
+        storeProductIdAndroidAnnual:
+            json['store_product_id_android_annual'] as String?,
         isPopular: json['is_popular'] as bool? ?? false,
         sortOrder: (json['sort_order'] as num?)?.toInt() ?? 0,
       );

@@ -103,18 +103,17 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
   }
 
   String _priceFor(SubscriptionPackage p, String currency, double discount) {
-    // Annual billing shows the discounted yearly total, derived dynamically.
-    if (_billing == BillingPeriod.yearly && p.priceAmount != null) {
-      final annual = annualAmount(p.priceAmount!, discount);
-      return CurrencyRates.format(annual, currency, from: p.currency);
-    }
     final repo = ref.read(subscriptionRepositoryProvider);
-    final storeId = repo.storeProductId(p);
+    // Prefer the store's real localized price for the chosen period.
+    final storeId = repo.storeProductId(p, period: _billing);
     final product = storeId == null ? null : _products[storeId];
-    if (product != null) return product.price; // real, store-localized price
+    if (product != null) return product.price;
+    // Fallback: annual = discounted yearly total; monthly = the base amount.
     if (p.priceAmount != null) {
-      // Convert the stored price (p.currency, BBD) to the chosen currency.
-      return CurrencyRates.format(p.priceAmount!, currency, from: p.currency);
+      final amount = _billing == BillingPeriod.yearly
+          ? annualAmount(p.priceAmount!, discount)
+          : p.priceAmount!;
+      return CurrencyRates.format(amount, currency, from: p.currency);
     }
     return '—';
   }
@@ -181,13 +180,16 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
 
   Future<void> _purchase(SubscriptionPackage pkg) async {
     final repo = ref.read(subscriptionRepositoryProvider);
-    final storeId = repo.storeProductId(pkg);
+    final storeId = repo.storeProductId(pkg, period: _billing);
     final product = storeId == null ? null : _products[storeId];
     if (product == null) {
       showAppSnackBar(
         context,
-        message: 'Subscriptions aren’t available right now. Please try again '
-            'shortly.',
+        message: _billing == BillingPeriod.yearly
+            ? 'Annual billing isn’t available for this plan yet. Try monthly, '
+                'or check back shortly.'
+            : 'Subscriptions aren’t available right now. Please try again '
+                'shortly.',
         isError: true,
       );
       return;
