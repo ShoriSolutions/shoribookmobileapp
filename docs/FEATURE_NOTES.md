@@ -14,6 +14,8 @@ what still needs backend or app-store configuration.
 | `20260719000003_subscription_auto_renew.sql` | `businesses.auto_renew/billing_period/current_period_end`, `set_subscription_prefs` RPC |
 | `20260719000004_annual_store_products.sql` | `subscription_packages.store_product_id_{ios,android}_annual` |
 | `20260719000005_trial_reminder_log.sql` | `trial_reminder_log` (dedupe for trial-ending notices) |
+| `20260720000000_appointment_customer_timezone.sql` | `appointments.customer_timezone` + write-once RPC |
+| `20260720000001_set_business_timezone.sql` | `set_business_timezone` RPC (vendor picks business zone) |
 
 All migrations are additive + idempotent. Run in the Supabase SQL editor
 (make sure the button says **Run**, not "Run selected").
@@ -66,6 +68,36 @@ to their own bookings at the query level (calendar + dashboard). Every
 booking carries `staff_profile_id`.
 
 ---
+
+### Intelligent time zones (IANA / DST) — `core/time/`
+`TimeZoneService` is the single source of truth: it loads the **IANA tz
+database** (`timezone` pkg, `ensureInitialized()` in `main`) and does all
+UTC↔local conversion, DST handling, device detection (`flutter_timezone`),
+zone-diff checks and formatting. The old fixed-offset table is gone;
+`businessLocalToUtc` / `utcToBusinessLocal` now delegate here, so every
+existing caller is DST-correct.
+
+- **Storage:** appointments stay UTC; each booking also records the
+  customer's IANA zone (`appointments.customer_timezone`, write-once RPC).
+- **Customer zone:** auto-detected from the device; manual override in
+  Account & security → **Time zone** (`customerTimeZoneProvider` +
+  `CustomerTimeZonePrefs`).
+- **Business zone:** editable in the business profile (**Business time
+  zone**, `set_business_timezone` RPC); still defaults to America/Barbados.
+- **Booking confirm (C06):** shows Business time + Your local time with a
+  friendly notice when they differ.
+- **Details:** customer booking detail shows "your local time" (+ business
+  time when different); vendor appointment detail shows a "Customer's time"
+  row so vendors understand reminder times.
+- **Reminders:** `process-reminders` appends "Business time … · Your time …"
+  when zones differ (uses `customer_timezone`).
+- **Calendar export:** ICS keeps UTC (`Z`) timestamps (correct on any
+  device) + `X-WR-TIMEZONE` with the business zone.
+- **Admin/troubleshooting:** stored UTC + business zone + `customer_timezone`
+  are all queryable; the vendor appointment detail surfaces both local
+  times. (A dedicated admin panel wasn't added — the data is all there.)
+- **Extension point:** every conversion/format goes through
+  `TimeZoneService`, so new booking/scheduling features stay consistent.
 
 ## Needs backend / app-store work (not doable from app code alone)
 
