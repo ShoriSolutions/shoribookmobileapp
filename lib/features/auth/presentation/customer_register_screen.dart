@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/location/address_form.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/password_policy.dart';
 import '../../../core/widgets/password_requirements.dart';
+import '../../../models/address.dart';
 import '../../../routing/route_paths.dart';
 import '../application/customer_register_controller.dart';
 import 'widgets/auth_field.dart';
@@ -27,6 +29,7 @@ class _CustomerRegisterScreenState
   final _password = TextEditingController();
   bool _obscurePassword = true;
   String? _checkEmailMessage;
+  Address _address = const Address();
 
   @override
   void dispose() {
@@ -43,6 +46,7 @@ class _CustomerRegisterScreenState
               fullName: _fullName.text.trim(),
               email: _email.text.trim(),
               password: _password.text,
+              address: _address.isEmpty ? null : _address,
             );
     if (result == null || !mounted) return;
     if (!result.sessionActive) {
@@ -139,6 +143,23 @@ class _CustomerRegisterScreenState
           ),
           const SizedBox(height: 12),
           PasswordRequirements(password: _password.text),
+          const SizedBox(height: 24),
+          const Text('Your area',
+              style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink)),
+          const SizedBox(height: 2),
+          const Text(
+            'Optional — helps us show pros near you. You can add or change '
+            'it anytime.',
+            style: TextStyle(fontSize: 13, color: AppColors.muted),
+          ),
+          const SizedBox(height: 12),
+          AddressForm(
+            streetLabel: 'Address (optional)',
+            onChanged: (a) => _address = a,
+          ),
           if (registerState.hasError) ...[
             const SizedBox(height: 12),
             Text(registerState.error.toString(),
