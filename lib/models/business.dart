@@ -33,6 +33,7 @@ class Business {
   final bool autoRenew;
   final String billingPeriod; // 'monthly' | 'yearly'
   final DateTime? currentPeriodEnd;
+  final String? subscriptionPackageId; // the active paid plan (null on trial)
   final String? countryCode; // ISO 3166-1 alpha-2, for price display currency
   final DateTime? nameCategoryLockedUntil;
   final String status;
@@ -75,6 +76,7 @@ class Business {
     this.autoRenew = true,
     this.billingPeriod = 'monthly',
     this.currentPeriodEnd,
+    this.subscriptionPackageId,
     this.countryCode,
     this.nameCategoryLockedUntil,
     required this.status,
@@ -140,6 +142,7 @@ class Business {
     currentPeriodEnd: json['current_period_end'] == null
         ? null
         : DateTime.parse(json['current_period_end'] as String),
+    subscriptionPackageId: json['subscription_package_id'] as String?,
     countryCode: json['country_code'] as String?,
     nameCategoryLockedUntil: json['name_category_locked_until'] == null
         ? null
@@ -191,6 +194,7 @@ class Business {
     'auto_renew': autoRenew,
     'billing_period': billingPeriod,
     'current_period_end': currentPeriodEnd?.toIso8601String(),
+    'subscription_package_id': subscriptionPackageId,
     'country_code': countryCode,
     'name_category_locked_until': nameCategoryLockedUntil?.toIso8601String(),
     'status': status,

@@ -11,10 +11,37 @@ import '../../../routing/route_paths.dart';
 import '../../app_mode/application/app_mode_provider.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
+import '../../subscription/application/plan_caps.dart';
+import '../../subscription/presentation/subscription_modal.dart';
 import '../application/staff_providers.dart';
 
 class StaffListScreen extends ConsumerWidget {
   const StaffListScreen({super.key});
+
+  Future<void> _showStaffUpgrade(BuildContext context, int limit) async {
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Staff limit reached'),
+        content: Text(
+          limit <= 1
+              ? 'Your plan is for solo pros. Upgrade to Squad to add a team '
+                  '(up to 5 staff) with per-staff schedules.'
+              : 'Your plan includes up to $limit staff. Upgrade for a bigger '
+                  'team.',
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Not now')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('See plans')),
+        ],
+      ),
+    );
+    if (go == true && context.mounted) showSubscriptionModal(context);
+  }
 
   Future<void> _makeSelfAvailable(BuildContext context, WidgetRef ref) async {
     final membership = ref.read(activeMembershipProvider).valueOrNull;
@@ -49,13 +76,18 @@ class StaffListScreen extends ConsumerWidget {
     // Owner/admin who isn't yet a bookable pro (no staff profile linked to
     // their membership) can add themselves.
     final canAddSelf = canManage && membership.staffProfileId == null;
+    final caps = ref.watch(activePlanCapsProvider);
+    final staffCount = staffAsync.valueOrNull?.length ?? 0;
+    final atStaffCap = staffCount >= caps.maxStaff;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Staff')),
       floatingActionButton: canManage
           ? FloatingActionButton.extended(
               backgroundColor: AppColors.terracotta,
-              onPressed: () => context.push(RoutePaths.staffInvite),
+              onPressed: () => atStaffCap
+                  ? _showStaffUpgrade(context, caps.maxStaff)
+                  : context.push(RoutePaths.staffInvite),
               icon: const Icon(Icons.person_add_alt, color: Colors.white),
               label: const Text(
                 'Invite',
@@ -85,6 +117,25 @@ class StaffListScreen extends ConsumerWidget {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: _SelfAvailabilityCard(
                       onTap: () => _makeSelfAvailable(context, ref),
+                    ),
+                  ),
+                if (canManage && caps.maxStaff < 9999)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12, left: 2),
+                    child: GestureDetector(
+                      onTap: () => showSubscriptionModal(context),
+                      child: Text(
+                        staff.length >= caps.maxStaff
+                            ? '${staff.length} of ${caps.maxStaff} staff used · Upgrade to add more'
+                            : '${staff.length} of ${caps.maxStaff} staff · your plan',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: staff.length >= caps.maxStaff
+                              ? AppColors.terracottaDeep
+                              : AppColors.muted,
+                        ),
+                      ),
                     ),
                   ),
                 if (staff.isEmpty)

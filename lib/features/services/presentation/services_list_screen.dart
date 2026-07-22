@@ -9,7 +9,31 @@ import '../../../models/service.dart';
 import '../../../routing/route_paths.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
+import '../../subscription/application/plan_caps.dart';
+import '../../subscription/presentation/subscription_modal.dart';
 import '../application/services_providers.dart';
+
+Future<void> _showUpgrade(BuildContext context, int limit) async {
+  final go = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Service limit reached'),
+      content: Text(
+        'Your current plan includes up to $limit services. Upgrade to add '
+        'more — unlimited services are available on Solo Pro and Squad.',
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Not now')),
+        TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('See plans')),
+      ],
+    ),
+  );
+  if (go == true && context.mounted) showSubscriptionModal(context);
+}
 
 /// V10 · Services — grouped by category with a count, price and duration,
 /// deposit tag, and hidden services dimmed. Tap a row to edit.
@@ -22,6 +46,17 @@ class ServicesListScreen extends ConsumerWidget {
     final membership = ref.watch(activeMembershipProvider).valueOrNull;
     final canManage =
         membership != null && can(membership.role, Permission.manageServices);
+    final caps = ref.watch(activePlanCapsProvider);
+    final count = servicesAsync.valueOrNull?.length ?? 0;
+    final atCap = caps.maxServices != null && count >= caps.maxServices!;
+
+    void addService() {
+      if (atCap) {
+        _showUpgrade(context, caps.maxServices!);
+      } else {
+        context.push(RoutePaths.serviceNew);
+      }
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -42,7 +77,7 @@ class ServicesListScreen extends ConsumerWidget {
                           color: AppColors.ink)),
                   if (canManage)
                     GestureDetector(
-                      onTap: () => context.push(RoutePaths.serviceNew),
+                      onTap: addService,
                       child: Container(
                         width: 44,
                         height: 44,
@@ -54,6 +89,22 @@ class ServicesListScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            if (canManage && caps.maxServices != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+                child: GestureDetector(
+                  onTap: () => showSubscriptionModal(context),
+                  child: Text(
+                    atCap
+                        ? '$count of ${caps.maxServices} services used · Upgrade for unlimited'
+                        : '$count of ${caps.maxServices} services · your plan',
+                    style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: atCap ? AppColors.terracottaDeep : AppColors.muted),
+                  ),
+                ),
+              ),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () => ref.refresh(servicesListProvider.future),

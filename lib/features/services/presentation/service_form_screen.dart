@@ -131,9 +131,12 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
+        final msg = AppException.from(e).message;
         showAppSnackBar(
           context,
-          message: AppException.from(e).message,
+          message: msg.contains('service_limit_reached')
+              ? "You've reached your plan's service limit. Upgrade to add more."
+              : msg,
           isError: true,
         );
       }
