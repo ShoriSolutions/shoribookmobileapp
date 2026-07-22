@@ -68,14 +68,13 @@ service role or an `is_admin()`-gated RPC/policy):
 
 ---
 
-## C. Featured-listing review 🟡 / 🔧
+## C. Featured-listing review ✅
 
 - Vendors set `businesses.featured_requested = true` ("please feature us");
-  `is_featured` is **admin-only**. ✅ the flag + intent exist.
-- 🔧 Add a tiny admin RPC (e.g. `admin_set_featured(p_business_id, p_featured)`)
-  or an `is_admin()`-scoped update policy so the dashboard can **approve/deny**
-  requests and toggle `is_featured`. (There's no dedicated approve RPC yet —
-  currently the flag is just recorded.)
+  `is_featured` is **admin-only**.
+- RPC: `admin_set_featured(p_business_id uuid, p_featured boolean)` — admin
+  approves/denies and toggles `is_featured` (clears `featured_requested`).
+  Build a review queue over `businesses where featured_requested = true`.
 
 ---
 
