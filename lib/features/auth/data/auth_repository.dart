@@ -26,6 +26,22 @@ class AuthRepository {
     }
   }
 
+  /// Starts an OAuth sign-in (Google / Apple). Opens the provider in the
+  /// browser; the session returns via the `shoribook://auth/callback` deep
+  /// link, handled in app.dart like the other auth deep links. Requires the
+  /// provider to be enabled in Supabase → Auth → Providers.
+  Future<void> signInWithProvider(OAuthProvider provider) async {
+    try {
+      await _client.auth.signInWithOAuth(
+        provider,
+        redirectTo: 'shoribook://auth/callback',
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   // ── Login attempt limiting (server-side) ─────────────────────────────────
   /// { locked: bool, locked_until: iso? } or null if never attempted.
   Future<Map<String, dynamic>?> checkLoginLock(String email) async {

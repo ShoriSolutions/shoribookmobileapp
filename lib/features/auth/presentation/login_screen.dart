@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show OAuthProvider;
+import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/shori_logo.dart';
 import '../../../routing/route_paths.dart';
+import '../application/auth_providers.dart';
 import 'widgets/auth_field.dart';
 import 'widgets/social_auth_button.dart';
 import '../application/login_controller.dart';
@@ -167,12 +170,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 16),
                 SocialAuthButton(
                   provider: SocialProvider.apple,
-                  onTap: () => _comingSoon('Apple'),
+                  onTap: () => _oauth(OAuthProvider.apple, 'Apple'),
                 ),
                 const SizedBox(height: 12),
                 SocialAuthButton(
                   provider: SocialProvider.google,
-                  onTap: () => _comingSoon('Google'),
+                  onTap: () => _oauth(OAuthProvider.google, 'Google'),
                 ),
                 const SizedBox(height: 20),
                 Center(
@@ -201,9 +204,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  void _comingSoon(String provider) {
-    showAppSnackBar(context,
-        message: '$provider sign-in is coming soon. Use email for now.');
+  Future<void> _oauth(OAuthProvider provider, String label) async {
+    try {
+      // Opens the provider; the session returns via the auth deep link.
+      await ref.read(authRepositoryProvider).signInWithProvider(provider);
+    } catch (e) {
+      if (mounted) {
+        showAppSnackBar(context,
+            message: '$label sign-in is unavailable: '
+                '${AppException.from(e).message}',
+            isError: true);
+      }
+    }
   }
 }
 
