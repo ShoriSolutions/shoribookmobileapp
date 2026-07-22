@@ -29,10 +29,17 @@ mobile app; admin actions are exposed as RPCs for the web dashboard).
   (looked up securely by id + phone). Signed‑in customers see all of theirs.
 - Guest Profile (Guest User, Become a Vendor, Vendor Login, Support, legal)
   and an optional customer account.
+- **Intelligent time zones** — the customer's device zone is auto‑detected
+  (overridable in Settings); appointments store UTC and display in each
+  viewer's local time (IANA/DST‑aware). When the customer and business are
+  in different zones, booking confirmation shows **both** times with a
+  friendly notice, details carry a "shown in your local time" label, and
+  calendar exports include the business zone.
 
 **Vendor / business (authenticated)**
-- Home dashboard: daily report (customisable stat cards + staff‑on‑duty)
-  and a quick‑share button.
+- Home dashboard: **time‑of‑day greeting** ("Good morning, Sarah 👋" /
+  "Working late? 🌙"), a customisable daily report grid, on‑duty staff, next
+  appointments, and a trial banner.
 - Availability: business hours, per‑staff schedules, breaks, blocked time,
   special days, and **booking rules** (buffer + per‑day/hour/simultaneous
   limits).
@@ -40,21 +47,30 @@ mobile app; admin actions are exposed as RPCs for the web dashboard).
   closures, blocks, buffer/overlap and limits before a booking is created
   (DST‑aware via Postgres IANA timezones).
 - Clients, services, staff, deposits, and atomic race‑free appointment
-  management.
-- Reports (week/month/quarter/year, revenue trend + breakdowns).
+  management. **Client blocking** (block/unblock a customer from future
+  bookings, private reason, audit log, enforced by a booking trigger).
+- **Staff** — multiple **job roles** per member (Barber, Nail Tech… + custom),
+  assign **which staff perform each service** (customers only see eligible
+  pros), and a per‑staff **calendar filter**.
+- Reports (week/month/quarter/year, revenue card + metrics + top services).
 - Profile & Marketplace: editable profile, logo + cover + gallery, map pin
   (OpenStreetMap) with structured address + geolocation autofill, social
-  links, visibility toggles, share cards, 90‑day name/category lock.
+  links, visibility toggles, share cards, 90‑day name/category lock, and a
+  selectable **business time zone** (IANA).
 - **Reminders & notifications** — provider‑abstracted (push / email /
   official WhatsApp Business / SMS‑future); reminders are queued and sent
-  server‑side.
+  server‑side, including **trial‑ending notices** (7/3/1 days) and dual‑time
+  reminders when the customer is in another zone.
 - **Trust & no‑show protection** — server‑calculated customer trust score
   (booking behaviour only; never device/location), booking eligibility gate,
   and admin moderation RPCs.
 - **Subscriptions** — dynamic package catalog (Side Hustle / Solo Pro /
-  Squad) loaded live from the DB, a **14‑day free trial**, a premium
-  bottom‑sheet modal, a launch promo, and Store IAP wiring. *(Feature
-  gating / trial‑end lockout is planned — see Roadmap.)*
+  Squad) loaded live from the DB, a **14‑day free trial** with a **trial‑end
+  access gate**, **monthly/annual billing** (configurable annual discount via
+  `app_config`), **auto‑renew** controls + billing dates, a premium
+  bottom‑sheet modal, and Store IAP wiring (monthly + annual product ids).
+- **Account & security** — one place for profile, change password, switch
+  account, log out, and delete account.
 
 **Authentication**
 - Guest‑first: customers never hit a login wall; a clear **Vendor Login**.
@@ -69,10 +85,10 @@ mobile app; admin actions are exposed as RPCs for the web dashboard).
 - **Flutter** (Dart), **Riverpod** state, **go_router** routing.
 - **Supabase** (Postgres + Auth + Storage + Edge Functions) via
   `supabase_flutter`.
-- `fl_chart`, `table_calendar`, `qr_flutter`, `image_picker`, `geolocator`,
-  `geocoding`, `flutter_map` + `latlong2`, `in_app_purchase`,
-  `cached_network_image`, `share_plus`, `url_launcher`, `shared_preferences`,
-  `intl`.
+- `timezone` + `flutter_timezone` (IANA/DST), `fl_chart`, `table_calendar`,
+  `qr_flutter`, `image_picker`, `geolocator`, `geocoding`, `flutter_map` +
+  `latlong2`, `in_app_purchase`, `cached_network_image`, `share_plus`,
+  `url_launcher`, `shared_preferences`, `intl`.
 
 ## Getting started
 
@@ -135,14 +151,30 @@ filename order, into the Supabase **SQL Editor**. Broad areas:
 - subscriptions (package catalog, trial, purchase recording) + pricing tiers
 - guest booking (auth‑optional booking RPC) + guest booking lookup
 - login attempt limiting + security alerts, 14‑day trial
+- staff **job roles** (`roles[]`) + service↔staff assignment
+- **client blocking** (flags, audit log, booking‑guard trigger)
+- **app_config** (configurable annual discount), subscription **auto‑renew**
+  + billing period, **annual** store product ids
+- appointment **customer_timezone** + set‑business‑timezone RPC
+
+See [`docs/FEATURE_NOTES.md`](docs/FEATURE_NOTES.md) for what each recent
+migration adds and the backend/store follow‑ups.
 
 **Storage buckets** (created by migrations, public read + owner‑scoped
 write): `business-images` (logos/covers/gallery) and `avatars`.
 
 **Edge Functions** ([`backend/supabase/functions/`](backend/supabase/functions/)) —
-deploy + configure a provider before they send:
-- `process-reminders` — sends queued appointment reminders.
+deploy + set `RESEND_API_KEY` (email) before they send:
+- `process-reminders` — sends queued appointment reminders + trial‑ending
+  notices (7/3/1 days); include both times when the customer is in another
+  zone. Runs on a `pg_cron` schedule (every minute).
+- `invite-staff` — emails a team member a set‑password/login link.
 - `send-security-alert` — emails the "login limit reached" alert.
+
+```bash
+supabase functions deploy process-reminders --no-verify-jwt --project-ref <ref>
+supabase functions deploy invite-staff --project-ref <ref>
+```
 
 **Required dashboard config**
 - Authentication → URL Configuration → **Redirect URLs**: add
@@ -166,10 +198,13 @@ env/                     # dev.example.json (template); dev.json is gitignored
 
 ## Notes
 
-- **Timezones:** business times use the business's IANA timezone (e.g.
-  `America/Barbados`), never the device timezone — see
-  `core/utils/timezone_offsets.dart`; the scheduling validator uses Postgres
-  `AT TIME ZONE` so it's DST‑aware.
+- **Timezones:** all appointments are stored in **UTC**. A single
+  `core/time/TimeZoneService` (backed by the IANA **`timezone`** package)
+  handles every UTC↔local conversion, DST, device detection
+  (`flutter_timezone`), and formatting; `businessLocalToUtc` /
+  `utcToBusinessLocal` delegate to it. Business times use the business's IANA
+  zone (never the device's); customer‑facing screens show the viewer's local
+  time. See `docs/FEATURE_NOTES.md` for the full design + extension points.
 - **Email confirmation is on**, so sign‑up returns no session until
   confirmed; a business is finalised, and any pending address drained, on
   first login.
@@ -183,19 +218,26 @@ env/                     # dev.example.json (template); dev.json is gitignored
 ## Operational setup (not wired by default)
 
 These need provider credentials / store setup before they work end‑to‑end:
-- **Reminders & security emails** — implement the Edge Function provider
-  `send()` (push/email/WhatsApp), add secrets, schedule a cron.
-- **Store IAP** — create the subscription products in App Store Connect /
-  Play Console using the `store_product_id_*` values in
-  `subscription_packages`; add server‑side receipt validation.
+- **Reminder & alert emails** — deploy the Edge Functions, set `RESEND_API_KEY`
+  (email works out of the box; push/WhatsApp `send()` are still stubs), and
+  ensure the `process-reminders` `pg_cron` job exists. Verify your sending
+  domain in Resend (or set `EMAIL_FROM`).
+- **Store IAP** — create the subscription products (monthly **and** annual)
+  in App Store Connect / Play Console and put their ids in the
+  `subscription_packages.store_product_id_*` columns; add server‑side receipt
+  validation.
 
 ## Roadmap
 
-- **Trial‑end lockout + per‑tier entitlements** — trial grants full access;
-  when it ends without a paid plan the account is locked until they
-  subscribe, and per‑tier caps (services/staff/deposits/reports/marketplace)
-  are enforced client‑ and server‑side. *(Billing/trial are in place; the
-  gating is not yet.)*
-- **Sign in with Google / Apple / phone‑OTP** at guest checkout.
+- **Per‑tier feature caps** — the trial‑end access gate is in place; the
+  finer per‑tier limits (services/staff/deposits/reports/marketplace) are the
+  next step to enforce client‑ and server‑side.
+- **Store receipt validation + renewal charging** — IAP products (monthly +
+  annual) are wired; move receipt validation to an Edge Function and handle
+  renewal/retry (see `docs/FEATURE_NOTES.md`).
+- **Sign in with Google / Apple / phone‑OTP** at guest checkout (buttons are
+  present, provider wiring pending).
+- **Multi‑session switch accounts** (guest + customer + vendor without
+  re‑login).
 - **Guest booking management** (cancel/reschedule via email or phone code)
   and **guest → account** history linking.
