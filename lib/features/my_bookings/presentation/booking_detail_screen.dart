@@ -26,7 +26,8 @@ class BookingDetailScreen extends ConsumerWidget {
 
   const BookingDetailScreen({super.key, required this.bookingId});
 
-  Future<void> _cancel(BuildContext context, WidgetRef ref) async {
+  Future<void> _cancel(BuildContext context, WidgetRef ref,
+      {String? guestPhone}) async {
     final confirmed = await showConfirmDialog(
       context,
       title: 'Cancel this booking?',
@@ -36,8 +37,9 @@ class BookingDetailScreen extends ConsumerWidget {
     );
     if (!confirmed) return;
     try {
-      final result =
-          await ref.read(myBookingsRepositoryProvider).cancel(bookingId);
+      final result = await ref
+          .read(myBookingsRepositoryProvider)
+          .cancel(bookingId, guestPhone: guestPhone);
       ref.invalidate(bookingDetailProvider(bookingId));
       ref.invalidate(myBookingsProvider);
       if (context.mounted) {
@@ -57,7 +59,8 @@ class BookingDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _reschedule(
-      BuildContext context, WidgetRef ref, Appointment appt) async {
+      BuildContext context, WidgetRef ref, Appointment appt,
+      {String? guestPhone}) async {
     final tz = appt.businessTimezone ?? 'America/Barbados';
     final localStart = utcToBusinessLocal(appt.startTime, tz);
 
@@ -86,7 +89,7 @@ class BookingDetailScreen extends ConsumerWidget {
     try {
       final result = await ref
           .read(myBookingsRepositoryProvider)
-          .reschedule(bookingId, newStartUtc);
+          .reschedule(bookingId, newStartUtc, guestPhone: guestPhone);
       ref.invalidate(bookingDetailProvider(bookingId));
       ref.invalidate(myBookingsProvider);
       if (!context.mounted) return;
@@ -131,6 +134,10 @@ class BookingDetailScreen extends ConsumerWidget {
     final apptAsync = ref.watch(bookingDetailProvider(bookingId));
     final signedIn =
         ref.watch(authStatusProvider) == AuthStatus.authenticated;
+    // Guests can manage a booking made on this device (verified by phone).
+    final guestPhone =
+        ref.watch(guestBookingPhoneProvider(bookingId)).valueOrNull;
+    final canManage = signedIn || guestPhone != null;
 
     return Scaffold(
       body: SafeArea(
@@ -284,7 +291,7 @@ class BookingDetailScreen extends ConsumerWidget {
                   ),
                 ],
                 const SizedBox(height: 16),
-                if (appt.isActive && signedIn) ...[
+                if (appt.isActive && canManage) ...[
                   Row(
                     children: [
                       Expanded(
@@ -293,7 +300,8 @@ class BookingDetailScreen extends ConsumerWidget {
                           icon: Icons.autorenew,
                           bg: AppColors.sageLight,
                           fg: AppColors.sageDark,
-                          onTap: () => _reschedule(context, ref, appt),
+                          onTap: () => _reschedule(context, ref, appt,
+                              guestPhone: signedIn ? null : guestPhone),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -303,7 +311,8 @@ class BookingDetailScreen extends ConsumerWidget {
                           bg: AppColors.white,
                           fg: AppColors.danger,
                           border: const Color(0xFFECCDC4),
-                          onTap: () => _cancel(context, ref),
+                          onTap: () => _cancel(context, ref,
+                              guestPhone: signedIn ? null : guestPhone),
                         ),
                       ),
                     ],

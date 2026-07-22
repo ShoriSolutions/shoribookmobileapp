@@ -94,12 +94,16 @@ class MyBookingsRepository {
     }
   }
 
-  Future<ManageBookingResult> cancel(String id) async {
+  /// Cancels a booking. A signed-in customer uses the auth-scoped RPC; a
+  /// guest passes [guestPhone] (the number they booked with) so the
+  /// server can verify ownership without an account.
+  Future<ManageBookingResult> cancel(String id, {String? guestPhone}) async {
     try {
-      final result = await _client.rpc(
-        'cancel_own_appointment',
-        params: {'p_appointment_id': id},
-      );
+      final result = guestPhone != null
+          ? await _client.rpc('cancel_guest_appointment',
+              params: {'p_appointment_id': id, 'p_phone': guestPhone})
+          : await _client.rpc('cancel_own_appointment',
+              params: {'p_appointment_id': id});
       final map = result as Map<String, dynamic>;
       return ManageBookingResult(
         status: map['status'] == 'unchanged'
@@ -111,15 +115,19 @@ class MyBookingsRepository {
     }
   }
 
-  Future<ManageBookingResult> reschedule(String id, DateTime newStart) async {
+  Future<ManageBookingResult> reschedule(String id, DateTime newStart,
+      {String? guestPhone}) async {
     try {
-      final result = await _client.rpc(
-        'reschedule_own_appointment',
-        params: {
-          'p_appointment_id': id,
-          'p_new_start_time': newStart.toIso8601String(),
-        },
-      );
+      final result = guestPhone != null
+          ? await _client.rpc('reschedule_guest_appointment', params: {
+              'p_appointment_id': id,
+              'p_phone': guestPhone,
+              'p_new_start_time': newStart.toIso8601String(),
+            })
+          : await _client.rpc('reschedule_own_appointment', params: {
+              'p_appointment_id': id,
+              'p_new_start_time': newStart.toIso8601String(),
+            });
       final map = result as Map<String, dynamic>;
       switch (map['status']) {
         case 'conflict':

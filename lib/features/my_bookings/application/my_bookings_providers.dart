@@ -12,6 +12,15 @@ final myBookingsRepositoryProvider = Provider<MyBookingsRepository>((ref) {
 final guestBookingsStoreProvider =
     Provider<GuestBookingsStore>((ref) => GuestBookingsStore());
 
+/// The phone a guest booked this appointment with (from on-device storage),
+/// or null if signed in / not made on this device. Lets a guest cancel or
+/// reschedule their own booking without an account.
+final guestBookingPhoneProvider =
+    FutureProvider.autoDispose.family<String?, String>((ref, id) async {
+  if (ref.watch(authStatusProvider) == AuthStatus.authenticated) return null;
+  return ref.watch(guestBookingsStoreProvider).phoneFor(id);
+});
+
 final myBookingsProvider = FutureProvider.autoDispose<List<Appointment>>((
   ref,
 ) async {
