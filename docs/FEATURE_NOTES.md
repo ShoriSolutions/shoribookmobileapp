@@ -24,7 +24,8 @@ what still needs backend or app-store configuration.
 | `20260721000000_messaging_system.sql` | **messaging**: conversations, messages, reports, moderation log, privileges, business toggles, RLS, RPCs, realtime, auto-create trigger |
 | `20260721000001_message_attachments.sql` | private `message-attachments` bucket + participant-scoped storage RLS; `send_message` extended with attachment + metadata |
 | `20260721000002_push_tokens.sql` | `device_push_tokens` + `register_push_token`/`unregister_push_token` RPCs + `message_push_targets` helper (for push) |
-| `20260721000003_message_email_notify.sql` | `message_email_log` + `claim_message_email_targets` RPC (email-on-message via Resend) |
+| `20260721000003_message_email_notify.sql` | `message_email_log` + `claim_message_email_targets` RPC (decides who to email for messages) |
+| `20260721000004_email_outbox.sql` | `email_outbox` + `claim_outbox_emails`/`mark_outbox_sent`/`mark_outbox_failed` (all email unified for Nodemailer) |
 
 All migrations are additive + idempotent. Run in the Supabase SQL editor
 (make sure the button says **Run**, not "Run selected").
@@ -61,26 +62,31 @@ built on Supabase Realtime.
 URLs). Documents/voice/location reuse the same `message_type`/`attachment_url`
 path when you're ready.
 
-### Message email notifications — built (transport-agnostic; use Nodemailer)
-The *decision* logic lives in Postgres: `claim_message_email_targets` finds
-conversations with an unread inbound message that has sat past a 3-minute
-grace (so active chats don't email), honours the recipient side's **mute**
-flag, de-dupes per (conversation, recipient) on a 60-minute cooldown, and
-**claims** the rows atomically so there is never a double-send. Recipient =
-the business **owner** (vendor side) or the **customer's** account.
+### All email unified on Nodemailer (via an outbox)
+Supabase Edge Functions run on Deno and can't run Nodemailer, so email is now
+**produced** in the Edge Function and **sent** by your Node backend:
 
-Because it's transport-agnostic, the actual send goes through **your existing
-Nodemailer dispatcher** — Nodemailer is a Node library and can't run in the
-Deno Edge Function, so we don't send email from Supabase for messages.
-**To activate:** run `backend/nodemailer/message-email-dispatcher.mjs` (a
-ready-to-adapt reference) on a schedule in your Node backend — it calls the
-RPC with the service-role key and sends via your SMTP transport. Keep exactly
-**one** consumer of the RPC (the claim is atomic).
+- **Producer:** `process-reminders` (per-minute cron) no longer calls Resend.
+  It ENQUEUEs every email into `public.email_outbox` — booking reminders
+  (category `booking_reminder`), trial notices (`trial`), and new-message
+  notices (`message`). Message recipients come from `claim_message_email_targets`
+  (unread past a 3-min grace, mute-aware, 60-min cooldown, atomic claim so no
+  double-send; recipient = business **owner** or the **customer** account).
+- **Consumer:** `backend/nodemailer/email-dispatcher.mjs` — one worker that
+  drains the outbox via `claim_outbox_emails` (FOR UPDATE SKIP LOCKED, so you
+  can run several) and sends with your SMTP Nodemailer transport. Failures
+  requeue up to 5 attempts, then mark `failed`.
 
-> Note: the older trial/booking reminders in `process-reminders` still call
-> Resend directly. If you want *all* email on Nodemailer, those can move to the
-> same claim-in-DB / send-in-Node pattern too — not done here to avoid
-> disturbing the working reminder path.
+**To activate:**
+1. Run migrations `20260721000003` + `20260721000004`.
+2. Re-deploy the producer: `supabase functions deploy process-reminders
+   --no-verify-jwt`. (Resend is no longer used — `RESEND_API_KEY` can be
+   removed.)
+3. Run `email-dispatcher.mjs` on a schedule in your Node backend
+   (`npm i @supabase/supabase-js nodemailer`, set SMTP + Supabase env).
+
+`push` / `whatsapp` reminder channels stay no-ops in the Edge Function and
+fall back to email → outbox.
 
 ### Message push notifications — backend built; optional (needs Firebase)
 Instant push is **optional** — email (above) already covers offline users.

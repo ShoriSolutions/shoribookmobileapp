@@ -6,19 +6,26 @@
 // enqueues rows in reminder_queue (see 20260714000000_reminder_system.sql).
 //
 // Deploy:   supabase functions deploy process-reminders --no-verify-jwt
-// Secrets:  supabase secrets set RESEND_API_KEY=... EMAIL_FROM="ShoriBooks <noreply@yourdomain>"
-//           (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are provided automatically)
+// Secrets:  none needed for email (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY
+//           are provided automatically).
 // Schedule: a cron (pg_cron + net.http_post) that invokes it every minute.
 //
-// Email is implemented via Resend. Push (FCM/APNs) and the OFFICIAL WhatsApp
-// Business Platform remain stubs until those providers are configured; email
-// is the fallback so reminders still go out.
+// Email is ENQUEUED into public.email_outbox and SENT by the Node/Nodemailer
+// dispatcher (backend/nodemailer/email-dispatcher.mjs) — Deno can't run
+// Nodemailer. Push (FCM/APNs) and the OFFICIAL WhatsApp Business Platform
+// remain stubs until configured; email is the fallback so reminders go out.
 // ============================================================================
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const BATCH_SIZE = 100;
 const MAX_RETRIES = 3;
+
+// Service-role client (also used to enqueue email into the outbox).
+const admin = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+);
 
 interface NotificationProvider {
   readonly channel: "push" | "email" | "whatsapp" | "sms";
@@ -34,30 +41,34 @@ function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;");
 }
 
-// ── Resend email ────────────────────────────────────────────────────────────
-async function sendEmail(
+// ── Email -> outbox (sent by the Node/Nodemailer dispatcher) ─────────────────
+// Deno can't run Nodemailer, so we enqueue here; the Node backend drains
+// public.email_outbox and does the actual SMTP send. `dedupeKey` prevents a
+// double-enqueue if this cron run overlaps.
+async function enqueueEmail(
   to: string,
   subject: string,
   html: string,
+  category = "general",
+  dedupeKey?: string,
 ): Promise<SendResult> {
-  const key = Deno.env.get("RESEND_API_KEY");
-  if (!key) return { ok: false, error: "RESEND_API_KEY not set" };
-  const from = Deno.env.get("EMAIL_FROM") ??
-    "ShoriBooks <noreply@shorisolutions.com>";
-  try {
-    const r = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ from, to, subject, html }),
-    });
-    if (r.ok) return { ok: true, providerStatus: String(r.status) };
-    return { ok: false, error: `resend ${r.status}: ${await r.text()}` };
-  } catch (e) {
-    return { ok: false, error: String(e) };
+  if (!to) return { ok: false, error: "no email address" };
+  const { error } = await admin.from("email_outbox").insert({
+    to_email: to,
+    subject,
+    html,
+    category,
+    dedupe_key: dedupeKey ?? null,
+  });
+  if (error) {
+    // Unique dedupe violation -> already queued; treat as success.
+    // deno-lint-ignore no-explicit-any
+    if ((error as any).code === "23505") {
+      return { ok: true, providerStatus: "deduped" };
+    }
+    return { ok: false, error: error.message };
   }
+  return { ok: true, providerStatus: "queued" };
 }
 
 const pushProvider: NotificationProvider = {
@@ -71,7 +82,12 @@ const emailProvider: NotificationProvider = {
   channel: "email",
   async send(to, subject, message) {
     if (!to.email) return { ok: false, error: "no email address" };
-    return sendEmail(to.email, subject, `<p>${escapeHtml(message)}</p>`);
+    return enqueueEmail(
+      to.email,
+      subject,
+      `<p>${escapeHtml(message)}</p>`,
+      "booking_reminder",
+    );
   },
 };
 const whatsappProvider: NotificationProvider = {
@@ -160,7 +176,13 @@ async function processTrialReminders(supabase: any): Promise<number> {
           `schedule, choose a plan in ShoriBooks under More → Subscription ` +
           `before it ends.`;
 
-      const res = await sendEmail(email, subject, `<p>${escapeHtml(body)}</p>`);
+      const res = await enqueueEmail(
+        email,
+        subject,
+        `<p>${escapeHtml(body)}</p>`,
+        "trial",
+        `trial:${b.id}:${days}`,
+      );
       if (res.ok) {
         await supabase
           .from("trial_reminder_log")
@@ -170,6 +192,36 @@ async function processTrialReminders(supabase: any): Promise<number> {
     }
   }
   return sent;
+}
+
+// New-message email notices for offline users. The RPC claims + de-dupes
+// atomically (grace period, mute-aware, cooldown); we enqueue each into the
+// outbox for the Node/Nodemailer dispatcher to send.
+// deno-lint-ignore no-explicit-any
+async function processMessageEmails(supabase: any): Promise<number> {
+  const { data, error } = await supabase.rpc("claim_message_email_targets", {
+    p_grace_minutes: 3,
+    p_cooldown_minutes: 60,
+  });
+  if (error || !data) return 0;
+  let queued = 0;
+  for (const t of data) {
+    const first = ((t.recipient_name as string) ?? "there").split(" ")[0];
+    const extra = (t.unread as number) > 1 ? ` (${t.unread} new messages)` : "";
+    const preview = t.preview ? `: "${escapeHtml(t.preview as string)}"` : "";
+    const subject = `New message from ${t.other_name}`;
+    const html = `<p>Hi ${escapeHtml(first)}, you have a new message from ` +
+      `${escapeHtml(t.other_name as string)} on Shorivo${extra}${preview}. ` +
+      `Open the app to reply.</p>`;
+    const res = await enqueueEmail(
+      t.recipient_email as string,
+      subject,
+      html,
+      "message",
+    );
+    if (res.ok) queued++;
+  }
+  return queued;
 }
 
 Deno.serve(async () => {
@@ -304,8 +356,11 @@ Deno.serve(async () => {
 
   // Trial-ending notices (7/3/1 days out), independent of the queue above.
   const trialReminders = await processTrialReminders(supabase);
+  // New-message notices -> outbox (Nodemailer dispatcher sends them).
+  const messageEmails = await processMessageEmails(supabase);
 
-  return new Response(JSON.stringify({ processed, trialReminders }), {
-    headers: { "content-type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify({ processed, trialReminders, messageEmails }),
+    { headers: { "content-type": "application/json" } },
+  );
 });
