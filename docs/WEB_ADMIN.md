@@ -95,6 +95,34 @@ Nice-to-haves an admin dashboard would want that aren't built yet:
 
 ---
 
+## Messaging moderation (in-app messaging system)
+
+The mobile app now has appointment-based messaging. Reports and a full audit
+trail are stored for the web admin to action:
+
+- **`conversation_reports`** — user-submitted reports (`open` / `reviewing` /
+  `actioned` / `dismissed`), with `conversation_id`, `reporter_role`, `reason`.
+- **`messaging_moderation_log`** — append-only audit of every report and
+  moderator action.
+- **`messaging_privileges`** — per-user suspension (`suspended_until`) or
+  permanent restriction (`permanently_restricted`).
+
+Admin RPCs (all `is_admin()`-gated, callable via `supabase.rpc`):
+- **`admin_resolve_report(p_report_id, p_status, p_resolution)`** — mark a
+  report reviewing/actioned/dismissed; writes the moderation log.
+- **`admin_set_messaging_suspension(p_user_id, p_until, p_permanent, p_reason)`**
+  — issue a warning window, temporary suspension, or permanent restriction.
+
+Admin dashboard should: list open reports, open the reported conversation
+(read via service role — conversations/messages are otherwise RLS-locked to
+participants), then warn / suspend / restrict and resolve the report. A vendor
+can also block a customer per-conversation from the app.
+
+**Message notifications** (push/email on new messages) are not yet delivered —
+in-app unread only. See `FEATURE_NOTES.md`.
+
+---
+
 ## Notes for whoever builds it
 - Everything in **A** is callable today via `supabase.rpc('...')` with an admin
   session — start there for the quickest wins (trust moderation + analytics).

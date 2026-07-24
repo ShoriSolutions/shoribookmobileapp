@@ -16,6 +16,12 @@ what still needs backend or app-store configuration.
 | `20260719000005_trial_reminder_log.sql` | `trial_reminder_log` (dedupe for trial-ending notices) |
 | `20260720000000_appointment_customer_timezone.sql` | `appointments.customer_timezone` + write-once RPC |
 | `20260720000001_set_business_timezone.sql` | `set_business_timezone` RPC (vendor picks business zone) |
+| `20260720000002_admin_set_featured.sql` | `admin_set_featured` RPC |
+| `20260720000003_guest_manage_booking.sql` | `cancel_guest_appointment` / `reschedule_guest_appointment` RPCs |
+| `20260720000004_service_plan_limit.sql` | `subscription_packages.max_services` + service-cap trigger |
+| `20260720000005_booking_staff_assignment_fix.sql` | booking allowed when a service has no staff assignments |
+| `20260720000006_fix_reminder_channels_array.sql` | fixes "malformed array literal: push" blocking Save booking |
+| `20260721000000_messaging_system.sql` | **messaging**: conversations, messages, reports, moderation log, privileges, business toggles, RLS, RPCs, realtime, auto-create trigger |
 
 All migrations are additive + idempotent. Run in the Supabase SQL editor
 (make sure the button says **Run**, not "Run selected").
@@ -23,6 +29,36 @@ All migrations are additive + idempotent. Run in the Supabase SQL editor
 ---
 
 ## What shipped (Flutter + Supabase, reusing existing services)
+
+### Appointment-based messaging — `features/messaging/`
+Secure in-app chat between a business (any active member) and a customer,
+built on Supabase Realtime.
+- **Two types:** `enquiry` (pre-booking questions, gated by the business's
+  `pre_booking_messaging_enabled`) and `booking` (auto-created by a trigger
+  when an appointment is made, showing the booking summary + quick actions).
+- **Live:** `MessagingRepository.watchMessages` / `watchConversations` use
+  `.stream()`; typing indicators use a Realtime broadcast channel (no DB).
+- **Read receipts / delivered:** `mark_conversation_read` stamps `read_at`;
+  bubbles show a single/double check.
+- **Controls:** per-side mute + archive (`set_conversation_flag`), vendor
+  block (`set_conversation_blocked`), report (`report_conversation`), and
+  business on/off toggles (`set_business_messaging_settings`, in vendor
+  Reminders & notifications).
+- **Security:** RLS scopes conversations to the business's members, the
+  customer who owns the contact / authored the enquiry, or an admin. All
+  writes go through SECURITY DEFINER RPCs.
+- **Entry points:** "Messages" (vendor More + customer Profile, with unread
+  badge), "Message business" on the customer booking detail, and "Ask a
+  question" on the business profile.
+- **Future-ready:** `messages.message_type` / `attachment_url` / `metadata`
+  are in place for photos, documents, voice, and location; the schema also
+  anticipates group/staff-specific threads and templates.
+
+**Not yet wired — push/email notifications for messages.** Unread is shown
+in-app and via Realtime. Delivering a *push* on a new message needs FCM/APNs
+(not set up), and email would extend `process-reminders`. The moderation
+`messaging_moderation_log` + `conversation_reports` are ready for the web
+admin (see WEB_ADMIN.md). Respect each user's mute flag when adding push.
 
 ### Time-based greetings — `core/utils/greeting.dart`
 `Greeting.full(name: 'Sarah')` → "Good morning, Sarah 👋" / "Working late,
