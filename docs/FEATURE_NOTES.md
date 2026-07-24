@@ -61,18 +61,26 @@ built on Supabase Realtime.
 URLs). Documents/voice/location reuse the same `message_type`/`attachment_url`
 path when you're ready.
 
-### Message email notifications — built (Resend, no Firebase)
-`process-reminders` now also emails the recipient of an unread chat message.
-`claim_message_email_targets` (called each cron run) finds conversations with
-an unread inbound message that has sat past a 3-minute grace (so active chats
-don't email), honours the recipient side's **mute** flag, de-dupes per
-(conversation, recipient) on a 60-minute cooldown, and claims them atomically
-so concurrent runs never double-send. Recipient = the business **owner**
-(vendor side) or the **customer's** account (customer side).
-**To activate:** re-deploy `process-reminders` (`supabase functions deploy
-process-reminders --no-verify-jwt`) — `RESEND_API_KEY` is already set and the
-per-minute cron already runs. Set `EMAIL_FROM` to a verified Shorivo sender
-when the sending domain is ready.
+### Message email notifications — built (transport-agnostic; use Nodemailer)
+The *decision* logic lives in Postgres: `claim_message_email_targets` finds
+conversations with an unread inbound message that has sat past a 3-minute
+grace (so active chats don't email), honours the recipient side's **mute**
+flag, de-dupes per (conversation, recipient) on a 60-minute cooldown, and
+**claims** the rows atomically so there is never a double-send. Recipient =
+the business **owner** (vendor side) or the **customer's** account.
+
+Because it's transport-agnostic, the actual send goes through **your existing
+Nodemailer dispatcher** — Nodemailer is a Node library and can't run in the
+Deno Edge Function, so we don't send email from Supabase for messages.
+**To activate:** run `backend/nodemailer/message-email-dispatcher.mjs` (a
+ready-to-adapt reference) on a schedule in your Node backend — it calls the
+RPC with the service-role key and sends via your SMTP transport. Keep exactly
+**one** consumer of the RPC (the claim is atomic).
+
+> Note: the older trial/booking reminders in `process-reminders` still call
+> Resend directly. If you want *all* email on Nodemailer, those can move to the
+> same claim-in-DB / send-in-Node pattern too — not done here to avoid
+> disturbing the working reminder path.
 
 ### Message push notifications — backend built; optional (needs Firebase)
 Instant push is **optional** — email (above) already covers offline users.

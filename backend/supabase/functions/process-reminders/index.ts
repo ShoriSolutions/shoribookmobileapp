@@ -172,35 +172,6 @@ async function processTrialReminders(supabase: any): Promise<number> {
   return sent;
 }
 
-// New-message email notices for offline users (no push/Firebase needed).
-// Reuses Resend; the RPC claims + de-dupes atomically so we never double-send.
-async function processMessageEmails(supabase: any): Promise<number> {
-  const { data, error } = await supabase.rpc("claim_message_email_targets", {
-    p_grace_minutes: 3,
-    p_cooldown_minutes: 60,
-  });
-  if (error || !data) return 0;
-  let sent = 0;
-  for (const t of data) {
-    const first = (t.recipient_name as string | undefined)?.split(" ")[0] ??
-      "there";
-    const extra = (t.unread as number) > 1 ? ` (${t.unread} new messages)` : "";
-    const preview = (t.preview as string | undefined) ?? "";
-    const subject = `New message from ${t.other_name}`;
-    const body = `Hi ${first}, you have a new message from ${t.other_name} ` +
-      `on Shorivo${extra}` +
-      (preview ? `: "${preview}"` : "") +
-      `. Open the app to reply.`;
-    const res = await sendEmail(
-      t.recipient_email as string,
-      subject,
-      `<p>${escapeHtml(body)}</p>`,
-    );
-    if (res.ok) sent++;
-  }
-  return sent;
-}
-
 Deno.serve(async () => {
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -333,11 +304,8 @@ Deno.serve(async () => {
 
   // Trial-ending notices (7/3/1 days out), independent of the queue above.
   const trialReminders = await processTrialReminders(supabase);
-  // New-message email notices for offline users.
-  const messageEmails = await processMessageEmails(supabase);
 
-  return new Response(
-    JSON.stringify({ processed, trialReminders, messageEmails }),
-    { headers: { "content-type": "application/json" } },
-  );
+  return new Response(JSON.stringify({ processed, trialReminders }), {
+    headers: { "content-type": "application/json" },
+  });
 });
