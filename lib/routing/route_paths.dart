@@ -38,6 +38,9 @@ class RoutePaths {
   static const editCustomerProfile = '/edit-profile';
   static const support = '/support';
   static const helpFaq = '/help';
+  static const messages = '/messages';
+  static const conversationRoute = '/messages/:id';
+  static String conversation(String id) => '/messages/$id';
   static const deleteAccount = '/delete-account';
   static const settings = '/settings';
   static const accountSettings = '/account-settings';

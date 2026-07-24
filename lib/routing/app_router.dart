@@ -57,6 +57,8 @@ import '../features/settings/presentation/settings_screen.dart';
 import '../features/staff/presentation/invite_staff_screen.dart';
 import '../features/staff/presentation/staff_detail_screen.dart';
 import '../features/staff/presentation/staff_list_screen.dart';
+import '../features/messaging/presentation/conversation_thread_screen.dart';
+import '../features/messaging/presentation/conversations_list_screen.dart';
 import '../features/support/presentation/help_faq_screen.dart';
 import '../features/support/presentation/support_screen.dart';
 import 'route_paths.dart';
@@ -519,6 +521,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.helpFaq,
         builder: (c, s) => const HelpFaqScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.messages,
+        builder: (c, s) => const ConversationsListScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.conversationRoute,
+        builder: (c, s) =>
+            ConversationThreadScreen(conversationId: s.pathParameters['id']!),
       ),
       GoRoute(
         path: RoutePaths.deleteAccount,

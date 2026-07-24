@@ -11,6 +11,7 @@ import '../../../models/customer_trust.dart';
 import '../../../routing/route_paths.dart';
 import '../../app_mode/application/app_mode_provider.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../messaging/application/messaging_providers.dart';
 import '../../trust/application/trust_providers.dart';
 
 /// C09 · Profile — light and guest-first. Identity card (guest or
@@ -230,6 +231,12 @@ class CustomerProfileScreen extends ConsumerWidget {
           onTap: () => context.push(RoutePaths.favorites),
         ),
         _MenuRow(
+          icon: Icons.forum_outlined,
+          title: 'Messages',
+          badge: ref.watch(unreadConversationsProvider),
+          onTap: () => context.push(RoutePaths.messages),
+        ),
+        _MenuRow(
           icon: Icons.notifications_none,
           title: 'Notifications',
           onTap: () => context.push(RoutePaths.notificationsFeed),
@@ -356,6 +363,7 @@ class _MenuRow extends StatelessWidget {
     this.iconTint = AppColors.sageLight,
     this.iconColor = AppColors.sageDark,
     this.danger = false,
+    this.badge = 0,
   });
 
   final IconData icon;
@@ -364,6 +372,7 @@ class _MenuRow extends StatelessWidget {
   final Color iconTint;
   final Color iconColor;
   final bool danger;
+  final int badge;
 
   @override
   Widget build(BuildContext context) {
@@ -390,6 +399,21 @@ class _MenuRow extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                       color: danger ? AppColors.danger : AppColors.ink)),
             ),
+            if (badge > 0)
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.terracotta,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text('$badge',
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white)),
+              ),
             const Icon(Icons.chevron_right, color: AppColors.faint),
           ],
         ),

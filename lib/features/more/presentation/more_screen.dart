@@ -11,6 +11,7 @@ import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
+import '../../messaging/application/messaging_providers.dart';
 import '../../staff/application/staff_providers.dart';
 
 /// V12 · More — the hub for everything that isn't day-to-day. Business
@@ -27,6 +28,7 @@ class MoreScreen extends ConsumerWidget {
     final isAdmin = role != null && can(role, Permission.manageSettings);
     final canBill = role != null && can(role, Permission.manageBilling);
     final staffCount = ref.watch(staffListProvider).valueOrNull?.length;
+    final unread = ref.watch(unreadConversationsProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -93,6 +95,14 @@ class MoreScreen extends ConsumerWidget {
             ],
             const _GroupLabel('Account'),
             _MenuCard(rows: [
+              _MenuRow(
+                icon: Icons.forum_outlined,
+                title: 'Messages',
+                subtitle: unread > 0 ? '$unread unread' : 'Customer chats',
+                subtitleColor:
+                    unread > 0 ? AppColors.terracottaDeep : null,
+                onTap: () => context.push(RoutePaths.messages),
+              ),
               if (canBill)
                 _MenuRow(
                   icon: Icons.workspace_premium_outlined,
