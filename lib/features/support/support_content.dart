@@ -6,12 +6,13 @@ class SupportContent {
   const SupportContent._();
 
   /// Where "Contact support" and the 90-day appeal email are sent.
-  /// TODO: change this to your real support inbox.
-  static const supportEmail = 'support@shorisolutions.com';
+  /// PLACEHOLDER — change this to your real support inbox before launch.
+  static const supportEmail = 'support@shorivo.app';
 
   /// The number customers can call for help. Shown on the Support tab and
-  /// used for tap-to-call. TODO: change this to your real support line.
-  static const supportPhone = '+1 (246) 000-0000';
+  /// used for tap-to-call.
+  /// PLACEHOLDER — change this to your real support line before launch.
+  static const supportPhone = '+1 (246) 555-0100';
 
   /// Bump this whenever the Terms/Privacy text below materially changes.
   /// Stored on the account at sign-up (terms_version) so you can tell who
