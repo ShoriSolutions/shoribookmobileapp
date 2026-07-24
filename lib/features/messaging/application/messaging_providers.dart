@@ -95,3 +95,9 @@ final conversationAppointmentProvider =
     FutureProvider.autoDispose.family<Appointment?, String>((ref, apptId) {
   return ref.watch(messagingRepositoryProvider).fetchAppointment(apptId);
 });
+
+/// A short-lived signed URL for a private attachment storage path.
+final attachmentUrlProvider =
+    FutureProvider.autoDispose.family<String, String>((ref, path) {
+  return ref.watch(messagingRepositoryProvider).signedAttachmentUrl(path);
+});

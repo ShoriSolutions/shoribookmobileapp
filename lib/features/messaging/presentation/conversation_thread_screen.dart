@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -115,6 +117,33 @@ class _ConversationThreadScreenState
     }
   }
 
+  Future<void> _pickAndSendImage() async {
+    if (_sending) return;
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+      imageQuality: 80,
+    );
+    if (picked == null) return;
+    setState(() => _sending = true);
+    try {
+      final bytes = await picked.readAsBytes();
+      final ext = picked.name.toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+      final repo = ref.read(messagingRepositoryProvider);
+      final path = await repo.uploadAttachment(widget.conversationId, bytes,
+          ext: ext);
+      await repo.sendMessage(widget.conversationId, '',
+          type: 'image', attachmentUrl: path);
+    } catch (e) {
+      if (mounted) {
+        showAppSnackBar(context,
+            message: _friendly(AppException.from(e).message), isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
   String _friendly(String msg) {
     if (msg.contains('messaging_disabled')) {
       return 'Messaging is turned off for this business.';
@@ -217,6 +246,7 @@ class _ConversationThreadScreenState
             blocked: (conv?.blockedByVendor ?? false) && !_asVendor,
             onChanged: _onComposerChanged,
             onSend: _send,
+            onAttach: _pickAndSendImage,
           ),
         ],
       ),
@@ -354,13 +384,13 @@ class _BookingSummary extends ConsumerWidget {
 }
 
 // ── Message bubble ─────────────────────────────────────────────────────────
-class _MessageBubble extends StatelessWidget {
+class _MessageBubble extends ConsumerWidget {
   const _MessageBubble({required this.message, required this.mine});
   final Message message;
   final bool mine;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (message.isSystem) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -397,11 +427,17 @@ class _MessageBubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(message.body,
-                style: TextStyle(
-                    fontSize: 15,
-                    height: 1.3,
-                    color: mine ? Colors.white : AppColors.ink)),
+            if (message.messageType == 'image' &&
+                message.attachmentUrl != null) ...[
+              _AttachmentImage(path: message.attachmentUrl!),
+              if (message.body.isNotEmpty) const SizedBox(height: 6),
+            ],
+            if (message.body.isNotEmpty)
+              Text(message.body,
+                  style: TextStyle(
+                      fontSize: 15,
+                      height: 1.3,
+                      color: mine ? Colors.white : AppColors.ink)),
             const SizedBox(height: 3),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -431,6 +467,67 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
+// ── Attachment image (private bucket -> signed URL, tap to view) ───────────
+class _AttachmentImage extends ConsumerWidget {
+  const _AttachmentImage({required this.path});
+  final String path;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final urlAsync = ref.watch(attachmentUrlProvider(path));
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: urlAsync.when(
+        loading: () => const _ImagePlaceholder(),
+        error: (_, __) => const _ImagePlaceholder(icon: Icons.broken_image),
+        data: (url) => GestureDetector(
+          onTap: () => _openFull(context, url),
+          child: CachedNetworkImage(
+            imageUrl: url,
+            width: 220,
+            fit: BoxFit.cover,
+            placeholder: (_, __) => const _ImagePlaceholder(),
+            errorWidget: (_, __, ___) =>
+                const _ImagePlaceholder(icon: Icons.broken_image),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openFull(BuildContext context, String url) {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: Center(
+          child: InteractiveViewer(
+            child: CachedNetworkImage(imageUrl: url, fit: BoxFit.contain),
+          ),
+        ),
+      ),
+    ));
+  }
+}
+
+class _ImagePlaceholder extends StatelessWidget {
+  const _ImagePlaceholder({this.icon});
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 220,
+      height: 160,
+      color: AppColors.fieldMuted,
+      child: Icon(icon ?? Icons.image_outlined, color: AppColors.faint),
+    );
+  }
+}
+
 // ── Composer ───────────────────────────────────────────────────────────────
 class _Composer extends StatelessWidget {
   const _Composer({
@@ -439,12 +536,14 @@ class _Composer extends StatelessWidget {
     required this.blocked,
     required this.onChanged,
     required this.onSend,
+    required this.onAttach,
   });
   final TextEditingController controller;
   final bool sending;
   final bool blocked;
   final ValueChanged<String> onChanged;
   final VoidCallback onSend;
+  final VoidCallback onAttach;
 
   @override
   Widget build(BuildContext context) {
@@ -469,6 +568,12 @@ class _Composer extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            IconButton(
+              onPressed: sending ? null : onAttach,
+              icon: const Icon(Icons.add_photo_alternate_outlined,
+                  color: AppColors.sageDark),
+              tooltip: 'Send a photo',
+            ),
             Expanded(
               child: TextField(
                 controller: controller,

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../models/appointment.dart';
@@ -136,16 +138,55 @@ class MessagingRepository {
     String conversationId,
     String body, {
     String type = 'text',
+    String? attachmentUrl,
+    Map<String, dynamic>? metadata,
   }) async {
     try {
-      await _client.rpc('send_message', params: {
+      final params = <String, dynamic>{
         'p_conversation_id': conversationId,
         'p_body': body,
         'p_message_type': type,
-      });
+      };
+      // Only sent when present so text messages still work if the attachments
+      // migration hasn't been applied yet.
+      if (attachmentUrl != null) params['p_attachment_url'] = attachmentUrl;
+      if (metadata != null) params['p_metadata'] = metadata;
+      await _client.rpc('send_message', params: params);
     } catch (e) {
       throw AppException.from(e);
     }
+  }
+
+  /// Uploads a chat image to the private message-attachments bucket under
+  /// the conversation's folder. Returns the storage PATH (not a URL) to
+  /// store in messages.attachment_url; display via [signedAttachmentUrl].
+  Future<String> uploadAttachment(
+    String conversationId,
+    Uint8List bytes, {
+    String ext = 'jpg',
+  }) async {
+    try {
+      final path =
+          '$conversationId/${DateTime.now().millisecondsSinceEpoch}.$ext';
+      await _client.storage.from('message-attachments').uploadBinary(
+            path,
+            bytes,
+            fileOptions: FileOptions(
+              contentType: ext == 'png' ? 'image/png' : 'image/jpeg',
+              upsert: false,
+            ),
+          );
+      return path;
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
+  /// A short-lived signed URL for a private attachment path.
+  Future<String> signedAttachmentUrl(String path) {
+    return _client.storage
+        .from('message-attachments')
+        .createSignedUrl(path, 3600);
   }
 
   Future<void> markRead(String conversationId) async {
