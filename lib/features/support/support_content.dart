@@ -9,6 +9,10 @@ class SupportContent {
   /// TODO: change this to your real support inbox.
   static const supportEmail = 'support@shorisolutions.com';
 
+  /// The number customers can call for help. Shown on the Support tab and
+  /// used for tap-to-call. TODO: change this to your real support line.
+  static const supportPhone = '+1 (246) 000-0000';
+
   /// Bump this whenever the Terms/Privacy text below materially changes.
   /// Stored on the account at sign-up (terms_version) so you can tell who
   /// accepted which version.
