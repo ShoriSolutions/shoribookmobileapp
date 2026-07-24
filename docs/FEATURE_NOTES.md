@@ -24,6 +24,7 @@ what still needs backend or app-store configuration.
 | `20260721000000_messaging_system.sql` | **messaging**: conversations, messages, reports, moderation log, privileges, business toggles, RLS, RPCs, realtime, auto-create trigger |
 | `20260721000001_message_attachments.sql` | private `message-attachments` bucket + participant-scoped storage RLS; `send_message` extended with attachment + metadata |
 | `20260721000002_push_tokens.sql` | `device_push_tokens` + `register_push_token`/`unregister_push_token` RPCs + `message_push_targets` helper (for push) |
+| `20260721000003_message_email_notify.sql` | `message_email_log` + `claim_message_email_targets` RPC (email-on-message via Resend) |
 
 All migrations are additive + idempotent. Run in the Supabase SQL editor
 (make sure the button says **Run**, not "Run selected").
@@ -60,7 +61,22 @@ built on Supabase Realtime.
 URLs). Documents/voice/location reuse the same `message_type`/`attachment_url`
 path when you're ready.
 
-### Message push notifications — backend built; needs Firebase to finish
+### Message email notifications — built (Resend, no Firebase)
+`process-reminders` now also emails the recipient of an unread chat message.
+`claim_message_email_targets` (called each cron run) finds conversations with
+an unread inbound message that has sat past a 3-minute grace (so active chats
+don't email), honours the recipient side's **mute** flag, de-dupes per
+(conversation, recipient) on a 60-minute cooldown, and claims them atomically
+so concurrent runs never double-send. Recipient = the business **owner**
+(vendor side) or the **customer's** account (customer side).
+**To activate:** re-deploy `process-reminders` (`supabase functions deploy
+process-reminders --no-verify-jwt`) — `RESEND_API_KEY` is already set and the
+per-minute cron already runs. Set `EMAIL_FROM` to a verified Shorivo sender
+when the sending domain is ready.
+
+### Message push notifications — backend built; optional (needs Firebase)
+Instant push is **optional** — email (above) already covers offline users.
+If you later want banner-style push:
 The server side is done and reusable:
 - `device_push_tokens` + `register_push_token` / `unregister_push_token` RPCs
   and a `PushTokensRepository` (`pushTokensRepositoryProvider`) ready to call.
