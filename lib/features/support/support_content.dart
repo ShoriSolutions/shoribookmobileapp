@@ -19,7 +19,62 @@ class SupportContent {
   /// accepted which version.
   static const termsVersion = '2026-07.3';
 
-  static const faq = <(String, String)>[
+  /// Questions a person booking an appointment would ask.
+  static const customerFaq = <(String, String)>[
+    (
+      'Do I need an account to book?',
+      'No — you can book as a guest with just your name and phone number. '
+          'Creating a free account lets you see all your bookings, save '
+          'favourites, and keep your details across devices.',
+    ),
+    (
+      'How do I book an appointment?',
+      'Open a business, pick a service and (if offered) a staff member, then '
+          'choose an available time and confirm. You\'ll get a confirmation '
+          'and a reminder before your appointment.',
+    ),
+    (
+      'Where do I see my bookings?',
+      'Tap My bookings. Bookings you made as a guest on this device show up '
+          'there too, matched by your phone number.',
+    ),
+    (
+      'How do I cancel or reschedule?',
+      'Open the booking from My bookings and tap Cancel or Reschedule. '
+          'Cancelling within the business\'s allowed window carries no '
+          'penalty; late cancellations and no-shows can affect your trust '
+          'score.',
+    ),
+    (
+      'Why was I asked for a deposit?',
+      'Some businesses require a deposit to confirm a booking. A refundable '
+          'deposit may also be requested automatically if your trust score is '
+          'low. Deposits and payments are arranged directly between you and '
+          'the business.',
+    ),
+    (
+      'What is my trust score?',
+      'Your trust score (0–100) is based only on booking behaviour — '
+          'completed bookings raise it; no-shows and late cancellations lower '
+          'it. A low score can mean a deposit is required or booking is '
+          'briefly paused; reliable behaviour restores it over time. It never '
+          'uses your device or location.',
+    ),
+    (
+      'How do I save a business I like?',
+      'Tap the heart on a business to add it to your Favourites, so it\'s easy '
+          'to find and rebook later.',
+    ),
+    (
+      'How do I change my password or delete my account?',
+      'Go to Profile → Account & security. From there you can change your '
+          'password (we email a secure link) or delete your account, which is '
+          'permanent and confirmed by a code we email you.',
+    ),
+  ];
+
+  /// Questions a business owner or staff member would ask.
+  static const vendorFaq = <(String, String)>[
     (
       'How do clients book with me?',
       'Share your booking link or QR code (More → Profile & Marketplace → '
@@ -38,6 +93,12 @@ class SupportContent {
       'How do I add staff and set their hours?',
       'Add team members in More → Staff. Set each person\'s working days and '
           'hours in More → Availability → Staff Schedules.',
+    ),
+    (
+      'How do I make myself bookable as the owner?',
+      'Go to More → Staff and tap "Make myself available". This adds you as a '
+          'bookable pro so clients can book with you and you show as On duty. '
+          'Set your own hours in More → Availability.',
     ),
     (
       'How do I block off time or set holidays?',
@@ -64,38 +125,24 @@ class SupportContent {
           'may be asked for a refundable deposit automatically.',
     ),
     (
-      'What is a trust score / reputation?',
+      'What is a customer\'s trust score / reputation?',
       'Each customer has a trust score (0–100) based only on booking '
           'behaviour — completed bookings raise it; no-shows and late '
-          'cancellations lower it. Cancelling within the allowed window is '
-          'free. Low scores can require a deposit or temporarily pause '
-          'booking; reliable behaviour restores trust over time. It never '
-          'uses your device or location.',
+          'cancellations lower it. Low scores can require a deposit or '
+          'temporarily pause booking; reliable behaviour restores trust over '
+          'time. It never uses their device or location.',
     ),
     (
-      'Where do I manage my account?',
-      'Everything account-related lives in one place: More → Account & '
-          'security (vendors) or Profile → Account & security (customers). '
-          'From there you can edit your profile, change your password, switch '
-          'account, log out, or delete your account.',
-    ),
-    (
-      'How do I change my password?',
-      'Open Account & security → Change password. We email you a secure link '
-          'to set a new one — no need to remember the old password.',
-    ),
-    (
-      'How do I make myself bookable as the owner?',
-      'Go to More → Staff and tap "Make myself available". This adds you as a '
-          'bookable pro so clients can book with you and you show as On duty. '
-          'Set your own hours in More → Availability.',
+      'How do I manage my account or change my password?',
+      'Everything account-related lives in More → Account & security. From '
+          'there you can edit your profile, change your password (we email a '
+          'secure link), switch account, or log out.',
     ),
     (
       'How do I delete my account?',
-      'Go to Account & security → Delete account (under More for vendors, or '
-          'Profile for customers). You type DELETE and confirm with a code we '
-          'email you. Deletion is permanent, and for a business owner it also '
-          'removes the business and all of its data.',
+      'Go to More → Account & security → Delete account. You type DELETE and '
+          'confirm with a code we email you. Deletion is permanent, and for a '
+          'business owner it also removes the business and all of its data.',
     ),
   ];
 

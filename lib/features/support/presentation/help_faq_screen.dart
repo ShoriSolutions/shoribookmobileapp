@@ -17,7 +17,9 @@ class HelpFaqScreen extends StatefulWidget {
 class _HelpFaqScreenState extends State<HelpFaqScreen> {
   final _search = TextEditingController();
   String _query = '';
-  int? _expanded = 0; // first item open by default
+  // Which question is expanded, tracked by its text so it's stable across
+  // both sections. The first customer question starts open.
+  String? _expanded = SupportContent.customerFaq.first.$1;
 
   @override
   void dispose() {
@@ -31,18 +33,37 @@ class _HelpFaqScreenState extends State<HelpFaqScreen> {
     ));
   }
 
+  List<Widget> _section(List<(String, String)> items) {
+    return [
+      for (final item in items) ...[
+        _FaqCard(
+          question: item.$1,
+          answer: item.$2,
+          expanded: _expanded == item.$1,
+          onTap: () => setState(
+              () => _expanded = _expanded == item.$1 ? null : item.$1),
+        ),
+        const SizedBox(height: 12),
+      ],
+    ];
+  }
+
+  List<(String, String)> _filter(List<(String, String)> faq) {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return faq;
+    return [
+      for (final item in faq)
+        if (item.$1.toLowerCase().contains(q) ||
+            item.$2.toLowerCase().contains(q))
+          item,
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final faq = SupportContent.faq;
-    final q = _query.trim().toLowerCase();
-    final filtered = <(int, (String, String))>[];
-    for (var i = 0; i < faq.length; i++) {
-      if (q.isEmpty ||
-          faq[i].$1.toLowerCase().contains(q) ||
-          faq[i].$2.toLowerCase().contains(q)) {
-        filtered.add((i, faq[i]));
-      }
-    }
+    final customer = _filter(SupportContent.customerFaq);
+    final vendor = _filter(SupportContent.vendorFaq);
+    final noResults = customer.isEmpty && vendor.isEmpty;
 
     return Scaffold(
       body: SafeArea(
@@ -97,17 +118,17 @@ class _HelpFaqScreenState extends State<HelpFaqScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  for (final entry in filtered) ...[
-                    _FaqCard(
-                      question: entry.$2.$1,
-                      answer: entry.$2.$2,
-                      expanded: _expanded == entry.$1,
-                      onTap: () => setState(() =>
-                          _expanded = _expanded == entry.$1 ? null : entry.$1),
-                    ),
+                  if (customer.isNotEmpty) ...[
+                    const _GroupLabel('For customers'),
+                    ..._section(customer),
                     const SizedBox(height: 12),
                   ],
-                  if (filtered.isEmpty)
+                  if (vendor.isNotEmpty) ...[
+                    const _GroupLabel('For businesses'),
+                    ..._section(vendor),
+                    const SizedBox(height: 12),
+                  ],
+                  if (noResults)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 24),
                       child: Center(
