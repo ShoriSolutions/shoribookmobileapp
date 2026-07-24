@@ -20,6 +20,8 @@ class Business {
   final String? facebookUrl;
   final String? tiktokUrl;
   final bool bookingEnabled;
+  final bool messagingEnabled;
+  final bool preBookingMessagingEnabled;
   final bool isPublished;
   final bool isMarketplaceListed;
   final bool featuredRequested;
@@ -64,6 +66,8 @@ class Business {
     this.facebookUrl,
     this.tiktokUrl,
     required this.bookingEnabled,
+    this.messagingEnabled = true,
+    this.preBookingMessagingEnabled = true,
     this.isPublished = true,
     this.isMarketplaceListed = true,
     this.featuredRequested = false,
@@ -126,6 +130,9 @@ class Business {
     facebookUrl: json['facebook_url'] as String?,
     tiktokUrl: json['tiktok_url'] as String?,
     bookingEnabled: json['booking_enabled'] as bool? ?? true,
+    messagingEnabled: json['messaging_enabled'] as bool? ?? true,
+    preBookingMessagingEnabled:
+        json['pre_booking_messaging_enabled'] as bool? ?? true,
     isPublished: json['is_published'] as bool? ?? true,
     isMarketplaceListed: json['is_marketplace_listed'] as bool? ?? true,
     featuredRequested: json['featured_requested'] as bool? ?? false,
@@ -182,6 +189,8 @@ class Business {
     'facebook_url': facebookUrl,
     'tiktok_url': tiktokUrl,
     'booking_enabled': bookingEnabled,
+    'messaging_enabled': messagingEnabled,
+    'pre_booking_messaging_enabled': preBookingMessagingEnabled,
     'is_published': isPublished,
     'is_marketplace_listed': isMarketplaceListed,
     'featured_requested': featuredRequested,

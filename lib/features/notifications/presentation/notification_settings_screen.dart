@@ -7,6 +7,7 @@ import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/notification_settings.dart';
 import '../../business_context/application/active_business_provider.dart';
+import '../../messaging/application/messaging_providers.dart';
 import '../application/notifications_providers.dart';
 
 class NotificationSettingsScreen extends ConsumerStatefulWidget {
@@ -26,8 +27,28 @@ class _NotificationSettingsScreenState
   bool _whatsapp = false;
   bool _sms = false;
   bool _whatsappConnected = false;
+  bool? _msgEnabled;
+  bool? _preBooking;
   final _offsets = <int>{};
   final _template = TextEditingController();
+
+  Future<void> _saveMessaging() async {
+    final membership = ref.read(activeMembershipProvider).valueOrNull;
+    if (membership == null) return;
+    try {
+      await ref.read(messagingRepositoryProvider).setBusinessMessagingSettings(
+            membership.business.id,
+            enabled: _msgEnabled,
+            preBooking: _preBooking,
+          );
+      ref.invalidate(activeMembershipProvider);
+    } catch (e) {
+      if (mounted) {
+        showAppSnackBar(context,
+            message: AppException.from(e).message, isError: true);
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -148,9 +169,45 @@ class _NotificationSettingsScreenState
               .toList()
             ..sort((a, b) => b.compareTo(a));
 
+          final business = ref.watch(activeMembershipProvider).valueOrNull?.business;
+          _msgEnabled ??= business?.messagingEnabled ?? true;
+          _preBooking ??= business?.preBookingMessagingEnabled ?? true;
+
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              Text('Customer messaging',
+                  style: Theme.of(context).textTheme.titleMedium),
+              Card(
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      title: const Text('In-app messaging'),
+                      subtitle: const Text(
+                          'Let customers message you about their bookings.'),
+                      value: _msgEnabled ?? true,
+                      onChanged: (v) {
+                        setState(() => _msgEnabled = v);
+                        _saveMessaging();
+                      },
+                    ),
+                    const Divider(height: 1),
+                    SwitchListTile(
+                      title: const Text('Pre-booking questions'),
+                      subtitle: const Text(
+                          'Allow questions before an appointment is booked.'),
+                      value: (_msgEnabled ?? true) && (_preBooking ?? true),
+                      onChanged: (_msgEnabled ?? true)
+                          ? (v) {
+                              setState(() => _preBooking = v);
+                              _saveMessaging();
+                            }
+                          : null,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
               Container(
                 margin: const EdgeInsets.only(bottom: 16),
                 padding: const EdgeInsets.all(12),

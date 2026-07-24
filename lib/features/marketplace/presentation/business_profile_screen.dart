@@ -5,16 +5,20 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/directions.dart';
 import '../../../core/utils/open_now.dart';
+import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../core/widgets/osm_map.dart';
 import '../../../models/business.dart';
 import '../../../models/service.dart';
 import '../../../routing/route_paths.dart';
+import '../../auth/application/auth_providers.dart';
 import '../../favorites/presentation/widgets/favorite_button.dart';
+import '../../messaging/application/messaging_providers.dart';
 import '../application/marketplace_providers.dart';
 import 'widgets/category_visuals.dart';
 
@@ -75,7 +79,7 @@ Future<void> _shareBusiness(BuildContext context, Business business) async {
   );
 }
 
-class _Loaded extends StatelessWidget {
+class _Loaded extends ConsumerWidget {
   const _Loaded({
     required this.slug,
     required this.data,
@@ -87,7 +91,7 @@ class _Loaded extends StatelessWidget {
   final bool isPreview;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final business = data.business;
     final visual = CategoryVisual.of(business.category);
     final open = isOpenNow(data.hours, business.timezone);
@@ -117,6 +121,21 @@ class _Loaded extends StatelessWidget {
                   _chips(business, open),
                   const SizedBox(height: 16),
                   _contactActions(business),
+                  if (!isPreview &&
+                      business.messagingEnabled &&
+                      business.preBookingMessagingEnabled) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: _ActionButton(
+                        icon: Icons.forum_outlined,
+                        label: 'Ask a question',
+                        bg: AppColors.sage,
+                        fg: Colors.white,
+                        onTap: () => _askQuestion(context, ref, business),
+                      ),
+                    ),
+                  ],
                   if ((business.description ?? '').isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Text(business.description!,
@@ -237,6 +256,31 @@ class _Loaded extends StatelessWidget {
           ),
       ],
     );
+  }
+
+  Future<void> _askQuestion(
+      BuildContext context, WidgetRef ref, Business business) async {
+    if (ref.read(authStatusProvider) != AuthStatus.authenticated) {
+      context.push(RoutePaths.login);
+      return;
+    }
+    try {
+      final id = await ref
+          .read(messagingRepositoryProvider)
+          .getOrCreateConversation(businessId: business.id);
+      if (context.mounted) context.push(RoutePaths.conversation(id));
+    } catch (e) {
+      if (context.mounted) {
+        final msg = AppException.from(e).message;
+        showAppSnackBar(context,
+            message: msg.contains('pre_booking_disabled')
+                ? "This business isn't taking questions right now."
+                : msg.contains('messaging_disabled')
+                    ? 'This business has messaging turned off.'
+                    : msg,
+            isError: true);
+      }
+    }
   }
 
   Widget _contactActions(Business business) {

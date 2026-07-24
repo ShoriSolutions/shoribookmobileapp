@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/time/customer_time_zone.dart';
 import '../../../core/time/time_zone_service.dart';
@@ -14,8 +15,10 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../core/widgets/osm_map.dart';
 import '../../../models/appointment.dart';
+import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../marketplace/presentation/widgets/category_visuals.dart';
+import '../../messaging/application/messaging_providers.dart';
 import '../application/my_bookings_providers.dart';
 import '../data/my_bookings_repository.dart';
 
@@ -111,6 +114,26 @@ class BookingDetailScreen extends ConsumerWidget {
       if (context.mounted) {
         showAppSnackBar(context,
             message: 'Could not reschedule booking', isError: true);
+      }
+    }
+  }
+
+  Future<void> _openConversation(
+      BuildContext context, WidgetRef ref, Appointment appt) async {
+    try {
+      final id = await ref
+          .read(messagingRepositoryProvider)
+          .getOrCreateConversation(
+              businessId: appt.businessId, appointmentId: appt.id);
+      if (context.mounted) context.push(RoutePaths.conversation(id));
+    } catch (e) {
+      if (context.mounted) {
+        final msg = AppException.from(e).message;
+        showAppSnackBar(context,
+            message: msg.contains('messaging_disabled')
+                ? 'This business has turned off messaging.'
+                : msg,
+            isError: true);
       }
     }
   }
@@ -330,6 +353,16 @@ class BookingDetailScreen extends ConsumerWidget {
                       'or sign in to manage it here.',
                       style: TextStyle(fontSize: 13, color: AppColors.sageDark),
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (signedIn) ...[
+                  _ActionBtn(
+                    label: 'Message ${appt.businessName ?? 'business'}',
+                    icon: Icons.forum_outlined,
+                    bg: AppColors.sage,
+                    fg: Colors.white,
+                    onTap: () => _openConversation(context, ref, appt),
                   ),
                   const SizedBox(height: 12),
                 ],
