@@ -57,6 +57,7 @@ import '../features/settings/presentation/settings_screen.dart';
 import '../features/staff/presentation/invite_staff_screen.dart';
 import '../features/staff/presentation/staff_detail_screen.dart';
 import '../features/staff/presentation/staff_list_screen.dart';
+import '../features/support/presentation/help_faq_screen.dart';
 import '../features/support/presentation/support_screen.dart';
 import 'route_paths.dart';
 import 'shell/bottom_nav_shell.dart';
@@ -199,7 +200,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (!seenOnboarding &&
             loc != RoutePaths.onboarding &&
             !_preAuthRoutes.contains(loc) &&
-            loc != RoutePaths.support) {
+            loc != RoutePaths.support &&
+            loc != RoutePaths.helpFaq) {
           return RoutePaths.onboarding;
         }
         if (loc == RoutePaths.onboarding) {
@@ -208,7 +210,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (_preAuthRoutes.contains(loc)) return null;
         if (_isCustomerModePath(loc)) return null;
         // Public help — reachable from the Guest Profile without an account.
-        if (loc == RoutePaths.support) return null;
+        if (loc == RoutePaths.support || loc == RoutePaths.helpFaq) return null;
         // Browsing-first default: an unauthenticated session's home is the
         // marketplace, not a login wall — booking still requires login,
         // enforced inline by the wizard's "Confirm" step, not here.
@@ -513,6 +515,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.support,
         builder: (c, s) => const SupportScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.helpFaq,
+        builder: (c, s) => const HelpFaqScreen(),
       ),
       GoRoute(
         path: RoutePaths.deleteAccount,

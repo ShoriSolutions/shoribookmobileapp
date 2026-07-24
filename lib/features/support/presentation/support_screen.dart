@@ -4,10 +4,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../support_content.dart';
-import 'legal_document_screen.dart';
 
-/// C16 · Support — the company email and a phone number to call, plus the
-/// required legal/privacy documents. Kept deliberately simple.
+/// Support — the company email and a phone number to call. Self-serve
+/// answers and legal documents live on the separate Help & FAQ screen.
 class SupportScreen extends StatelessWidget {
   const SupportScreen({super.key});
 
@@ -33,12 +32,6 @@ class SupportScreen extends StatelessWidget {
       showAppSnackBar(context,
           message: 'Call us at ${SupportContent.supportPhone}', isError: true);
     }
-  }
-
-  void _openDoc(BuildContext context, String title, String body) {
-    Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => LegalDocumentScreen(title: title, body: body),
-    ));
   }
 
   @override
@@ -71,10 +64,12 @@ class SupportScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
                 children: [
+                  const Padding(
+                    padding: EdgeInsets.only(left: 4, bottom: 12),
+                    child: Text('We usually reply within a day.',
+                        style: TextStyle(fontSize: 14, color: AppColors.muted)),
+                  ),
                   _contactCard(context),
-                  const SizedBox(height: 20),
-                  const _GroupLabel('Legal & privacy'),
-                  _legalCard(context),
                 ],
               ),
             ),
@@ -111,57 +106,6 @@ class SupportScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _legalCard(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.parchment),
-      ),
-      child: Column(
-        children: [
-          ListTile(
-            leading:
-                const Icon(Icons.description_outlined, color: AppColors.sage),
-            title: const Text('Terms of Service'),
-            trailing:
-                const Icon(Icons.chevron_right, color: AppColors.faint),
-            onTap: () => _openDoc(
-                context, 'Terms of Service', SupportContent.termsOfService),
-          ),
-          const Divider(height: 1, color: AppColors.divider),
-          ListTile(
-            leading:
-                const Icon(Icons.privacy_tip_outlined, color: AppColors.sage),
-            title: const Text('Privacy & data we collect'),
-            trailing:
-                const Icon(Icons.chevron_right, color: AppColors.faint),
-            onTap: () =>
-                _openDoc(context, 'Privacy & Data', SupportContent.privacyPolicy),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GroupLabel extends StatelessWidget {
-  const _GroupLabel(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(text.toUpperCase(),
-          style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.7,
-              color: AppColors.faint)),
     );
   }
 }

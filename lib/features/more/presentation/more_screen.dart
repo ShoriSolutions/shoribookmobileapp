@@ -117,7 +117,12 @@ class MoreScreen extends ConsumerWidget {
               ),
               _MenuRow(
                 icon: Icons.help_outline,
-                title: 'Help & support',
+                title: 'Help & FAQ',
+                onTap: () => context.push(RoutePaths.helpFaq),
+              ),
+              _MenuRow(
+                icon: Icons.support_agent_outlined,
+                title: 'Contact support',
                 onTap: () => context.push(RoutePaths.support),
               ),
               _MenuRow(

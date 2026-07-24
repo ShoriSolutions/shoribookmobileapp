@@ -264,6 +264,11 @@ class CustomerProfileScreen extends ConsumerWidget {
         const _GroupLabel('Support'),
         _MenuCard(rows: [
           _MenuRow(
+            icon: Icons.help_outline,
+            title: 'Help & FAQ',
+            onTap: () => context.push(RoutePaths.helpFaq),
+          ),
+          _MenuRow(
             icon: Icons.support_agent_outlined,
             title: 'Contact support',
             onTap: () => context.push(RoutePaths.support),
