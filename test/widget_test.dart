@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shori_book/features/auth/presentation/login_screen.dart';
+import 'package:shorivo/features/auth/presentation/login_screen.dart';
 
 void main() {
   testWidgets('LoginScreen renders email/password fields and a submit button', (
@@ -19,8 +19,9 @@ void main() {
     await tester.pump();
 
     expect(find.text('Welcome back'), findsOneWidget);
-    expect(find.widgetWithText(TextFormField, 'Email address'), findsOneWidget);
-    expect(find.widgetWithText(TextFormField, 'Password'), findsOneWidget);
+    // Fields are AuthField widgets labelled 'Email' / 'Password'.
+    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
     expect(find.widgetWithText(ElevatedButton, 'Log in'), findsOneWidget);
 
     // Submitting an empty form should surface validation errors, not crash.

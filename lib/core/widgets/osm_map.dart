@@ -6,7 +6,7 @@ import '../theme/app_colors.dart';
 /// OpenStreetMap tiles need no API key. A User-Agent identifying the app
 /// is required by OSM's tile usage policy.
 const String _osmUrlTemplate = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const String _osmUserAgent = 'com.shorisolutions.shoribook';
+const String _osmUserAgent = 'com.shorisolutions.shorivo';
 
 /// Fallback centre when no location is set yet (Barbados).
 const LatLng kDefaultMapCenter = LatLng(13.1939, -59.5432);

@@ -1,4 +1,4 @@
-package com.example.shori_book
+package com.shorisolutions.shorivo
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -32,12 +32,12 @@ Future<void> addAppointmentToCalendar({
   final lines = <String>[
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//ShoriBooks//Booking//EN',
+    'PRODID:-//Shorivo//Booking//EN',
     'CALSCALE:GREGORIAN',
     if (timeZone != null && timeZone.trim().isNotEmpty)
       'X-WR-TIMEZONE:${esc(timeZone)}',
     'BEGIN:VEVENT',
-    'UID:${startUtc.microsecondsSinceEpoch}@shoribooks',
+    'UID:${startUtc.microsecondsSinceEpoch}@shorivo',
     'DTSTAMP:$stamp',
     'DTSTART:${fmt(startUtc)}',
     'DTEND:${fmt(endUtc)}',
@@ -50,7 +50,7 @@ Future<void> addAppointmentToCalendar({
     'END:VCALENDAR',
   ];
 
-  final file = File('${Directory.systemTemp.path}/shoribooks_appointment.ics');
+  final file = File('${Directory.systemTemp.path}/shorivo_appointment.ics');
   await file.writeAsString(lines.join('\r\n'));
   await Share.shareXFiles(
     [XFile(file.path, mimeType: 'text/calendar')],

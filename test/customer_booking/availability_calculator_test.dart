@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shori_book/features/customer_booking/data/availability_calculator.dart';
-import 'package:shori_book/models/availability_models.dart';
-import 'package:shori_book/models/staff_profile.dart';
+import 'package:shorivo/features/customer_booking/data/availability_calculator.dart';
+import 'package:shorivo/models/availability_models.dart';
+import 'package:shorivo/models/staff_profile.dart';
 
 // A fixed future date so tests never hit the "isToday" past-time filter
 // unintentionally. 'UTC' timezone (offset 0) keeps business-local time

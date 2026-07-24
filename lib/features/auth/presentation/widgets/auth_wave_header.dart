@@ -7,7 +7,7 @@ import '../../../../core/widgets/shori_logo.dart';
 
 /// Header for the auth screens: soft colour "bubbles" drift slowly over a
 /// solid beige backdrop, while the wave line along the bottom edge flows.
-/// The ShoriBooks mark sits centred on top. The motion is driven by a
+/// The Shorivo mark sits centred on top. The motion is driven by a
 /// shared clock, so login ↔ register read as one continuous motif.
 class AuthWaveHeader extends StatefulWidget {
   const AuthWaveHeader({
@@ -24,7 +24,7 @@ class AuthWaveHeader extends StatefulWidget {
   final bool showBack;
   final VoidCallback? onBack;
 
-  /// The ShoriBooks mark, centred over the header.
+  /// The Shorivo mark, centred over the header.
   final bool showLogo;
 
   @override

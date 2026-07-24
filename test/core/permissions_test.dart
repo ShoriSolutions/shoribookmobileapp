@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shori_book/features/business_context/application/permissions.dart';
-import 'package:shori_book/models/business_role.dart';
+import 'package:shorivo/features/business_context/application/permissions.dart';
+import 'package:shorivo/models/business_role.dart';
 
 void main() {
   group('can()', () {

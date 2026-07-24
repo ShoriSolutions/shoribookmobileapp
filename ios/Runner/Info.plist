@@ -5,13 +5,13 @@
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>ShoriBooks needs access to your photos so you can set your profile photo and business logo and cover image.</string>
+	<string>Shorivo needs access to your photos so you can set your profile photo and business logo and cover image.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>ShoriBooks uses your location, only when you tap "Use my current location", to fill in your address and to find and get directions to nearby businesses.</string>
+	<string>Shorivo uses your location, only when you tap "Use my current location", to fill in your address and to find and get directions to nearby businesses.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>ShoriBooks</string>
+	<string>Shorivo</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -19,7 +19,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>ShoriBooks</string>
+	<string>Shorivo</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

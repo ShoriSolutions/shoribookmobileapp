@@ -69,7 +69,7 @@ Future<void> _shareBusiness(BuildContext context, Business business) async {
       ? box.localToGlobal(Offset.zero) & box.size
       : const Rect.fromLTWH(0, 0, 1, 1);
   await Share.share(
-    'Check out ${business.name} on ShoriBooks: '
+    'Check out ${business.name} on Shorivo: '
     'https://betterbooking.app/business/${business.slug}',
     sharePositionOrigin: origin,
   );

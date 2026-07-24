@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-/// ShoriBooks's actual shipping brand palette (matched from the web
+/// Shorivo's actual shipping brand palette (matched from the web
 /// app's source, not the generic teal/navy direction in the original
 /// brief) — a warm sage/terracotta boutique look, kept identical across
 /// web and mobile.
@@ -43,7 +43,7 @@ class AppColors {
 
   static const Color white = Color(0xFFFFFFFF);
 
-  /// ShoriBooks brand blue — the "S" mark and wordmark colour.
+  /// Shorivo brand blue — the "S" mark and wordmark colour.
   static const Color shoriBlue = Color(0xFFA3D0E6);
 
   // ── Semantic status (text on tint) ─────────────────────────────────────

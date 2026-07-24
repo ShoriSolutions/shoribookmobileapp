@@ -54,7 +54,7 @@ class CustomerProfileScreen extends ConsumerWidget {
             ]),
             const SizedBox(height: 24),
             const Center(
-              child: Text('ShoriBooks v1.0 · Shori Solutions',
+              child: Text('Shorivo v1.0 · Shori Solutions',
                   style: TextStyle(fontSize: 12.5, color: AppColors.faint)),
             ),
           ],

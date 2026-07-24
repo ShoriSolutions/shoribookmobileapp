@@ -6,8 +6,8 @@ import 'features/auth/application/auth_providers.dart';
 import 'routing/app_router.dart';
 import 'routing/route_paths.dart';
 
-class ShoriBooksApp extends ConsumerWidget {
-  const ShoriBooksApp({super.key});
+class ShorivoApp extends ConsumerWidget {
+  const ShorivoApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,7 +32,7 @@ class ShoriBooksApp extends ConsumerWidget {
     });
 
     return MaterialApp.router(
-      title: 'ShoriBooks',
+      title: 'Shorivo',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: router,

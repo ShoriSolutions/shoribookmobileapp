@@ -32,7 +32,7 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       overrides: [onboardingSeenProvider.overrideWith((ref) => onboardingSeen)],
-      child: const ShoriBooksApp(),
+      child: const ShorivoApp(),
     ),
   );
 }

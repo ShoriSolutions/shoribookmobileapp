@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-/// The ShoriBooks brand lockup — the "S" mark plus the "ShoriBooks"
+/// The Shorivo brand lockup — the "S" mark plus the "Shorivo"
 /// wordmark. The mark asset is a single-colour shape on transparency, so
 /// passing [color] recolours it (e.g. white on a dark header) while
 /// keeping its alpha. Reused on the splash, login, and registration
@@ -40,7 +40,7 @@ class ShoriLogo extends StatelessWidget {
         if (showWordmark) ...[
           SizedBox(height: markSize * 0.12),
           Text(
-            'ShoriBooks',
+            'Shorivo',
             style: TextStyle(
               fontSize: markSize * 0.28,
               fontWeight: FontWeight.w600,

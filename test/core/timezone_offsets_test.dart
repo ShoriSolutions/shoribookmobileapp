@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shori_book/core/utils/timezone_offsets.dart';
+import 'package:shorivo/core/utils/timezone_offsets.dart';
 
 void main() {
   group('businessLocalToUtc', () {

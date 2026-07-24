@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shori_book/models/appointment.dart';
-import 'package:shori_book/models/business.dart';
-import 'package:shori_book/models/business_member.dart';
-import 'package:shori_book/models/business_role.dart';
-import 'package:shori_book/models/customer.dart';
-import 'package:shori_book/models/service.dart';
+import 'package:shorivo/models/appointment.dart';
+import 'package:shorivo/models/business.dart';
+import 'package:shorivo/models/business_member.dart';
+import 'package:shorivo/models/business_role.dart';
+import 'package:shorivo/models/customer.dart';
+import 'package:shorivo/models/service.dart';
 
 void main() {
   group('Business.fromJson', () {

@@ -140,7 +140,7 @@ class NotificationsFeedScreen extends ConsumerWidget {
       items.add(_NotifItem(
         _NotifType.newInArea,
         'New in your area',
-        '${b.name} just joined ShoriBooks'
+        '${b.name} just joined Shorivo'
             '${area != null && area.isNotEmpty ? ' in $area' : ''}.',
         _ago(b.createdAt),
       ));

@@ -119,7 +119,7 @@ class ProfileMarketplaceScreen extends ConsumerWidget {
                 SwitchListTile(
                   title: const Text('Listed in marketplace'),
                   subtitle: const Text(
-                    'Appear in the ShoriBooks discovery directory so new '
+                    'Appear in the Shorivo discovery directory so new '
                     'clients can find you.',
                   ),
                   value: business.isMarketplaceListed,

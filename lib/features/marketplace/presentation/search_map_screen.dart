@@ -314,7 +314,7 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
           children: [
             TileLayer(
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.shorisolutions.shoribook',
+              userAgentPackageName: 'com.shorisolutions.shorivo',
             ),
             MarkerLayer(
               markers: [

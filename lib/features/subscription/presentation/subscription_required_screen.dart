@@ -105,7 +105,7 @@ class _SubscriptionRequiredScreenState
                 const SizedBox(height: 8),
                 Text(
                   !canBill
-                      ? "This business's ShoriBooks subscription has ended. "
+                      ? "This business's Shorivo subscription has ended. "
                           'Please ask the owner to renew to continue.'
                       : neverTrialed
                           ? 'Get 14 days of full access to everything — no card '
