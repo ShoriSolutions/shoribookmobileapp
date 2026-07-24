@@ -222,15 +222,40 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
                 : const SubscriptionPackage(id: '', name: ''),
           );
           if (id != null && pkg.id.isNotEmpty) {
+            final store = repo.storeName;
+            // Prefer server-side receipt verification; fall back to the
+            // trust-the-client RPC only if the backend has no store secret
+            // configured yet.
+            final receipt = purchase.verificationData.serverVerificationData;
             try {
-              await repo.recordPurchase(
+              final verified = await repo.verifyPurchase(
                 businessId: id,
                 packageId: pkg.id,
-                store: repo.storeName,
-                token: purchase.purchaseID ?? '',
+                store: store,
+                productId: purchase.productID,
+                receipt: store == 'apple' ? receipt : null,
+                purchaseToken: store == 'google' ? receipt : null,
               );
+              if (!verified) {
+                await repo.recordPurchase(
+                  businessId: id,
+                  packageId: pkg.id,
+                  store: store,
+                  token: purchase.purchaseID ?? '',
+                );
+              }
               ref.invalidate(activeMembershipProvider);
-            } catch (_) {}
+            } catch (e) {
+              if (mounted) {
+                setState(() => _busy = false);
+                showAppSnackBar(context,
+                    message: AppException.from(e).message, isError: true);
+              }
+              if (purchase.pendingCompletePurchase) {
+                await repo.completePurchase(purchase);
+              }
+              break;
+            }
           }
           if (purchase.pendingCompletePurchase) {
             await repo.completePurchase(purchase);

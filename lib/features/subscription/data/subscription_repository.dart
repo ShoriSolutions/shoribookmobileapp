@@ -71,8 +71,52 @@ class SubscriptionRepository {
     }
   }
 
-  /// Grants the entitlement after a completed store purchase. (Production:
-  /// move receipt verification to an Edge Function before granting.)
+  /// Server-side receipt verification: forwards the store receipt to the
+  /// `verify-purchase` Edge Function, which validates it with Apple / Google
+  /// and grants the entitlement with the store's own (trusted) expiry date.
+  ///
+  /// Returns true when the purchase was verified and the plan activated.
+  /// Returns false when verification isn't configured on the backend yet
+  /// (no store secret set) — the caller should fall back to [recordPurchase].
+  /// Throws [AppException] when the receipt is present but fails validation.
+  Future<bool> verifyPurchase({
+    required String businessId,
+    required String packageId,
+    required String store,
+    required String productId,
+    String? receipt,
+    String? purchaseToken,
+  }) async {
+    try {
+      final res = await _client.functions.invoke('verify-purchase', body: {
+        'business_id': businessId,
+        'package_id': packageId,
+        'store': store,
+        'product_id': productId,
+        if (receipt != null) 'receipt': receipt,
+        if (purchaseToken != null) 'purchase_token': purchaseToken,
+      });
+      final data = (res.data as Map?)?.cast<String, dynamic>() ?? const {};
+      return data['success'] == true;
+    } on FunctionException catch (e) {
+      // 501 = the backend has no store secret configured yet → let the caller
+      // fall back to the trust-the-client MVP path. Anything else (a real
+      // validation failure) is surfaced.
+      final details = (e.details as Map?)?.cast<String, dynamic>();
+      if (e.status == 501 || details?['error'] == 'verification_not_configured') {
+        return false;
+      }
+      throw AppException(
+        (details?['message'] as String?) ??
+            'We couldn\'t verify that purchase. Please try again.',
+      );
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
+  /// Grants the entitlement after a completed store purchase. Used as the
+  /// fallback when [verifyPurchase] reports server verification isn't set up.
   Future<void> recordPurchase({
     required String businessId,
     required String packageId,

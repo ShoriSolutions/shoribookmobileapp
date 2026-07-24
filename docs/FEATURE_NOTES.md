@@ -101,13 +101,27 @@ existing caller is DST-correct.
 
 ## Needs backend / app-store work (not doable from app code alone)
 
+### Receipt validation — implemented + deployed; just add store secrets
+The `verify-purchase` Edge Function (deployed to project `hdfuwrlvpswylikjuswj`)
+validates the App Store / Play receipt server-side and grants the entitlement
+with the **store's own trusted expiry** — the client never grants access
+directly. Flow: `SubscriptionRepository.verifyPurchase` forwards the receipt
+(`serverVerificationData`) → the function checks the caller is an OWNER/ADMIN,
+verifies with Apple `verifyReceipt` (prod→sandbox fallback) or the Google Play
+Developer API (service-account JWT), then activates the plan. If no store
+secret is configured it returns **501** and the client falls back to the
+legacy `recordPurchase` RPC, so nothing breaks before secrets are set.
+**Remaining — set these secrets in the dashboard** (Project → Edge Functions →
+Secrets), then verification turns on automatically:
+- `APPLE_SHARED_SECRET` — App Store Connect "app-specific shared secret".
+- `GOOGLE_SERVICE_ACCOUNT_JSON` — Play service-account key (androidpublisher
+  access), pasted as one line.
+- `ANDROID_PACKAGE_NAME` — e.g. `com.shorisolutions.shoribook`.
+
 ### Subscription auto-renewal — the actual charge
 `auto_renew` + dates are stored, but **charging on renewal is store-managed**
 (auto-renewable IAP handles renewal/retry) or requires a payment-processor
 (e.g. Stripe) Edge Function. To complete:
-- **Store path:** create the auto-renewable products and validate receipts in
-  an Edge Function before granting entitlement
-  (`SubscriptionRepository.recordPurchase` has a TODO).
 - **Failed-payment retry + graceful restriction:** the access gate already
   restricts on `hasActiveAccess`; a `past_due` grace window + retry schedule
   belongs in the billing Edge Function.
