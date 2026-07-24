@@ -12,6 +12,7 @@ import '../../../models/appointment.dart';
 import '../../../models/business.dart';
 import '../../../models/staff_profile.dart';
 import '../../../routing/route_paths.dart';
+import '../../messaging/application/messaging_providers.dart';
 import '../../app_mode/application/app_mode_provider.dart';
 import '../../booking_link/presentation/booking_share_sheet.dart';
 import '../../business_context/application/active_business_provider.dart';
@@ -58,7 +59,7 @@ class DashboardScreen extends ConsumerWidget {
             data: (data) => ListView(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
               children: [
-                _header(context, business, firstName),
+                _header(context, ref, business, firstName),
                 if (business.subscriptionStatus == 'trialing') ...[
                   const SizedBox(height: 12),
                   _trialBanner(context, business),
@@ -124,7 +125,8 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _header(BuildContext context, Business business, String? firstName) {
+  Widget _header(
+      BuildContext context, WidgetRef ref, Business business, String? firstName) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -145,6 +147,27 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(width: 8),
+        _headerIcon(
+          icon: Icons.forum_outlined,
+          badge: ref.watch(unreadConversationsProvider),
+          onPressed: () => context.push(RoutePaths.messages),
+        ),
+        const SizedBox(width: 8),
+        _headerIcon(
+          icon: Icons.ios_share,
+          onPressed: () => showBookingShareSheet(context, business),
+        ),
+      ],
+    );
+  }
+
+  Widget _headerIcon(
+      {required IconData icon,
+      required VoidCallback onPressed,
+      int badge = 0}) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
         Container(
           decoration: BoxDecoration(
             color: AppColors.white,
@@ -152,10 +175,30 @@ class DashboardScreen extends ConsumerWidget {
             border: Border.all(color: AppColors.parchment),
           ),
           child: IconButton(
-            icon: const Icon(Icons.ios_share, color: AppColors.ink, size: 20),
-            onPressed: () => showBookingShareSheet(context, business),
+            icon: Icon(icon, color: AppColors.ink, size: 20),
+            onPressed: onPressed,
           ),
         ),
+        if (badge > 0)
+          Positioned(
+            right: 0,
+            top: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              constraints: const BoxConstraints(minWidth: 18),
+              decoration: BoxDecoration(
+                color: AppColors.terracotta,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: AppColors.cream, width: 1.5),
+              ),
+              child: Text(badge > 9 ? '9+' : '$badge',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white)),
+            ),
+          ),
       ],
     );
   }

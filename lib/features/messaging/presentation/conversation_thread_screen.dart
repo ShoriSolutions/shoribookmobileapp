@@ -144,6 +144,21 @@ class _ConversationThreadScreenState
     }
   }
 
+  /// Why the customer can't type right now (vendor block, or the business is
+  /// currently closed). Vendors can always reply. Returns null when open.
+  String? _disabledReason(Conversation? conv, String title) {
+    if (_asVendor || conv == null) return null;
+    if (conv.blockedByVendor) {
+      return 'You can no longer message this business.';
+    }
+    final open = ref.watch(businessOpenProvider(conv.businessId)).valueOrNull;
+    if (open == false) {
+      return '$title is closed right now. Send a message during opening '
+          'hours and they\'ll get back to you.';
+    }
+    return null;
+  }
+
   String _friendly(String msg) {
     if (msg.contains('messaging_disabled')) {
       return 'Messaging is turned off for this business.';
@@ -243,7 +258,7 @@ class _ConversationThreadScreenState
           _Composer(
             controller: _composer,
             sending: _sending,
-            blocked: (conv?.blockedByVendor ?? false) && !_asVendor,
+            disabledReason: _disabledReason(conv, title),
             onChanged: _onComposerChanged,
             onSend: _send,
             onAttach: _pickAndSendImage,
@@ -533,28 +548,28 @@ class _Composer extends StatelessWidget {
   const _Composer({
     required this.controller,
     required this.sending,
-    required this.blocked,
+    required this.disabledReason,
     required this.onChanged,
     required this.onSend,
     required this.onAttach,
   });
   final TextEditingController controller;
   final bool sending;
-  final bool blocked;
+  final String? disabledReason;
   final ValueChanged<String> onChanged;
   final VoidCallback onSend;
   final VoidCallback onAttach;
 
   @override
   Widget build(BuildContext context) {
-    if (blocked) {
+    if (disabledReason != null) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         color: AppColors.fieldMuted,
-        child: const Text('You can no longer message this business.',
+        child: Text(disabledReason!,
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted)),
+            style: const TextStyle(color: AppColors.muted)),
       );
     }
     return SafeArea(

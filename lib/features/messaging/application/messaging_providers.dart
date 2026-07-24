@@ -106,3 +106,10 @@ final attachmentUrlProvider =
     FutureProvider.autoDispose.family<String, String>((ref, path) {
   return ref.watch(messagingRepositoryProvider).signedAttachmentUrl(path);
 });
+
+/// Whether a business is open right now (by its hours). null = unknown, which
+/// the UI treats as open. Used to "close" the customer composer out of hours.
+final businessOpenProvider =
+    FutureProvider.autoDispose.family<bool?, String>((ref, businessId) {
+  return ref.watch(messagingRepositoryProvider).fetchBusinessOpen(businessId);
+});

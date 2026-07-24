@@ -11,6 +11,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/business.dart';
 import '../../../routing/route_paths.dart';
+import '../../messaging/application/messaging_providers.dart';
 import '../../favorites/presentation/widgets/favorite_button.dart';
 import '../application/marketplace_providers.dart';
 import 'widgets/category_visuals.dart';
@@ -141,6 +142,14 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                   ),
                 ),
               ),
+              _CircleIconButton(
+                icon: Icons.forum_outlined,
+                background: AppColors.sageLight,
+                foreground: AppColors.sageDark,
+                badge: ref.watch(unreadConversationsProvider),
+                onTap: () => context.push(RoutePaths.messages),
+              ),
+              const SizedBox(width: 10),
               _CircleIconButton(
                 icon: Icons.person_outline,
                 background: AppColors.sageLight,
@@ -631,27 +640,57 @@ class _CircleIconButton extends StatelessWidget {
     required this.background,
     required this.foreground,
     required this.onTap,
+    this.badge = 0,
   });
 
   final IconData icon;
   final Color background;
   final Color foreground;
   final VoidCallback onTap;
+  final int badge;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: background,
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.sageTintBorder),
-        ),
-        child: Icon(icon, size: 22, color: foreground),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: background,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.sageTintBorder),
+            ),
+            child: Icon(icon, size: 22, color: foreground),
+          ),
+          if (badge > 0)
+            Positioned(
+              right: -2,
+              top: -2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                constraints: const BoxConstraints(minWidth: 18),
+                decoration: BoxDecoration(
+                  color: AppColors.terracotta,
+                  shape: BoxShape.rectangle,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: AppColors.cream, width: 1.5),
+                ),
+                child: Text(
+                  badge > 9 ? '9+' : '$badge',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

@@ -2,7 +2,9 @@ import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../core/utils/open_now.dart';
 import '../../../models/appointment.dart';
+import '../../../models/availability_models.dart';
 import '../../../models/conversation.dart';
 import '../../../models/message.dart';
 
@@ -102,6 +104,29 @@ class MessagingRepository {
           .toList();
     } catch (e) {
       throw AppException.from(e);
+    }
+  }
+
+  /// Whether the business is open right now (from its weekly hours + zone).
+  /// null = unknown (no hours on record) — callers should treat as open.
+  Future<bool?> fetchBusinessOpen(String businessId) async {
+    try {
+      final biz = await _client
+          .from('businesses')
+          .select('timezone')
+          .eq('id', businessId)
+          .maybeSingle();
+      final tz = (biz?['timezone'] as String?) ?? 'America/Barbados';
+      final rows = await _client
+          .from('business_hours')
+          .select()
+          .eq('business_id', businessId);
+      final hours = (rows as List)
+          .map((e) => BusinessHours.fromJson(e as Map<String, dynamic>))
+          .toList();
+      return isOpenNow(hours, tz);
+    } catch (_) {
+      return null; // never block messaging on a lookup failure
     }
   }
 
