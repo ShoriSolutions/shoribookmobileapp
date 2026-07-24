@@ -7,9 +7,14 @@ import '../../app_mode/application/app_mode_provider.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../data/messaging_repository.dart';
+import '../data/push_tokens_repository.dart';
 
 final messagingRepositoryProvider = Provider<MessagingRepository>((ref) {
   return MessagingRepository(ref.watch(supabaseClientProvider));
+});
+
+final pushTokensRepositoryProvider = Provider<PushTokensRepository>((ref) {
+  return PushTokensRepository(ref.watch(supabaseClientProvider));
 });
 
 /// True when the current session is acting as a business (vendor side).

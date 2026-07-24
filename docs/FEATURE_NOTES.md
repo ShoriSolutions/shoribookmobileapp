@@ -22,6 +22,8 @@ what still needs backend or app-store configuration.
 | `20260720000005_booking_staff_assignment_fix.sql` | booking allowed when a service has no staff assignments |
 | `20260720000006_fix_reminder_channels_array.sql` | fixes "malformed array literal: push" blocking Save booking |
 | `20260721000000_messaging_system.sql` | **messaging**: conversations, messages, reports, moderation log, privileges, business toggles, RLS, RPCs, realtime, auto-create trigger |
+| `20260721000001_message_attachments.sql` | private `message-attachments` bucket + participant-scoped storage RLS; `send_message` extended with attachment + metadata |
+| `20260721000002_push_tokens.sql` | `device_push_tokens` + `register_push_token`/`unregister_push_token` RPCs + `message_push_targets` helper (for push) |
 
 All migrations are additive + idempotent. Run in the Supabase SQL editor
 (make sure the button says **Run**, not "Run selected").
@@ -54,11 +56,38 @@ built on Supabase Realtime.
   are in place for photos, documents, voice, and location; the schema also
   anticipates group/staff-specific threads and templates.
 
-**Not yet wired — push/email notifications for messages.** Unread is shown
-in-app and via Realtime. Delivering a *push* on a new message needs FCM/APNs
-(not set up), and email would extend `process-reminders`. The moderation
+**Photos** send/receive via a private, participant-scoped bucket (signed
+URLs). Documents/voice/location reuse the same `message_type`/`attachment_url`
+path when you're ready.
+
+### Message push notifications — backend built; needs Firebase to finish
+The server side is done and reusable:
+- `device_push_tokens` + `register_push_token` / `unregister_push_token` RPCs
+  and a `PushTokensRepository` (`pushTokensRepositoryProvider`) ready to call.
+- Edge Function **`send-message-push`**: resolves the recipient (honouring the
+  mute flag) via `message_push_targets`, looks up their device tokens, and
+  sends FCM HTTP v1. Prunes stale tokens. No-ops safely if the FCM secret is
+  unset.
+
+**To turn push on** (needs a Firebase project — not set up yet):
+1. Create a Firebase project; add the iOS + Android apps (bundle id
+   `com.shorisolutions.shorivo`). Drop in `google-services.json` (Android) and
+   `GoogleService-Info.plist` (iOS), and upload the APNs key in Firebase.
+2. Add `firebase_core` + `firebase_messaging` to the app; on login call
+   `FirebaseMessaging.instance.getToken()` then
+   `ref.read(pushTokensRepositoryProvider).register(token)`, and
+   `unregister(token)` on sign-out. (Deferred here so the build doesn't break
+   without the Firebase config files.)
+3. Deploy the function: `supabase functions deploy send-message-push
+   --no-verify-jwt` and set secret `FCM_SERVICE_ACCOUNT_JSON` (the Firebase
+   service-account key, one line).
+4. Add a **Database Webhook** (dashboard → Database → Webhooks): table
+   `public.messages`, event INSERT, POST to the function URL. The function
+   accepts `{ record }` or `{ message_id }`.
+
+Email-on-message could extend `process-reminders`; not built. The moderation
 `messaging_moderation_log` + `conversation_reports` are ready for the web
-admin (see WEB_ADMIN.md). Respect each user's mute flag when adding push.
+admin (see WEB_ADMIN.md).
 
 ### Time-based greetings — `core/utils/greeting.dart`
 `Greeting.full(name: 'Sarah')` → "Good morning, Sarah 👋" / "Working late,
