@@ -1,25 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../app_mode/application/app_mode_provider.dart';
 import '../support_content.dart';
 import 'legal_document_screen.dart';
 
 /// Help & FAQ — a searchable list of common questions, with the legal /
-/// privacy documents below. Contacting a human lives on the separate
-/// Support screen.
-class HelpFaqScreen extends StatefulWidget {
+/// privacy documents below. Shows the questions relevant to the current
+/// app: business owners see the vendor FAQ, everyone else (customers and
+/// guests) sees the customer FAQ. Contacting a human lives on the
+/// separate Support screen.
+class HelpFaqScreen extends ConsumerStatefulWidget {
   const HelpFaqScreen({super.key});
 
   @override
-  State<HelpFaqScreen> createState() => _HelpFaqScreenState();
+  ConsumerState<HelpFaqScreen> createState() => _HelpFaqScreenState();
 }
 
-class _HelpFaqScreenState extends State<HelpFaqScreen> {
+class _HelpFaqScreenState extends ConsumerState<HelpFaqScreen> {
   final _search = TextEditingController();
   String _query = '';
-  // Which question is expanded, tracked by its text so it's stable across
-  // both sections. The first customer question starts open.
-  String? _expanded = SupportContent.customerFaq.first.$1;
+  // Which question is expanded, tracked by its text.
+  String? _expanded;
 
   @override
   void dispose() {
@@ -61,9 +64,13 @@ class _HelpFaqScreenState extends State<HelpFaqScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final customer = _filter(SupportContent.customerFaq);
-    final vendor = _filter(SupportContent.vendorFaq);
-    final noResults = customer.isEmpty && vendor.isEmpty;
+    // Business owners see the vendor FAQ; customers and guests see the
+    // customer FAQ.
+    final isVendor = ref.watch(appModeProvider) == AppMode.businessOwner;
+    final source =
+        isVendor ? SupportContent.vendorFaq : SupportContent.customerFaq;
+    final items = _filter(source);
+    final noResults = items.isEmpty;
 
     return Scaffold(
       body: SafeArea(
@@ -118,16 +125,8 @@ class _HelpFaqScreenState extends State<HelpFaqScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  if (customer.isNotEmpty) ...[
-                    const _GroupLabel('For customers'),
-                    ..._section(customer),
-                    const SizedBox(height: 12),
-                  ],
-                  if (vendor.isNotEmpty) ...[
-                    const _GroupLabel('For businesses'),
-                    ..._section(vendor),
-                    const SizedBox(height: 12),
-                  ],
+                  ..._section(items),
+                  const SizedBox(height: 12),
                   if (noResults)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 24),
