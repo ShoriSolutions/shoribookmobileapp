@@ -233,9 +233,9 @@ const String appointmentSelectColumns = '''
   cancellation_policy_accepted,
   customer_name, customer_phone, customer_email, customer_timezone, notes,
   booking_source, internal_notes, created_at, updated_at,
-  services ( name ),
-  staff_profiles ( name, role ),
-  customers ( first_name, last_name, phone, email, whatsapp_number )
+  services!appointments_service_id_fkey ( name ),
+  staff_profiles!appointments_staff_profile_id_fkey ( name, role ),
+  customers!appointments_customer_id_fkey ( first_name, last_name, phone, email, whatsapp_number )
 ''';
 
 /// Extends [appointmentSelectColumns] with a businesses join — a
@@ -250,7 +250,7 @@ const String customerAppointmentSelectColumns = '''
   cancellation_policy_accepted,
   customer_name, customer_phone, customer_email, customer_timezone, notes,
   booking_source, internal_notes, created_at, updated_at,
-  services ( name ),
-  staff_profiles ( name, role ),
+  services!appointments_service_id_fkey ( name ),
+  staff_profiles!appointments_staff_profile_id_fkey ( name, role ),
   businesses ( name, logo_url, slug, timezone, phone, whatsapp_number, category, address, latitude, longitude )
 ''';
