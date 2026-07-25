@@ -11,7 +11,7 @@
 -- real accounts are never deleted.
 -- ================================================================
 
-CREATE OR REPLACE FUNCTION public.purge_stale_anonymous_users(p_days int DEFAULT 30)
+CREATE OR REPLACE FUNCTION public.purge_stale_anonymous_users(p_days int DEFAULT 15)
 RETURNS integer
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth
 AS $$
@@ -63,7 +63,7 @@ END $$;
 DO $$
 BEGIN
   PERFORM cron.schedule('purge-anon-users', '0 3 * * *',
-    'SELECT public.purge_stale_anonymous_users(30);');
+    'SELECT public.purge_stale_anonymous_users(15);');
 EXCEPTION WHEN OTHERS THEN
   RAISE NOTICE 'pg_cron not available - schedule purge-anon-users manually.';
 END $$;
