@@ -31,6 +31,7 @@ what still needs backend or app-store configuration.
 | `20260721000007_fix_enquiry_upsert.sql` | fixes "no unique or exclusion constraint matching the ON CONFLICT" on "Ask a question" |
 | `20260721000008_fix_profiles_rls.sql` | **security**: scopes `profiles` SELECT to owner+admin (was readable by any authenticated/anon user) |
 | `20260721000009_purge_anonymous_users.sql` | `purge_stale_anonymous_users(days)` + daily pg_cron; clears stale guest accounts/profiles + abandoned enquiries |
+| `20260721000010_revert_profiles_rls.sql` | **reverts** 20260721000008 — the profiles lockdown broke marketplace browsing (businesses RLS reads profiles) |
 
 All migrations are additive + idempotent. Run in the Supabase SQL editor
 (make sure the button says **Run**, not "Run selected").
