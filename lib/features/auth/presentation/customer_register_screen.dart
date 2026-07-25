@@ -207,6 +207,16 @@ class _CustomerRegisterScreenState
               ),
             ),
           ),
+          const SizedBox(height: 8),
+          Center(
+            child: TextButton(
+              onPressed: () => context.canPop()
+                  ? context.pop()
+                  : context.go(RoutePaths.discover),
+              child: const Text('Continue as guest',
+                  style: TextStyle(color: AppColors.muted)),
+            ),
+          ),
         ],
       ),
     );
