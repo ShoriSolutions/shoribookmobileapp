@@ -263,7 +263,7 @@ BEGIN
     INSERT INTO public.conversations (business_id, customer_id, customer_user_id,
         customer_display_name, type)
     VALUES (p_business_id, v_customer, v_uid, v_name, 'enquiry')
-    ON CONFLICT (business_id, customer_user_id) WHERE type = 'enquiry'
+    ON CONFLICT (business_id, customer_user_id) WHERE type = 'enquiry' AND customer_user_id IS NOT NULL
     DO UPDATE SET updated_at = now(), customer_archived = false
     RETURNING id INTO v_conv_id;
   END IF;
