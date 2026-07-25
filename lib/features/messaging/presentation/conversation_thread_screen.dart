@@ -151,8 +151,9 @@ class _ConversationThreadScreenState
     if (conv.blockedByVendor) {
       return 'You can no longer message this business.';
     }
-    final open = ref.watch(businessOpenProvider(conv.businessId)).valueOrNull;
-    if (open == false) {
+    final gate =
+        ref.watch(businessMessagingGateProvider(conv.businessId)).valueOrNull;
+    if (gate != null && gate.restrictAfterHours && gate.open == false) {
       return '$title is closed right now. Send a message during opening '
           'hours and they\'ll get back to you.';
     }

@@ -107,16 +107,20 @@ class MessagingRepository {
     }
   }
 
-  /// Whether the business is open right now (from its weekly hours + zone).
-  /// null = unknown (no hours on record) — callers should treat as open.
-  Future<bool?> fetchBusinessOpen(String businessId) async {
+  /// Whether the business is currently open, and whether it wants messaging
+  /// gated to opening hours at all (a vendor toggle — applies to both
+  /// enquiry and booking conversations). [open] is null when unknown (no
+  /// hours on record); callers should treat that as open.
+  Future<({bool? open, bool restrictAfterHours})> fetchBusinessMessagingGate(
+      String businessId) async {
     try {
       final biz = await _client
           .from('businesses')
-          .select('timezone')
+          .select('timezone, messaging_restrict_after_hours')
           .eq('id', businessId)
           .maybeSingle();
       final tz = (biz?['timezone'] as String?) ?? 'America/Barbados';
+      final restrict = biz?['messaging_restrict_after_hours'] as bool? ?? true;
       final rows = await _client
           .from('business_hours')
           .select()
@@ -124,9 +128,10 @@ class MessagingRepository {
       final hours = (rows as List)
           .map((e) => BusinessHours.fromJson(e as Map<String, dynamic>))
           .toList();
-      return isOpenNow(hours, tz);
+      return (open: isOpenNow(hours, tz), restrictAfterHours: restrict);
     } catch (_) {
-      return null; // never block messaging on a lookup failure
+      // Never block messaging on a lookup failure.
+      return (open: null, restrictAfterHours: false);
     }
   }
 
@@ -264,12 +269,14 @@ class MessagingRepository {
     String businessId, {
     bool? enabled,
     bool? preBooking,
+    bool? restrictAfterHours,
   }) async {
     try {
       await _client.rpc('set_business_messaging_settings', params: {
         'p_business_id': businessId,
         'p_enabled': enabled,
         'p_pre_booking': preBooking,
+        'p_restrict_after_hours': restrictAfterHours,
       });
     } catch (e) {
       throw AppException.from(e);

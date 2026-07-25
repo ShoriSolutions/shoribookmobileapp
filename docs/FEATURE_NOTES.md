@@ -26,6 +26,7 @@ what still needs backend or app-store configuration.
 | `20260721000002_push_tokens.sql` | `device_push_tokens` + `register_push_token`/`unregister_push_token` RPCs + `message_push_targets` helper (for push) |
 | `20260721000003_message_email_notify.sql` | `message_email_log` + `claim_message_email_targets` RPC (decides who to email for messages) |
 | `20260721000004_email_outbox.sql` | `email_outbox` + `claim_outbox_emails`/`mark_outbox_sent`/`mark_outbox_failed` (all email unified for Nodemailer) |
+| `20260721000005_messaging_hours_toggle.sql` | `businesses.messaging_restrict_after_hours` (default true) + `set_business_messaging_settings` gains a 4th param |
 
 All migrations are additive + idempotent. Run in the Supabase SQL editor
 (make sure the button says **Run**, not "Run selected").
@@ -51,9 +52,16 @@ built on Supabase Realtime.
 - **Security:** RLS scopes conversations to the business's members, the
   customer who owns the contact / authored the enquiry, or an admin. All
   writes go through SECURITY DEFINER RPCs.
-- **Entry points:** "Messages" (vendor More + customer Profile, with unread
-  badge), "Message business" on the customer booking detail, and "Ask a
-  question" on the business profile.
+- **Entry points:** "Messages" (vendor More + customer Profile, **plus a
+  badge icon on both home screens** — Discover header / Dashboard header),
+  "Message business" on the customer booking detail, and "Ask a question" on
+  the business profile.
+- **Opening-hours gate:** `businesses.messaging_restrict_after_hours`
+  (default **on**, vendor toggle in Reminders & notifications → Customer
+  messaging → "Only during opening hours") closes the customer's composer
+  outside the business's hours — applies to both enquiries and booking
+  chats. Vendors can always reply regardless. `businessMessagingGateProvider`
+  combines `isOpenNow` + the toggle client-side.
 - **Future-ready:** `messages.message_type` / `attachment_url` / `metadata`
   are in place for photos, documents, voice, and location; the schema also
   anticipates group/staff-specific threads and templates.

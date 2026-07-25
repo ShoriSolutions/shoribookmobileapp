@@ -107,9 +107,13 @@ final attachmentUrlProvider =
   return ref.watch(messagingRepositoryProvider).signedAttachmentUrl(path);
 });
 
-/// Whether a business is open right now (by its hours). null = unknown, which
-/// the UI treats as open. Used to "close" the customer composer out of hours.
-final businessOpenProvider =
-    FutureProvider.autoDispose.family<bool?, String>((ref, businessId) {
-  return ref.watch(messagingRepositoryProvider).fetchBusinessOpen(businessId);
+/// The messaging "closed for now" gate for a business: whether it's open by
+/// its hours, and whether the vendor even wants that enforced (a toggle,
+/// applies to both enquiry and booking conversations). Used to "close" the
+/// customer composer out of hours.
+final businessMessagingGateProvider = FutureProvider.autoDispose
+    .family<({bool? open, bool restrictAfterHours}), String>((ref, businessId) {
+  return ref
+      .watch(messagingRepositoryProvider)
+      .fetchBusinessMessagingGate(businessId);
 });

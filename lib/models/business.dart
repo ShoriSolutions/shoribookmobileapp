@@ -22,6 +22,7 @@ class Business {
   final bool bookingEnabled;
   final bool messagingEnabled;
   final bool preBookingMessagingEnabled;
+  final bool messagingRestrictAfterHours;
   final bool isPublished;
   final bool isMarketplaceListed;
   final bool featuredRequested;
@@ -68,6 +69,7 @@ class Business {
     required this.bookingEnabled,
     this.messagingEnabled = true,
     this.preBookingMessagingEnabled = true,
+    this.messagingRestrictAfterHours = true,
     this.isPublished = true,
     this.isMarketplaceListed = true,
     this.featuredRequested = false,
@@ -133,6 +135,8 @@ class Business {
     messagingEnabled: json['messaging_enabled'] as bool? ?? true,
     preBookingMessagingEnabled:
         json['pre_booking_messaging_enabled'] as bool? ?? true,
+    messagingRestrictAfterHours:
+        json['messaging_restrict_after_hours'] as bool? ?? true,
     isPublished: json['is_published'] as bool? ?? true,
     isMarketplaceListed: json['is_marketplace_listed'] as bool? ?? true,
     featuredRequested: json['featured_requested'] as bool? ?? false,
@@ -191,6 +195,7 @@ class Business {
     'booking_enabled': bookingEnabled,
     'messaging_enabled': messagingEnabled,
     'pre_booking_messaging_enabled': preBookingMessagingEnabled,
+    'messaging_restrict_after_hours': messagingRestrictAfterHours,
     'is_published': isPublished,
     'is_marketplace_listed': isMarketplaceListed,
     'featured_requested': featuredRequested,

@@ -29,6 +29,7 @@ class _NotificationSettingsScreenState
   bool _whatsappConnected = false;
   bool? _msgEnabled;
   bool? _preBooking;
+  bool? _restrictAfterHours;
   final _offsets = <int>{};
   final _template = TextEditingController();
 
@@ -40,6 +41,7 @@ class _NotificationSettingsScreenState
             membership.business.id,
             enabled: _msgEnabled,
             preBooking: _preBooking,
+            restrictAfterHours: _restrictAfterHours,
           );
       ref.invalidate(activeMembershipProvider);
     } catch (e) {
@@ -172,6 +174,7 @@ class _NotificationSettingsScreenState
           final business = ref.watch(activeMembershipProvider).valueOrNull?.business;
           _msgEnabled ??= business?.messagingEnabled ?? true;
           _preBooking ??= business?.preBookingMessagingEnabled ?? true;
+          _restrictAfterHours ??= business?.messagingRestrictAfterHours ?? true;
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -200,6 +203,22 @@ class _NotificationSettingsScreenState
                       onChanged: (_msgEnabled ?? true)
                           ? (v) {
                               setState(() => _preBooking = v);
+                              _saveMessaging();
+                            }
+                          : null,
+                    ),
+                    const Divider(height: 1),
+                    SwitchListTile(
+                      title: const Text('Only during opening hours'),
+                      subtitle: const Text(
+                          "When on, customers can't send new messages "
+                          "outside your business hours (applies to both "
+                          "enquiries and booking chats). When off, they can "
+                          "message anytime."),
+                      value: (_msgEnabled ?? true) && (_restrictAfterHours ?? true),
+                      onChanged: (_msgEnabled ?? true)
+                          ? (v) {
+                              setState(() => _restrictAfterHours = v);
                               _saveMessaging();
                             }
                           : null,
