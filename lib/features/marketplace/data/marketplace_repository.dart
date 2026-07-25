@@ -21,7 +21,7 @@ class MarketplaceRepository {
     try {
       var q = _client
           .from('businesses')
-          .select()
+          .select(businessMarketplaceColumns)
           .eq('booking_enabled', true)
           .neq('status', 'not_accepting_bookings');
 
@@ -69,7 +69,7 @@ class MarketplaceRepository {
     try {
       final data = await _client
           .from('businesses')
-          .select()
+          .select(businessMarketplaceColumns)
           .eq('slug', slug)
           .maybeSingle();
       return data == null ? null : Business.fromJson(data);
@@ -98,7 +98,7 @@ class MarketplaceRepository {
     try {
       final data = await _client
           .from('staff_profiles')
-          .select()
+          .select(StaffProfile.marketplaceColumns)
           .eq('business_id', businessId)
           .eq('is_active', true)
           .order('display_order', ascending: true);

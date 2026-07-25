@@ -33,6 +33,7 @@ what still needs backend or app-store configuration.
 | `20260721000009_purge_anonymous_users.sql` | `purge_stale_anonymous_users(days)` + daily pg_cron; clears stale guest accounts/profiles + abandoned enquiries |
 | `20260721000010_revert_profiles_rls.sql` | **reverts** 20260721000008 — the profiles lockdown broke marketplace browsing (businesses RLS reads profiles) |
 | `20260721000011_remove_guest_messaging.sql` | blocks anonymous senders (`trg_reject_anonymous_message`); drops `claim_guest_booking_conversation` — guests can't message |
+| `20260721000012_guest_marketplace_access.sql` | grants the `anon` role marketplace read (guests browse with NO session); protects `businesses` store cols + `staff_profiles` email/phone |
 
 All migrations are additive + idempotent. Run in the Supabase SQL editor
 (make sure the button says **Run**, not "Run selected").
@@ -64,8 +65,10 @@ built on Supabase Realtime.
   `authStatus == authenticated`, and anonymous sessions count as guests) and
   server-side (`trg_reject_anonymous_message` blocks message inserts from
   anonymous sessions — see `20260721000011_remove_guest_messaging.sql`).
-  Guests still browse + book via an anonymous session (see main.dart), which
-  is only for **browsing** (the bare `anon` role can't read the marketplace).
+  Guests browse + book with **no session at all** — the `anon` role is
+  granted read on the marketplace tables (`20260721000012`), with sensitive
+  columns (business store tokens, staff email/phone) revoked. Anonymous
+  sessions have been removed entirely.
 - **Entry points:** "Messages" (vendor More + customer Profile, **plus a
   badge icon on both home screens** — Discover header / Dashboard header),
   "Message business" on the customer booking detail, and "Ask a question" on

@@ -25,22 +25,6 @@ Future<void> main() async {
     publishableKey: Env.supabaseAnonKey,
   );
 
-  // Guests browse as an anonymous (authenticated) session so marketplace
-  // reads work — the bare `anon` role lacks the table grants, but the
-  // `authenticated` role has them. The session persists on-device, so a
-  // returning guest reuses it (no new user). Anonymous users are still
-  // treated as guests everywhere in the UI (see authStatusProvider), and
-  // stale ones are purged after 15 days. Best-effort: never block launch.
-  final client = Supabase.instance.client;
-  if (client.auth.currentSession == null) {
-    try {
-      await client.auth.signInAnonymously();
-    } catch (_) {
-      // Anonymous sign-ins disabled or offline — the app still launches;
-      // browsing may be limited until a session can be established.
-    }
-  }
-
   // Load the first-run flag before the router's redirect reads it, so a
   // returning session goes straight to the marketplace with no intro flash.
   final onboardingSeen = await OnboardingPrefs().seen();

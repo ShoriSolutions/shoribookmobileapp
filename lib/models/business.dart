@@ -219,6 +219,23 @@ class Business {
   };
 }
 
+/// Explicit column list for public/marketplace business reads. It's every
+/// field the [Business] model needs, but deliberately excludes the sensitive
+/// store columns (subscription_token, subscription_store, subscription_period_end)
+/// which the anon role isn't granted — so guest browsing never exposes them.
+const String businessMarketplaceColumns = '''
+  id, owner_id, name, slug, category, description, logo_url, cover_image_url,
+  phone, email, address, latitude, longitude, timezone, currency,
+  whatsapp_number, google_maps_url, instagram_url, facebook_url, tiktok_url,
+  booking_enabled, messaging_enabled, pre_booking_messaging_enabled,
+  messaging_restrict_after_hours, is_published, is_marketplace_listed,
+  featured_requested, buffer_minutes, max_bookings_per_day,
+  max_bookings_per_hour, max_simultaneous_bookings, subscription_status,
+  trial_ends_at, auto_renew, billing_period, current_period_end,
+  subscription_package_id, country_code, name_category_locked_until, status,
+  badges, gallery_urls, created_at, updated_at
+''';
+
 /// The service-category taxonomy, matching the web app's entrepreneur
 /// registration form exactly (src/app/(auth)/register/entrepreneur/
 /// page.tsx CATEGORIES) — used both there for a business to pick its own

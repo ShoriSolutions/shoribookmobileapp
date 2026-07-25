@@ -53,6 +53,13 @@ class StaffProfile {
     displayOrder: json['display_order'] as int? ?? 0,
   );
 
+  /// Explicit column list for public/marketplace staff reads — excludes the
+  /// staff member's private contact details (email, phone), which the anon
+  /// role isn't granted, so guest browsing never exposes them.
+  static const marketplaceColumns =
+      'id, business_id, member_id, name, role, roles, bio, profile_image_url, '
+      'instagram_url, is_active, is_bookable, display_order';
+
   Map<String, dynamic> toInsertJson(String businessId) => {
     'business_id': businessId,
     'name': name,
