@@ -44,11 +44,21 @@ class AuthRepository {
     }
   }
 
+  /// Clears a guest (anonymous) session before a real sign-in/sign-up so the
+  /// account switch is clean — otherwise the anonymous user (which has no
+  /// role) can linger and the app reads it as an unsupported account.
+  Future<void> _clearAnonymousSession() async {
+    if (_client.auth.currentUser?.isAnonymous ?? false) {
+      await _client.auth.signOut();
+    }
+  }
+
   Future<void> signInWithPassword({
     required String email,
     required String password,
   }) async {
     try {
+      await _clearAnonymousSession();
       await _client.auth.signInWithPassword(email: email, password: password);
     } catch (e) {
       throw AppException.from(e);
@@ -61,6 +71,7 @@ class AuthRepository {
   /// provider to be enabled in Supabase → Auth → Providers.
   Future<void> signInWithProvider(OAuthProvider provider) async {
     try {
+      await _clearAnonymousSession();
       await _client.auth.signInWithOAuth(
         provider,
         redirectTo: 'shoribook://auth/callback',
@@ -114,6 +125,7 @@ class AuthRepository {
       if (address != null && !address.isEmpty) {
         data['pending_address'] = address.toProfileJson();
       }
+      await _clearAnonymousSession();
       final response = await _client.auth.signUp(
         email: email,
         password: password,
@@ -174,6 +186,7 @@ class AuthRepository {
           'longitude': address.longitude,
         };
       }
+      await _clearAnonymousSession();
       final response =
           await _client.auth.signUp(email: email, password: password, data: data);
       return response.session != null;
