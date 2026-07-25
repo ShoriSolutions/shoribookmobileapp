@@ -11,6 +11,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/business.dart';
 import '../../../routing/route_paths.dart';
+import '../../auth/application/auth_providers.dart';
 import '../../messaging/application/messaging_providers.dart';
 import '../../favorites/presentation/widgets/favorite_button.dart';
 import '../application/marketplace_providers.dart';
@@ -142,14 +143,17 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                   ),
                 ),
               ),
-              _CircleIconButton(
-                icon: Icons.forum_outlined,
-                background: AppColors.sageLight,
-                foreground: AppColors.sageDark,
-                badge: ref.watch(unreadConversationsProvider),
-                onTap: () => context.push(RoutePaths.messages),
-              ),
-              const SizedBox(width: 10),
+              // Messaging is for signed-in customers only (not guests).
+              if (ref.watch(authStatusProvider) == AuthStatus.authenticated) ...[
+                _CircleIconButton(
+                  icon: Icons.forum_outlined,
+                  background: AppColors.sageLight,
+                  foreground: AppColors.sageDark,
+                  badge: ref.watch(unreadConversationsProvider),
+                  onTap: () => context.push(RoutePaths.messages),
+                ),
+                const SizedBox(width: 10),
+              ],
               _CircleIconButton(
                 icon: Icons.person_outline,
                 background: AppColors.sageLight,

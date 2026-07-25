@@ -19,7 +19,6 @@ import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../marketplace/presentation/widgets/category_visuals.dart';
 import '../../messaging/application/messaging_providers.dart';
-import '../../messaging/presentation/sign_in_to_message.dart';
 import '../application/my_bookings_providers.dart';
 import '../data/my_bookings_repository.dart';
 
@@ -120,28 +119,11 @@ class BookingDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _openConversation(
-      BuildContext context, WidgetRef ref, Appointment appt,
-      {String? guestPhone}) async {
-    final auth = ref.read(authRepositoryProvider);
+      BuildContext context, WidgetRef ref, Appointment appt) async {
     final repo = ref.read(messagingRepositoryProvider);
     try {
-      String id;
-      final signedIn = auth.currentSession != null && !auth.isAnonymous;
-      if (signedIn) {
-        id = await repo.getOrCreateConversation(
-            businessId: appt.businessId, appointmentId: appt.id);
-      } else {
-        // Guest: sign in anonymously, then claim the booking chat by phone.
-        if (guestPhone == null) {
-          if (context.mounted) await showSignInToMessagePrompt(context);
-          return;
-        }
-        if (!await auth.ensureSession()) {
-          if (context.mounted) await showSignInToMessagePrompt(context);
-          return;
-        }
-        id = await repo.claimGuestBookingConversation(appt.id, guestPhone);
-      }
+      final id = await repo.getOrCreateConversation(
+          businessId: appt.businessId, appointmentId: appt.id);
       if (context.mounted) context.push(RoutePaths.conversation(id));
     } catch (e) {
       if (context.mounted) {
@@ -373,14 +355,13 @@ class BookingDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                 ],
-                if (signedIn || guestPhone != null) ...[
+                if (signedIn) ...[
                   _ActionBtn(
                     label: 'Message ${appt.businessName ?? 'business'}',
                     icon: Icons.forum_outlined,
                     bg: AppColors.sage,
                     fg: Colors.white,
-                    onTap: () => _openConversation(context, ref, appt,
-                        guestPhone: signedIn ? null : guestPhone),
+                    onTap: () => _openConversation(context, ref, appt),
                   ),
                   const SizedBox(height: 12),
                 ],

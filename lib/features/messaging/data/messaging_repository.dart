@@ -149,24 +149,6 @@ class MessagingRepository {
   }
 
   // ── Write RPCs ───────────────────────────────────────────────────────────
-  /// For a guest (anonymous session): links this device's anon user to the
-  /// booking conversation after verifying the phone they booked with, and
-  /// returns the conversation id.
-  Future<String> claimGuestBookingConversation(
-    String appointmentId,
-    String phone,
-  ) async {
-    try {
-      final res = await _client.rpc('claim_guest_booking_conversation', params: {
-        'p_appointment_id': appointmentId,
-        'p_phone': phone,
-      });
-      return res as String;
-    } catch (e) {
-      throw AppException.from(e);
-    }
-  }
-
   Future<String> getOrCreateConversation({
     required String businessId,
     String? appointmentId,

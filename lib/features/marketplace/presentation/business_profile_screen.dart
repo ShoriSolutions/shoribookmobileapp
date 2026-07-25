@@ -261,15 +261,10 @@ class _Loaded extends ConsumerWidget {
 
   Future<void> _askQuestion(
       BuildContext context, WidgetRef ref, Business business) async {
-    // Guests can message too: sign them in anonymously so they get a uid for
-    // secure messaging. If anonymous sign-ins are disabled, fall back to login.
-    final auth = ref.read(authRepositoryProvider);
-    if (auth.currentSession == null) {
-      final ok = await auth.ensureSession();
-      if (!ok) {
-        if (context.mounted) await showSignInToMessagePrompt(context);
-        return;
-      }
+    // Messaging requires a real account — guests are prompted to sign in.
+    if (ref.read(authStatusProvider) != AuthStatus.authenticated) {
+      await showSignInToMessagePrompt(context);
+      return;
     }
     try {
       final id = await ref
