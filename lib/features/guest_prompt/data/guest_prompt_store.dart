@@ -21,4 +21,23 @@ class GuestPromptStore {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_key, DateTime.now().toIso8601String());
   }
+
+  // ── 15-day "keep your bookings" reminder for guests with device-only
+  // bookings (shown at most once per 15 days). ─────────────────────────────
+  static const _reminderKey = 'guest_data_reminder_last_shown_v1';
+  static const _reminderInterval = Duration(days: 15);
+
+  Future<bool> shouldRemindExpiry() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_reminderKey);
+    if (raw == null) return true;
+    final last = DateTime.tryParse(raw);
+    if (last == null) return true;
+    return DateTime.now().difference(last) > _reminderInterval;
+  }
+
+  Future<void> markExpiryReminded() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_reminderKey, DateTime.now().toIso8601String());
+  }
 }

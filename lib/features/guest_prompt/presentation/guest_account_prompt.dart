@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../my_bookings/application/my_bookings_providers.dart';
 import '../data/guest_prompt_store.dart';
 
 final guestPromptStoreProvider =
@@ -31,7 +32,32 @@ Future<void> maybeShowGuestAccountPrompt(
   }
 }
 
-Future<void> _showGuestAccountPrompt(BuildContext context) {
+// In-flight guard for the 15-day "keep your bookings" reminder.
+bool _reminderBusy = false;
+
+/// Reminds a guest who has device-only bookings to create an account so they
+/// don't lose them if they change/lose their phone — at most once every 15
+/// days. No-op for signed-in users or guests with no bookings.
+Future<void> maybeShowGuestDataReminder(
+    BuildContext context, WidgetRef ref) async {
+  if (_reminderBusy) return;
+  if (ref.read(authStatusProvider) == AuthStatus.authenticated) return;
+  _reminderBusy = true;
+  try {
+    final bookings = await ref.read(guestBookingsStoreProvider).all();
+    if (bookings.isEmpty) return; // nothing on this device to protect
+    final store = ref.read(guestPromptStoreProvider);
+    if (await store.shouldRemindExpiry()) {
+      await store.markExpiryReminded();
+      if (context.mounted) await _showGuestAccountPrompt(context, warning: true);
+    }
+  } finally {
+    _reminderBusy = false;
+  }
+}
+
+Future<void> _showGuestAccountPrompt(BuildContext context,
+    {bool warning = false}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -39,12 +65,13 @@ Future<void> _showGuestAccountPrompt(BuildContext context) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (ctx) => const _GuestAccountSheet(),
+    builder: (ctx) => _GuestAccountSheet(warning: warning),
   );
 }
 
 class _GuestAccountSheet extends StatefulWidget {
-  const _GuestAccountSheet();
+  const _GuestAccountSheet({this.warning = false});
+  final bool warning;
 
   @override
   State<_GuestAccountSheet> createState() => _GuestAccountSheetState();
@@ -89,27 +116,42 @@ class _GuestAccountSheetState extends State<_GuestAccountSheet> {
                 child: Container(
                   width: 60,
                   height: 60,
-                  decoration: const BoxDecoration(
-                    color: AppColors.sageLight,
+                  decoration: BoxDecoration(
+                    color: widget.warning
+                        ? AppColors.terracottaTint
+                        : AppColors.sageLight,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.favorite_outline,
-                      color: AppColors.sageDark, size: 30),
+                  child: Icon(
+                      widget.warning
+                          ? Icons.bookmark_added_outlined
+                          : Icons.favorite_outline,
+                      color: widget.warning
+                          ? AppColors.terracottaDeep
+                          : AppColors.sageDark,
+                      size: 30),
                 ),
               ),
               const SizedBox(height: 16),
-              const Text('Keep your Shorivo experience',
+              Text(
+                  widget.warning
+                      ? "Don't lose your bookings"
+                      : 'Keep your Shorivo experience',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                       fontSize: 21,
                       fontWeight: FontWeight.w800,
                       color: AppColors.ink)),
               const SizedBox(height: 8),
-              const Text(
-                "You're browsing as a guest. Create a free Shorivo account to "
-                'unlock more:',
+              Text(
+                widget.warning
+                    ? 'Your bookings are saved only on this device. Create a '
+                        'free Shorivo account to keep them safe:'
+                    : "You're browsing as a guest. Create a free Shorivo "
+                        'account to unlock more:',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14.5, height: 1.4, color: AppColors.muted),
+                style: const TextStyle(
+                    fontSize: 14.5, height: 1.4, color: AppColors.muted),
               ),
               const SizedBox(height: 18),
               for (final b in _benefits) _benefitRow(b),

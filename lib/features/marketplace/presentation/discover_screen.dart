@@ -12,6 +12,7 @@ import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/business.dart';
 import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../guest_prompt/presentation/guest_account_prompt.dart';
 import '../../messaging/application/messaging_providers.dart';
 import '../../favorites/presentation/widgets/favorite_button.dart';
 import '../application/marketplace_providers.dart';
@@ -30,6 +31,16 @@ class DiscoverScreen extends ConsumerStatefulWidget {
 class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   final _searchController = TextEditingController();
   bool _locating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Remind a guest with device-only bookings to make an account so they
+    // don't lose them (once per 15 days; no-op otherwise).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) maybeShowGuestDataReminder(context, ref);
+    });
+  }
 
   @override
   void dispose() {
