@@ -29,6 +29,7 @@ what still needs backend or app-store configuration.
 | `20260721000005_messaging_hours_toggle.sql` | `businesses.messaging_restrict_after_hours` (default true) + `set_business_messaging_settings` gains a 4th param |
 | `20260721000006_guest_messaging.sql` | `claim_guest_booking_conversation` RPC (guest links their anon uid to a booking chat by phone) |
 | `20260721000007_fix_enquiry_upsert.sql` | fixes "no unique or exclusion constraint matching the ON CONFLICT" on "Ask a question" |
+| `20260721000008_fix_profiles_rls.sql` | **security**: scopes `profiles` SELECT to owner+admin (was readable by any authenticated/anon user) |
 
 All migrations are additive + idempotent. Run in the Supabase SQL editor
 (make sure the button says **Run**, not "Run selected").
