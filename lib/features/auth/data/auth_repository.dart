@@ -253,6 +253,12 @@ class AuthRepository {
   Future<void> signOut() async {
     try {
       await _client.auth.signOut();
+      // Drop straight into a guest (anonymous) session so browsing keeps
+      // working after logout — the bare anon role can't read the marketplace.
+      // Best-effort; ignored if anonymous sign-ins are unavailable.
+      try {
+        await _client.auth.signInAnonymously();
+      } catch (_) {}
     } catch (e) {
       throw AppException.from(e);
     }
