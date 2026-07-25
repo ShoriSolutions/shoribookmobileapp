@@ -19,6 +19,7 @@ import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../marketplace/presentation/widgets/category_visuals.dart';
 import '../../messaging/application/messaging_providers.dart';
+import '../../messaging/presentation/sign_in_to_message.dart';
 import '../application/my_bookings_providers.dart';
 import '../data/my_bookings_repository.dart';
 
@@ -132,11 +133,11 @@ class BookingDetailScreen extends ConsumerWidget {
       } else {
         // Guest: sign in anonymously, then claim the booking chat by phone.
         if (guestPhone == null) {
-          if (context.mounted) context.push(RoutePaths.login);
+          if (context.mounted) await showSignInToMessagePrompt(context);
           return;
         }
         if (!await auth.ensureSession()) {
-          if (context.mounted) context.push(RoutePaths.login);
+          if (context.mounted) await showSignInToMessagePrompt(context);
           return;
         }
         id = await repo.claimGuestBookingConversation(appt.id, guestPhone);

@@ -19,6 +19,7 @@ import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../favorites/presentation/widgets/favorite_button.dart';
 import '../../messaging/application/messaging_providers.dart';
+import '../../messaging/presentation/sign_in_to_message.dart';
 import '../application/marketplace_providers.dart';
 import 'widgets/category_visuals.dart';
 
@@ -266,7 +267,7 @@ class _Loaded extends ConsumerWidget {
     if (auth.currentSession == null) {
       final ok = await auth.ensureSession();
       if (!ok) {
-        if (context.mounted) context.push(RoutePaths.login);
+        if (context.mounted) await showSignInToMessagePrompt(context);
         return;
       }
     }
