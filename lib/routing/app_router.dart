@@ -203,7 +203,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             loc != RoutePaths.onboarding &&
             !_preAuthRoutes.contains(loc) &&
             loc != RoutePaths.support &&
-            loc != RoutePaths.helpFaq) {
+            loc != RoutePaths.helpFaq &&
+            !loc.startsWith(RoutePaths.messages)) {
           return RoutePaths.onboarding;
         }
         if (loc == RoutePaths.onboarding) {
@@ -213,6 +214,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (_isCustomerModePath(loc)) return null;
         // Public help — reachable from the Guest Profile without an account.
         if (loc == RoutePaths.support || loc == RoutePaths.helpFaq) return null;
+        // Guests can message (they get an anonymous session) — allow the
+        // messages list and any conversation thread through.
+        if (loc.startsWith(RoutePaths.messages)) return null;
         // Browsing-first default: an unauthenticated session's home is the
         // marketplace, not a login wall — booking still requires login,
         // enforced inline by the wizard's "Confirm" step, not here.
