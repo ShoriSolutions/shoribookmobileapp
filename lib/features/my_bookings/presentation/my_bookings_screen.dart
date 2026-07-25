@@ -7,6 +7,7 @@ import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/appointment.dart';
 import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../guest_prompt/presentation/guest_account_prompt.dart';
 import '../application/my_bookings_providers.dart';
 import 'widgets/booking_card.dart';
 
@@ -19,6 +20,14 @@ class MyBookingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isGuest =
         ref.watch(authStatusProvider) != AuthStatus.authenticated;
+
+    // Nudge guests to create an account when they check their bookings
+    // (once-per-30-days cooldown; never on launch).
+    if (isGuest) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) maybeShowGuestAccountPrompt(context, ref);
+      });
+    }
 
     return DefaultTabController(
       length: 2,

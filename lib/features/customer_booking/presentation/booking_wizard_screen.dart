@@ -14,6 +14,7 @@ import '../../../models/service.dart';
 import '../../../models/staff_profile.dart';
 import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../guest_prompt/presentation/guest_account_prompt.dart';
 import '../../marketplace/application/marketplace_providers.dart';
 import '../../marketplace/presentation/widgets/category_visuals.dart';
 import '../application/booking_wizard_controller.dart';
@@ -1336,6 +1337,14 @@ class _ConfirmedScreen extends ConsumerWidget {
         ? apptId.substring(0, 8).toUpperCase()
         : apptId?.toUpperCase();
     final signedIn = ref.watch(authStatusProvider) == AuthStatus.authenticated;
+
+    // After a guest completes a booking, gently nudge them to make an account
+    // (respects the once-per-30-days cooldown; no-op for signed-in users).
+    if (!signedIn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) maybeShowGuestAccountPrompt(context, ref);
+      });
+    }
 
     return SafeArea(
       child: Column(
