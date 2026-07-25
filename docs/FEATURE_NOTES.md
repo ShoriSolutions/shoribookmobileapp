@@ -27,6 +27,7 @@ what still needs backend or app-store configuration.
 | `20260721000003_message_email_notify.sql` | `message_email_log` + `claim_message_email_targets` RPC (decides who to email for messages) |
 | `20260721000004_email_outbox.sql` | `email_outbox` + `claim_outbox_emails`/`mark_outbox_sent`/`mark_outbox_failed` (all email unified for Nodemailer) |
 | `20260721000005_messaging_hours_toggle.sql` | `businesses.messaging_restrict_after_hours` (default true) + `set_business_messaging_settings` gains a 4th param |
+| `20260721000006_guest_messaging.sql` | `claim_guest_booking_conversation` RPC (guest links their anon uid to a booking chat by phone) |
 
 All migrations are additive + idempotent. Run in the Supabase SQL editor
 (make sure the button says **Run**, not "Run selected").
@@ -52,6 +53,16 @@ built on Supabase Realtime.
 - **Security:** RLS scopes conversations to the business's members, the
   customer who owns the contact / authored the enquiry, or an admin. All
   writes go through SECURITY DEFINER RPCs.
+- **Guests can message** via Supabase **anonymous auth**: tapping "Ask a
+  question" / "Message business" as a guest calls `AuthRepository.ensureSession`
+  (signs in anonymously → real `auth.uid()` so RLS + Realtime + attachments
+  all work). Anonymous users are still treated as **guests** everywhere else —
+  `authStatusProvider` reports anonymous sessions as unauthenticated, so
+  browsing / guest booking / "Log in or sign up" prompts are unchanged. A
+  guest links their booking chat with the phone they booked with
+  (`claim_guest_booking_conversation`). **Requires "Enable anonymous sign-ins"
+  in the Supabase dashboard (Auth → Providers)**; if it's off, the app falls
+  back to prompting a normal login.
 - **Entry points:** "Messages" (vendor More + customer Profile, **plus a
   badge icon on both home screens** — Discover header / Dashboard header),
   "Message business" on the customer booking detail, and "Ask a question" on

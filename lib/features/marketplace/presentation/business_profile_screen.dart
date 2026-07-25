@@ -260,9 +260,15 @@ class _Loaded extends ConsumerWidget {
 
   Future<void> _askQuestion(
       BuildContext context, WidgetRef ref, Business business) async {
-    if (ref.read(authStatusProvider) != AuthStatus.authenticated) {
-      context.push(RoutePaths.login);
-      return;
+    // Guests can message too: sign them in anonymously so they get a uid for
+    // secure messaging. If anonymous sign-ins are disabled, fall back to login.
+    final auth = ref.read(authRepositoryProvider);
+    if (auth.currentSession == null) {
+      final ok = await auth.ensureSession();
+      if (!ok) {
+        if (context.mounted) context.push(RoutePaths.login);
+        return;
+      }
     }
     try {
       final id = await ref

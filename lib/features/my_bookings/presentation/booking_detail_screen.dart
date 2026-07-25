@@ -119,12 +119,28 @@ class BookingDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _openConversation(
-      BuildContext context, WidgetRef ref, Appointment appt) async {
+      BuildContext context, WidgetRef ref, Appointment appt,
+      {String? guestPhone}) async {
+    final auth = ref.read(authRepositoryProvider);
+    final repo = ref.read(messagingRepositoryProvider);
     try {
-      final id = await ref
-          .read(messagingRepositoryProvider)
-          .getOrCreateConversation(
-              businessId: appt.businessId, appointmentId: appt.id);
+      String id;
+      final signedIn = auth.currentSession != null && !auth.isAnonymous;
+      if (signedIn) {
+        id = await repo.getOrCreateConversation(
+            businessId: appt.businessId, appointmentId: appt.id);
+      } else {
+        // Guest: sign in anonymously, then claim the booking chat by phone.
+        if (guestPhone == null) {
+          if (context.mounted) context.push(RoutePaths.login);
+          return;
+        }
+        if (!await auth.ensureSession()) {
+          if (context.mounted) context.push(RoutePaths.login);
+          return;
+        }
+        id = await repo.claimGuestBookingConversation(appt.id, guestPhone);
+      }
       if (context.mounted) context.push(RoutePaths.conversation(id));
     } catch (e) {
       if (context.mounted) {
@@ -356,13 +372,14 @@ class BookingDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                 ],
-                if (signedIn) ...[
+                if (signedIn || guestPhone != null) ...[
                   _ActionBtn(
                     label: 'Message ${appt.businessName ?? 'business'}',
                     icon: Icons.forum_outlined,
                     bg: AppColors.sage,
                     fg: Colors.white,
-                    onTap: () => _openConversation(context, ref, appt),
+                    onTap: () => _openConversation(context, ref, appt,
+                        guestPhone: signedIn ? null : guestPhone),
                   ),
                   const SizedBox(height: 12),
                 ],

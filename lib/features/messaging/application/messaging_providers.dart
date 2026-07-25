@@ -34,6 +34,8 @@ final conversationsProvider =
     if (businessId == null) return Stream.value(const []);
     return repo.watchConversations(asVendor: true, businessId: businessId);
   }
+  // Re-run when the session changes (incl. a guest gaining an anon session).
+  ref.watch(authStateChangesProvider);
   final uid = ref.watch(authRepositoryProvider).currentUser?.id;
   if (uid == null) return Stream.value(const []);
   return repo.watchConversations(asVendor: false, customerUserId: uid);

@@ -29,11 +29,16 @@ final authStatusProvider = Provider<AuthStatus>((ref) {
   final authRepo = ref.watch(authRepositoryProvider);
   final stateAsync = ref.watch(authStateChangesProvider);
 
+  // An anonymous (guest) session is deliberately treated as unauthenticated
+  // so the guest-first UX (browsing, guest booking, "Log in or sign up"
+  // prompts) is unchanged. Anonymous users still get a uid for messaging.
+  bool realSession(Session? s) => s != null && !(s.user.isAnonymous);
+
   return stateAsync.when(
-    data: (state) => state.session != null
+    data: (state) => realSession(state.session)
         ? AuthStatus.authenticated
         : AuthStatus.unauthenticated,
-    loading: () => authRepo.currentSession != null
+    loading: () => realSession(authRepo.currentSession)
         ? AuthStatus.authenticated
         : AuthStatus.unknown,
     error: (_, __) => AuthStatus.unauthenticated,

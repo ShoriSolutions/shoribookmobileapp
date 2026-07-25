@@ -13,7 +13,36 @@ class AuthRepository {
   Session? get currentSession => _client.auth.currentSession;
   User? get currentUser => _client.auth.currentUser;
 
+  /// True when the current session is an anonymous (guest) one. Such users
+  /// are treated as guests everywhere except where a uid is genuinely needed
+  /// (e.g. messaging RLS / Realtime).
+  bool get isAnonymous => _client.auth.currentUser?.isAnonymous ?? false;
+
   Stream<AuthState> get onAuthStateChange => _client.auth.onAuthStateChange;
+
+  /// Signs the guest in anonymously so they get a real auth.uid() (needed for
+  /// secure messaging). Throws [AppException] if anonymous sign-ins are
+  /// disabled in the Supabase project — callers can then fall back to
+  /// prompting a normal login.
+  Future<void> signInAnonymously() async {
+    try {
+      await _client.auth.signInAnonymously();
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
+  /// Ensures there is *some* session (real or anonymous). Returns false if a
+  /// session couldn't be established (anonymous sign-ins disabled).
+  Future<bool> ensureSession() async {
+    if (currentSession != null) return true;
+    try {
+      await signInAnonymously();
+      return currentSession != null;
+    } catch (_) {
+      return false;
+    }
+  }
 
   Future<void> signInWithPassword({
     required String email,
