@@ -22,6 +22,7 @@ import '../../auth/application/auth_providers.dart';
 import '../../guest_prompt/presentation/guest_account_prompt.dart';
 import '../../marketplace/application/marketplace_providers.dart';
 import '../../marketplace/presentation/widgets/category_visuals.dart';
+import '../../waitlist/presentation/join_waitlist_sheet.dart';
 import '../application/booking_wizard_controller.dart';
 import '../application/booking_wizard_state.dart';
 
@@ -743,24 +744,34 @@ class _TimesGrid extends ConsumerWidget {
       ),
       data: (slots) {
         if (slots.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Text(
-              'No times available for this date.\nTry a different date or pro.',
-              style: TextStyle(color: AppColors.muted),
-            ),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Text(
+                  'No times available for this date.\n'
+                  'Try a different date or pro.',
+                  style: TextStyle(color: AppColors.muted),
+                ),
+              ),
+              _waitlistCta(context, state, service, date),
+            ],
           );
         }
         final anyOpen = slots.any((s) => s.available);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (!anyOpen)
+            if (!anyOpen) ...[
               const Padding(
-                padding: EdgeInsets.only(bottom: 10),
+                padding: EdgeInsets.only(bottom: 6),
                 child: Text('Fully booked for this date — try another day.',
                     style: TextStyle(fontSize: 13, color: AppColors.muted)),
               ),
+              _waitlistCta(context, state, service, date),
+              const SizedBox(height: 6),
+            ],
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -816,6 +827,37 @@ class _TimesGrid extends ConsumerWidget {
           ],
         );
       },
+    );
+  }
+
+  /// "Join the waitlist" CTA shown when the day is full / has no times, only
+  /// when the business has waitlist notifications enabled.
+  Widget _waitlistCta(
+    BuildContext context,
+    BookingWizardState state,
+    Service service,
+    DateTime date,
+  ) {
+    if (!data.business.waitlistEnabled) return const SizedBox.shrink();
+    final joinName = [state.firstName, state.lastName]
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .join(' ');
+    return OutlinedButton.icon(
+      onPressed: () => showJoinWaitlistSheet(
+        context,
+        businessId: data.business.id,
+        serviceId: service.id,
+        serviceName: service.name,
+        staffProfileId: state.selectedStaff?.id,
+        staffName: state.selectedStaff?.name,
+        preferredDate: date,
+        initialName: joinName.isEmpty ? null : joinName,
+        initialPhone: state.phone.trim().isEmpty ? null : state.phone.trim(),
+        countryCode: data.business.countryCode,
+      ),
+      icon: const Icon(Icons.notifications_active_outlined, size: 18),
+      label: const Text('Join the waitlist'),
     );
   }
 }

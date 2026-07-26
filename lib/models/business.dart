@@ -245,7 +245,9 @@ const String businessMarketplaceColumns = '''
   booking_enabled, messaging_enabled, pre_booking_messaging_enabled,
   messaging_restrict_after_hours, is_published, is_marketplace_listed,
   featured_requested, buffer_minutes, max_bookings_per_day,
-  max_bookings_per_hour, max_simultaneous_bookings, subscription_status,
+  max_bookings_per_hour, max_simultaneous_bookings,
+  require_confirmation, confirmation_window_minutes, waitlist_enabled,
+  subscription_status,
   trial_ends_at, auto_renew, billing_period, current_period_end,
   subscription_package_id, country_code, name_category_locked_until, status,
   badges, gallery_urls, created_at, updated_at
