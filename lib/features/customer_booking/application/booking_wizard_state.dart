@@ -30,6 +30,9 @@ class BookingWizardState {
   final String? conflictMessage;
   final bool phoneConflict;
   final String? createdAppointmentId;
+  // Set when the created booking needs confirmation before a deadline.
+  final bool createdRequireConfirmation;
+  final DateTime? createdConfirmationDeadline;
 
   const BookingWizardState({
     this.step = BookingWizardStep.service,
@@ -49,6 +52,8 @@ class BookingWizardState {
     this.conflictMessage,
     this.phoneConflict = false,
     this.createdAppointmentId,
+    this.createdRequireConfirmation = false,
+    this.createdConfirmationDeadline,
   });
 
   bool get canContinueFromDetails =>
@@ -83,6 +88,8 @@ class BookingWizardState {
     bool clearConflict = false,
     bool? phoneConflict,
     String? createdAppointmentId,
+    bool? createdRequireConfirmation,
+    DateTime? createdConfirmationDeadline,
   }) {
     return BookingWizardState(
       step: step ?? this.step,
@@ -105,6 +112,10 @@ class BookingWizardState {
           clearConflict ? null : (conflictMessage ?? this.conflictMessage),
       phoneConflict: phoneConflict ?? this.phoneConflict,
       createdAppointmentId: createdAppointmentId ?? this.createdAppointmentId,
+      createdRequireConfirmation:
+          createdRequireConfirmation ?? this.createdRequireConfirmation,
+      createdConfirmationDeadline:
+          createdConfirmationDeadline ?? this.createdConfirmationDeadline,
     );
   }
 }

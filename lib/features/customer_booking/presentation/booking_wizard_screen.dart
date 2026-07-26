@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/phone_input.dart';
 import '../../../core/time/customer_time_zone.dart';
@@ -1378,6 +1381,8 @@ class _ConfirmedScreen extends ConsumerWidget {
         ? apptId.substring(0, 8).toUpperCase()
         : apptId?.toUpperCase();
     final signedIn = ref.watch(authStatusProvider) == AuthStatus.authenticated;
+    final needsConfirmation = state.createdRequireConfirmation &&
+        state.createdConfirmationDeadline != null;
 
     // After a guest completes a booking, gently nudge them to make an account
     // (respects the once-per-30-days cooldown; no-op for signed-in users).
@@ -1404,23 +1409,34 @@ class _ConfirmedScreen extends ConsumerWidget {
                     child: Container(
                       width: 92,
                       height: 92,
-                      decoration: const BoxDecoration(
-                          color: AppColors.sage, shape: BoxShape.circle),
-                      child: const Icon(Icons.check,
-                          color: Colors.white, size: 48),
+                      decoration: BoxDecoration(
+                          color: needsConfirmation
+                              ? AppColors.terracotta
+                              : AppColors.sage,
+                          shape: BoxShape.circle),
+                      child: Icon(
+                          needsConfirmation
+                              ? Icons.hourglass_top
+                              : Icons.check,
+                          color: Colors.white,
+                          size: 48),
                     ),
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text('Booking confirmed',
+                Text(needsConfirmation ? 'Almost done' : 'Booking confirmed',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.w800,
                         color: AppColors.ink)),
                 const SizedBox(height: 8),
                 Text(
-                  'Your appointment with ${business.name} is set. See you soon!',
+                  needsConfirmation
+                      ? 'Your appointment with ${business.name} is reserved. '
+                          'Please confirm it below to lock it in.'
+                      : 'Your appointment with ${business.name} is set. '
+                          'See you soon!',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                       fontSize: 15, height: 1.4, color: AppColors.muted),
@@ -1429,22 +1445,29 @@ class _ConfirmedScreen extends ConsumerWidget {
                 _detailsCard(service, staff, date, time, business.address,
                     reference),
                 const SizedBox(height: 14),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.notifications_none,
-                        size: 18, color: AppColors.muted),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        "We'll remind you before your appointment on the "
-                        'details you gave.',
-                        style: const TextStyle(
-                            fontSize: 13.5, color: AppColors.muted),
+                if (needsConfirmation && apptId != null)
+                  _ConfirmReservationCard(
+                    appointmentId: apptId,
+                    deadline: state.createdConfirmationDeadline!,
+                    guestPhone: signedIn ? null : state.phone.trim(),
+                  )
+                else
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.notifications_none,
+                          size: 18, color: AppColors.muted),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "We'll remind you before your appointment on the "
+                          'details you gave.',
+                          style: const TextStyle(
+                              fontSize: 13.5, color: AppColors.muted),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
                 if (!signedIn) ...[
                   const SizedBox(height: 16),
                   _signUpNudge(context),
@@ -1632,3 +1655,192 @@ String _fmtTime(String hhmm) {
 
 bool _sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
+
+/// Post-booking countdown + Confirm button, shown when a booking is created in
+/// 'pending_confirmation'. Live-counts down to [deadline]; confirming calls the
+/// confirm RPC (guest via id + phone, else the authed RPC) and swaps to a
+/// confirmed state. If the deadline elapses first it shows a released notice.
+class _ConfirmReservationCard extends ConsumerStatefulWidget {
+  const _ConfirmReservationCard({
+    required this.appointmentId,
+    required this.deadline,
+    this.guestPhone,
+  });
+
+  final String appointmentId;
+  final DateTime deadline;
+  final String? guestPhone;
+
+  @override
+  ConsumerState<_ConfirmReservationCard> createState() =>
+      _ConfirmReservationCardState();
+}
+
+class _ConfirmReservationCardState
+    extends ConsumerState<_ConfirmReservationCard> {
+  Timer? _timer;
+  late Duration _remaining;
+  bool _confirming = false;
+  bool _confirmed = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _remaining = widget.deadline.difference(DateTime.now());
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      final r = widget.deadline.difference(DateTime.now());
+      setState(() => _remaining = r);
+      if (r.isNegative) _timer?.cancel();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _confirm() async {
+    setState(() {
+      _confirming = true;
+      _error = null;
+    });
+    try {
+      final status =
+          await ref.read(customerBookingRepositoryProvider).confirmAppointment(
+                appointmentId: widget.appointmentId,
+                guestPhone: widget.guestPhone,
+              );
+      if (!mounted) return;
+      if (status == 'confirmed' || status == 'already_confirmed') {
+        _timer?.cancel();
+        setState(() => _confirmed = true);
+      } else if (status == 'expired') {
+        _timer?.cancel();
+        setState(() => _remaining = Duration.zero);
+      } else {
+        setState(() => _error = 'Could not confirm. Please try again.');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = AppException.from(e).message);
+    } finally {
+      if (mounted) setState(() => _confirming = false);
+    }
+  }
+
+  String get _countdown {
+    if (_remaining.isNegative) return '0:00';
+    final h = _remaining.inHours;
+    final m = _remaining.inMinutes % 60;
+    final s = _remaining.inSeconds % 60;
+    if (h > 0) return '${h}h ${m}m';
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_confirmed) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.check_circle, size: 18, color: AppColors.sage),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text(
+              "You're confirmed! We'll remind you before your appointment.",
+              style: TextStyle(fontSize: 13.5, color: AppColors.sageDark),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (_remaining.isNegative || _remaining == Duration.zero) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.closedBg,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.schedule, size: 18, color: AppColors.closedText),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'The confirmation time has passed. This reservation may have '
+                'been released — check My bookings or book another time.',
+                style: TextStyle(fontSize: 13.5, color: AppColors.closedText),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final deadlineLabel =
+        TimeOfDay.fromDateTime(widget.deadline.toLocal()).format(context);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.terracottaTint,
+        borderRadius: BorderRadius.circular(16),
+        border:
+            Border.all(color: AppColors.terracotta.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.hourglass_bottom,
+                  size: 18, color: AppColors.terracottaDeep),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Confirm within $_countdown',
+                  style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.terracottaDeep),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Please confirm before $deadlineLabel, otherwise your reservation '
+            'is automatically cancelled and the time may be offered to another '
+            'customer.',
+            style: const TextStyle(
+                fontSize: 13, height: 1.4, color: AppColors.ink),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 8),
+            Text(_error!,
+                style: const TextStyle(fontSize: 13, color: AppColors.danger)),
+          ],
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: _confirming ? null : _confirm,
+              child: _confirming
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Text('Confirm booking',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

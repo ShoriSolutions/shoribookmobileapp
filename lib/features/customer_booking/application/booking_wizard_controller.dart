@@ -354,6 +354,8 @@ class BookingWizardController extends AutoDisposeFamilyNotifier<
           state = state.copyWith(
             isSubmitting: false,
             createdAppointmentId: apptId,
+            createdRequireConfirmation: result.requireConfirmation,
+            createdConfirmationDeadline: result.confirmationDeadline,
             step: BookingWizardStep.confirmation,
           );
           break;

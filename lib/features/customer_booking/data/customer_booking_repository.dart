@@ -14,11 +14,17 @@ class CustomerBookingResult {
   final CustomerBookingStatus status;
   final String? appointmentId;
   final List<Map<String, dynamic>> conflicts;
+  // When the business requires confirmation, the booking is created as
+  // 'pending_confirmation' and must be confirmed before [confirmationDeadline].
+  final bool requireConfirmation;
+  final DateTime? confirmationDeadline;
 
   const CustomerBookingResult({
     required this.status,
     this.appointmentId,
     this.conflicts = const [],
+    this.requireConfirmation = false,
+    this.confirmationDeadline,
   });
 }
 
@@ -166,8 +172,38 @@ class CustomerBookingRepository {
           return CustomerBookingResult(
             status: CustomerBookingStatus.created,
             appointmentId: map['appointment_id'] as String,
+            requireConfirmation:
+                map['confirmation_required'] as bool? ?? false,
+            confirmationDeadline: map['confirmation_deadline'] != null
+                ? DateTime.parse(map['confirmation_deadline'] as String)
+                : null,
           );
       }
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
+  /// Confirms a pending-confirmation booking. A logged-in customer (or the
+  /// business's staff) uses confirm_appointment; a guest passes their
+  /// [guestPhone] so confirm_guest_appointment can match on id + phone.
+  /// Returns the server status: 'confirmed' | 'already_confirmed' |
+  /// 'expired' | 'unknown'.
+  Future<String> confirmAppointment({
+    required String appointmentId,
+    String? guestPhone,
+  }) async {
+    try {
+      final res = guestPhone != null
+          ? await _client.rpc('confirm_guest_appointment', params: {
+              'p_booking_id': appointmentId,
+              'p_phone': guestPhone,
+            })
+          : await _client.rpc('confirm_appointment', params: {
+              'p_booking_id': appointmentId,
+            });
+      final map = (res as Map).cast<String, dynamic>();
+      return map['status'] as String? ?? 'unknown';
     } catch (e) {
       throw AppException.from(e);
     }
