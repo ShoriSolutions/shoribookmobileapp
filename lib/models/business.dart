@@ -30,6 +30,11 @@ class Business {
   final int? maxBookingsPerDay; // null = no limit
   final int? maxBookingsPerHour;
   final int? maxSimultaneousBookings;
+  // Booking confirmation window: when on, online no-deposit bookings must be
+  // confirmed within [confirmationWindowMinutes] or they auto-cancel.
+  final bool requireConfirmation;
+  final int confirmationWindowMinutes;
+  final bool waitlistEnabled; // reserved for Phase 2 (waitlist notifications)
   // 'none' | 'trialing' | 'trial_pending' | 'active' | 'past_due' | 'canceled'
   final String subscriptionStatus;
   final DateTime? trialEndsAt;
@@ -77,6 +82,9 @@ class Business {
     this.maxBookingsPerDay,
     this.maxBookingsPerHour,
     this.maxSimultaneousBookings,
+    this.requireConfirmation = false,
+    this.confirmationWindowMinutes = 120,
+    this.waitlistEnabled = false,
     this.subscriptionStatus = 'none',
     this.trialEndsAt,
     this.autoRenew = true,
@@ -144,6 +152,10 @@ class Business {
     maxBookingsPerDay: json['max_bookings_per_day'] as int?,
     maxBookingsPerHour: json['max_bookings_per_hour'] as int?,
     maxSimultaneousBookings: json['max_simultaneous_bookings'] as int?,
+    requireConfirmation: json['require_confirmation'] as bool? ?? false,
+    confirmationWindowMinutes:
+        json['confirmation_window_minutes'] as int? ?? 120,
+    waitlistEnabled: json['waitlist_enabled'] as bool? ?? false,
     subscriptionStatus: json['subscription_status'] as String? ?? 'none',
     trialEndsAt: json['trial_ends_at'] == null
         ? null
@@ -203,6 +215,9 @@ class Business {
     'max_bookings_per_day': maxBookingsPerDay,
     'max_bookings_per_hour': maxBookingsPerHour,
     'max_simultaneous_bookings': maxSimultaneousBookings,
+    'require_confirmation': requireConfirmation,
+    'confirmation_window_minutes': confirmationWindowMinutes,
+    'waitlist_enabled': waitlistEnabled,
     'subscription_status': subscriptionStatus,
     'trial_ends_at': trialEndsAt?.toIso8601String(),
     'auto_renew': autoRenew,

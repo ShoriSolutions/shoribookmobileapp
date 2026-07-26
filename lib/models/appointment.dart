@@ -4,11 +4,27 @@
 class AppointmentStatus {
   static const pending = 'pending';
   static const confirmed = 'confirmed';
+  // Awaiting the customer's confirmation before a set deadline; auto-cancels
+  // (status -> cancelled, reason 'confirmation_expired') if not confirmed.
+  static const pendingConfirmation = 'pending_confirmation';
   static const completed = 'completed';
   static const cancelled = 'cancelled';
   static const noShow = 'no_show';
 
-  static const all = [pending, confirmed, completed, cancelled, noShow];
+  static const all = [
+    pending,
+    confirmed,
+    pendingConfirmation,
+    completed,
+    cancelled,
+    noShow,
+  ];
+}
+
+/// Cancellation reason values written by the server. 'confirmation_expired'
+/// is set when a pending_confirmation booking passes its deadline.
+class CancellationReason {
+  static const confirmationExpired = 'confirmation_expired';
 }
 
 class DepositStatus {
@@ -92,6 +108,11 @@ class Appointment {
   final String? notes;
   final String bookingSource;
   final String? internalNotes;
+  // Booking confirmation window state.
+  final bool confirmationRequired;
+  final DateTime? confirmationDeadline;
+  final DateTime? confirmedAt;
+  final String? cancellationReason;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -136,6 +157,10 @@ class Appointment {
     this.notes,
     required this.bookingSource,
     this.internalNotes,
+    this.confirmationRequired = false,
+    this.confirmationDeadline,
+    this.confirmedAt,
+    this.cancellationReason,
     required this.createdAt,
     required this.updatedAt,
     this.serviceName,
@@ -155,6 +180,15 @@ class Appointment {
 
   bool get isActive =>
       status != AppointmentStatus.cancelled && status != AppointmentStatus.noShow;
+
+  /// Awaiting the customer's confirmation before [confirmationDeadline].
+  bool get isPendingConfirmation =>
+      status == AppointmentStatus.pendingConfirmation;
+
+  /// Cancelled specifically because the confirmation window elapsed.
+  bool get wasConfirmationExpired =>
+      status == AppointmentStatus.cancelled &&
+      cancellationReason == CancellationReason.confirmationExpired;
 
   factory Appointment.fromJson(Map<String, dynamic> json) {
     final service = json['services'] as Map<String, dynamic>?;
@@ -203,6 +237,14 @@ class Appointment {
       notes: json['notes'] as String?,
       bookingSource: json['booking_source'] as String? ?? BookingSource.online,
       internalNotes: json['internal_notes'] as String?,
+      confirmationRequired: json['confirmation_required'] as bool? ?? false,
+      confirmationDeadline: json['confirmation_deadline'] != null
+          ? DateTime.parse(json['confirmation_deadline'] as String)
+          : null,
+      confirmedAt: json['confirmed_at'] != null
+          ? DateTime.parse(json['confirmed_at'] as String)
+          : null,
+      cancellationReason: json['cancellation_reason'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
       serviceName: service?['name'] as String?,
@@ -232,7 +274,9 @@ const String appointmentSelectColumns = '''
   payment_method, payment_reference, deposit_paid_at,
   cancellation_policy_accepted,
   customer_name, customer_phone, customer_email, customer_timezone, notes,
-  booking_source, internal_notes, created_at, updated_at,
+  booking_source, internal_notes,
+  confirmation_required, confirmation_deadline, confirmed_at, cancellation_reason,
+  created_at, updated_at,
   services!appointments_service_id_fkey ( name ),
   staff_profiles!appointments_staff_profile_id_fkey ( name, role ),
   customers!appointments_customer_id_fkey ( first_name, last_name, phone, email, whatsapp_number )
@@ -249,7 +293,9 @@ const String customerAppointmentSelectColumns = '''
   payment_method, payment_reference, deposit_paid_at,
   cancellation_policy_accepted,
   customer_name, customer_phone, customer_email, customer_timezone, notes,
-  booking_source, internal_notes, created_at, updated_at,
+  booking_source, internal_notes,
+  confirmation_required, confirmation_deadline, confirmed_at, cancellation_reason,
+  created_at, updated_at,
   services!appointments_service_id_fkey ( name ),
   staff_profiles!appointments_staff_profile_id_fkey ( name, role ),
   businesses ( name, logo_url, slug, timezone, phone, whatsapp_number, category, address, latitude, longitude )
