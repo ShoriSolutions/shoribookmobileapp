@@ -23,7 +23,7 @@ final customerBookingRepositoryProvider = Provider<CustomerBookingRepository>(
 /// fetches everything the pure calculateAvailableSlots function needs
 /// and delegates the actual algorithm to it.
 final availableSlotsProvider = FutureProvider.autoDispose
-    .family<List<AvailableSlot>, ({String slug, String serviceId, String? staffId, DateTime date})>(
+    .family<List<DaySlot>, ({String slug, String serviceId, String? staffId, DateTime date})>(
       (ref, args) async {
         final profileData = await ref.watch(businessProfileProvider(args.slug).future);
         if (profileData == null) return [];
@@ -77,7 +77,7 @@ final availableSlotsProvider = FutureProvider.autoDispose
           ),
         ]);
 
-        return calculateAvailableSlots(
+        return calculateDaySlots(
           date: dateStr,
           timezone: tz,
           serviceDurationMinutes: service.durationMinutes,

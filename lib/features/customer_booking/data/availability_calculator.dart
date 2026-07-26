@@ -16,6 +16,20 @@ class AvailableSlot {
   });
 }
 
+/// A slot on the day's grid — [available] false means it's taken/unavailable
+/// and should be shown greyed-out rather than hidden.
+class DaySlot {
+  final String startTime; // "HH:MM" business-local
+  final String endTime;
+  final bool available;
+
+  const DaySlot({
+    required this.startTime,
+    required this.endTime,
+    required this.available,
+  });
+}
+
 const int _slotIntervalMinutes = 15;
 
 int _toMin(String t) {
@@ -211,4 +225,91 @@ List<AvailableSlot> calculateAvailableSlots({
         ),
       )
       .toList();
+}
+
+/// The full business-hours grid for the day, each slot flagged available or
+/// taken. Wraps [calculateAvailableSlots] (which decides what's free) and
+/// fills in the rest of the grid so the UI can show taken times greyed-out
+/// instead of hiding them — blocking double bookings while staying legible.
+List<DaySlot> calculateDaySlots({
+  required String date,
+  required String timezone,
+  required int serviceDurationMinutes,
+  required int bufferBeforeMinutes,
+  required int bufferAfterMinutes,
+  required List<StaffProfile> staffList,
+  required List<BusinessHours> businessHours,
+  SpecialBusinessDay? specialDay,
+  required List<StaffAvailability> staffAvailability,
+  required List<StaffBreak> staffBreaks,
+  required List<BlockedRange> blockedRanges,
+  required List<BookedRange> bookedRanges,
+}) {
+  final availableStarts = {
+    for (final s in calculateAvailableSlots(
+      date: date,
+      timezone: timezone,
+      serviceDurationMinutes: serviceDurationMinutes,
+      bufferBeforeMinutes: bufferBeforeMinutes,
+      bufferAfterMinutes: bufferAfterMinutes,
+      staffList: staffList,
+      businessHours: businessHours,
+      specialDay: specialDay,
+      staffAvailability: staffAvailability,
+      staffBreaks: staffBreaks,
+      blockedRanges: blockedRanges,
+      bookedRanges: bookedRanges,
+    ))
+      s.startTime,
+  };
+
+  // Business open window for the day (same source as calculateAvailableSlots).
+  if (specialDay?.isClosed == true) return const [];
+  final dateParts = date.split('-').map(int.parse).toList();
+  int bizOpen;
+  int bizClose;
+  if (specialDay?.customOpenTime != null &&
+      specialDay?.customCloseTime != null) {
+    bizOpen = _toMin(specialDay!.customOpenTime!);
+    bizClose = _toMin(specialDay.customCloseTime!);
+  } else {
+    final dow =
+        DateTime(dateParts[0], dateParts[1], dateParts[2]).weekday % 7;
+    final todayHours = businessHours.where((h) => h.dayOfWeek == dow);
+    if (todayHours.isEmpty) return const [];
+    final bh = todayHours.first;
+    if (bh.isClosed || bh.openTime == null || bh.closeTime == null) {
+      return const [];
+    }
+    bizOpen = _toMin(bh.openTime!);
+    bizClose = _toMin(bh.closeTime!);
+  }
+
+  final nowUtc = DateTime.now().toUtc();
+  final isToday = businessLocalDateString(nowUtc, timezone) == date;
+  final nowMin = isToday
+      ? () {
+          final l = utcToBusinessLocal(nowUtc, timezone);
+          return l.hour * 60 + l.minute;
+        }()
+      : 0;
+
+  final minStart = bizOpen + bufferBeforeMinutes;
+  final maxStart = bizClose - serviceDurationMinutes - bufferAfterMinutes;
+  if (minStart > maxStart) return const [];
+  final firstSlot =
+      ((minStart + _slotIntervalMinutes - 1) ~/ _slotIntervalMinutes) *
+          _slotIntervalMinutes;
+
+  final slots = <DaySlot>[];
+  for (var t = firstSlot; t <= maxStart; t += _slotIntervalMinutes) {
+    if (isToday && t < nowMin) continue; // never show past times
+    final key = _fromMin(t);
+    slots.add(DaySlot(
+      startTime: key,
+      endTime: _fromMin(t + serviceDurationMinutes),
+      available: availableStarts.contains(key),
+    ));
+  }
+  return slots;
 }

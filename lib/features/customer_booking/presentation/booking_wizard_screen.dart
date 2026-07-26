@@ -748,37 +748,69 @@ class _TimesGrid extends ConsumerWidget {
             ),
           );
         }
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 2.4,
-          ),
-          itemCount: slots.length,
-          itemBuilder: (c, i) {
-            final slot = slots[i];
-            final selected = slot.startTime == state.selectedTime;
-            return GestureDetector(
-              onTap: () => controller.selectTime(slot.startTime),
-              child: Container(
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: selected ? AppColors.sage : AppColors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: selected ? AppColors.sage : AppColors.parchment),
-                ),
-                child: Text(_fmtTime(slot.startTime),
-                    style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: selected ? Colors.white : AppColors.ink)),
+        final anyOpen = slots.any((s) => s.available);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!anyOpen)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 10),
+                child: Text('Fully booked for this date — try another day.',
+                    style: TextStyle(fontSize: 13, color: AppColors.muted)),
               ),
-            );
-          },
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 2.4,
+              ),
+              itemCount: slots.length,
+              itemBuilder: (c, i) {
+                final slot = slots[i];
+                final selected =
+                    slot.available && slot.startTime == state.selectedTime;
+                // Taken/unavailable slots are shown greyed-out and disabled,
+                // so a time can't be double-booked once it's gone.
+                if (!slot.available) {
+                  return Container(
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: AppColors.fieldMuted,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.divider),
+                    ),
+                    child: Text(_fmtTime(slot.startTime),
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.faint,
+                            decoration: TextDecoration.lineThrough)),
+                  );
+                }
+                return GestureDetector(
+                  onTap: () => controller.selectTime(slot.startTime),
+                  child: Container(
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: selected ? AppColors.sage : AppColors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color:
+                              selected ? AppColors.sage : AppColors.parchment),
+                    ),
+                    child: Text(_fmtTime(slot.startTime),
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: selected ? Colors.white : AppColors.ink)),
+                  ),
+                );
+              },
+            ),
+          ],
         );
       },
     );
