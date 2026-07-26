@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/errors/app_exception.dart';
+import 'confirmation_analytics.dart';
 import 'report_summary.dart';
 
 class ReportsRepository {
@@ -26,6 +27,28 @@ class ReportsRepository {
         },
       );
       return ReportSummary.fromJson(result as Map<String, dynamic>);
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
+  /// Confirmation-window + waitlist metrics (OWNER/ADMIN enforced server-side
+  /// by get_confirmation_waitlist_analytics).
+  Future<ConfirmationAnalytics> fetchConfirmationAnalytics({
+    required String businessId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final result = await _client.rpc(
+        'get_confirmation_waitlist_analytics',
+        params: {
+          'p_business_id': businessId,
+          'p_start_date': _isoDate(startDate),
+          'p_end_date': _isoDate(endDate),
+        },
+      );
+      return ConfirmationAnalytics.fromJson(result as Map<String, dynamic>);
     } catch (e) {
       throw AppException.from(e);
     }

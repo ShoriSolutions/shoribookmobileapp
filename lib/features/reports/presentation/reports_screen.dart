@@ -168,6 +168,8 @@ class ReportsScreen extends ConsumerWidget {
                           ),
                         ),
                       ],
+                      const SizedBox(height: 24),
+                      const _ConfirmationAnalyticsSection(),
                     ],
                   );
                 },
@@ -264,6 +266,118 @@ class _Tile extends StatelessWidget {
           const SizedBox(height: 4),
           Text(label,
               style: const TextStyle(fontSize: 14, color: AppColors.muted)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Confirmation-window + waitlist metrics. Hidden when there's no activity in
+/// the period, so it never clutters a business that uses neither feature.
+class _ConfirmationAnalyticsSection extends ConsumerWidget {
+  const _ConfirmationAnalyticsSection();
+
+  static String _pct(double? r) => r == null ? '—' : '${(r * 100).round()}%';
+
+  static String _avg(double? m) {
+    if (m == null) return '—';
+    if (m < 60) return '${m.round()}m';
+    final h = m ~/ 60;
+    final min = (m % 60).round();
+    return min == 0 ? '${h}h' : '${h}h ${min}m';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(confirmationAnalyticsProvider);
+    return async.maybeWhen(
+      data: (a) {
+        if (a.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Confirmations & waitlist',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink)),
+            const SizedBox(height: 12),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.55,
+              children: [
+                _Tile('Confirmation rate', _pct(a.confirmationRate),
+                    AppColors.sageDark),
+                _Tile('Expired', '${a.expiredTotal}', AppColors.danger),
+                _Tile('Avg confirm time', _avg(a.avgConfirmationMinutes),
+                    AppColors.ink),
+                _Tile('Waitlist conversion', _pct(a.waitlistConversionRate),
+                    AppColors.sageDark),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.parchment),
+              ),
+              child: Column(
+                children: [
+                  _ContextRow(
+                      label: 'Confirmed',
+                      value:
+                          '${a.confirmedTotal} of ${a.confirmationRequiredTotal}'),
+                  const Divider(height: 1, color: AppColors.divider),
+                  _ContextRow(
+                      label: 'On waitlist',
+                      value: a.waitlistNotified > 0
+                          ? '${a.waitlistTotal} · ${a.waitlistNotified} notified'
+                          : '${a.waitlistTotal}'),
+                  const Divider(height: 1, color: AppColors.divider),
+                  _ContextRow(
+                      label: 'Rebooked after expiry',
+                      value: a.expiredCustomers == 0
+                          ? 'No expiries'
+                          : '${a.rebookedCustomers} of ${a.expiredCustomers} '
+                              '(${_pct(a.rebookRate)})'),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _ContextRow extends StatelessWidget {
+  const _ContextRow({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(label,
+                style: const TextStyle(
+                    fontSize: 15, color: AppColors.ink)),
+          ),
+          Text(value,
+              style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.muted)),
         ],
       ),
     );
