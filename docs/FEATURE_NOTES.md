@@ -381,3 +381,27 @@ refinement, along with re-notify tuning and waitlist analytics.
 **Ops (run manually):** run `20260726000003` + `20260726000004`; redeploy
 `process-reminders`; ensure the daily `expire-stale-waitlist` cron scheduled
 (guarded in the migration).
+
+---
+
+## Confirmation + Waitlist analytics (Phase 3)
+
+`get_confirmation_waitlist_analytics(business, from, to)` (`20260726000005`,
+OWNER/ADMIN only) aggregates, by `created_at` over the range:
+- **Confirmation rate** = confirmed / (confirmed + expired) of bookings that
+  required confirmation; **expired count**; **avg confirmation time**
+  (`confirmed_at - created_at`).
+- **Waitlist**: total / notified / **conversion rate** (booked among notified).
+- **Rebook rate**: of distinct customers with an expired confirmation, how many
+  later created another booking.
+
+Surfaced in the **Reports** screen as a "Confirmations & waitlist" section that
+follows the existing period picker (`reportRangeDates` shared helper) and hides
+itself when there's no activity. Rates are null-safe (show "—" when the
+denominator is 0).
+
+**Ops (run manually):** run `20260726000005`. Read-only RPC, no cron/redeploy.
+
+This completes the original Confirmation / Auto-cancel / Waitlist spec. Possible
+follow-ups: trend charts over time, per-service breakdowns, and time/range-aware
+waitlist matching.
