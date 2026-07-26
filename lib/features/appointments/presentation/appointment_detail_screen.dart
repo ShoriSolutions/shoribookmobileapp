@@ -58,7 +58,8 @@ class AppointmentDetailScreen extends ConsumerWidget {
                 spacing: 8,
                 children: [
                   StatusBadge(
-                    label: StatusColors.appointmentStatusLabel(appt.status),
+                    label: StatusColors.appointmentStatusLabel(appt.status,
+                        cancellationReason: appt.cancellationReason),
                     color: StatusColors.appointmentStatus(appt.status),
                     filled: true,
                   ),

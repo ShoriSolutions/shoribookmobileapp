@@ -61,6 +61,31 @@ class BookingDetailScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _confirm(BuildContext context, WidgetRef ref,
+      {String? guestPhone}) async {
+    try {
+      final ok = await ref
+          .read(myBookingsRepositoryProvider)
+          .confirm(bookingId, guestPhone: guestPhone);
+      ref.invalidate(bookingDetailProvider(bookingId));
+      ref.invalidate(myBookingsProvider);
+      if (context.mounted) {
+        showAppSnackBar(
+          context,
+          message: ok
+              ? 'Booking confirmed'
+              : 'This booking could no longer be confirmed',
+          isError: !ok,
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        showAppSnackBar(context,
+            message: 'Could not confirm booking', isError: true);
+      }
+    }
+  }
+
   Future<void> _reschedule(
       BuildContext context, WidgetRef ref, Appointment appt,
       {String? guestPhone}) async {
@@ -313,6 +338,48 @@ class BookingDetailScreen extends ConsumerWidget {
                   ),
                 ],
                 const SizedBox(height: 16),
+                if (appt.isPendingConfirmation && canManage) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.terracottaTint,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.hourglass_top,
+                            size: 18, color: AppColors.terracottaDeep),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            appt.confirmationDeadline != null
+                                ? 'Confirm before '
+                                    '${DateTimeFormatters.time(appt.confirmationDeadline!, viewerZone)} '
+                                    'on ${DateTimeFormatters.weekdayDate(appt.confirmationDeadline!, viewerZone)}, '
+                                    'or this booking is automatically cancelled '
+                                    'and the time may be offered to another '
+                                    'customer.'
+                                : 'Confirm this booking to keep it, otherwise '
+                                    'it may be automatically cancelled.',
+                            style: const TextStyle(
+                                fontSize: 13, height: 1.4, color: AppColors.ink),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _ActionBtn(
+                    label: 'Confirm booking',
+                    icon: Icons.check_circle_outline,
+                    bg: AppColors.terracotta,
+                    fg: Colors.white,
+                    onTap: () => _confirm(context, ref,
+                        guestPhone: signedIn ? null : guestPhone),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 if (appt.isActive && canManage) ...[
                   Row(
                     children: [
@@ -391,14 +458,21 @@ class BookingDetailScreen extends ConsumerWidget {
   (String, Color, Color, IconData) _banner(Appointment a) {
     switch (a.status) {
       case AppointmentStatus.cancelled:
-        return ('Cancelled', AppColors.closedBg, AppColors.closedText,
-            Icons.cancel_outlined);
+        return (
+          a.wasConfirmationExpired ? 'Confirmation expired' : 'Cancelled',
+          AppColors.closedBg,
+          AppColors.closedText,
+          Icons.cancel_outlined
+        );
       case AppointmentStatus.noShow:
         return ('No-show', const Color(0xFFF7ECE9), AppColors.danger,
             Icons.error_outline);
       case AppointmentStatus.completed:
         return ('Completed', AppColors.closedBg, AppColors.closedText,
             Icons.check_circle_outline);
+      case AppointmentStatus.pendingConfirmation:
+        return ('Awaiting confirmation', AppColors.terracottaTint,
+            AppColors.terracottaDeep, Icons.hourglass_top);
       case AppointmentStatus.pending:
         return ('Pending', AppColors.terracottaTint, AppColors.terracottaDeep,
             Icons.hourglass_empty);

@@ -115,13 +115,20 @@ class BookingCard extends StatelessWidget {
 
   (String, Color, Color) _statusChip(Appointment a) {
     if (a.status == AppointmentStatus.cancelled) {
-      return ('Cancelled', AppColors.closedBg, AppColors.closedText);
+      return (
+        a.wasConfirmationExpired ? 'Confirmation expired' : 'Cancelled',
+        AppColors.closedBg,
+        AppColors.closedText,
+      );
     }
     if (a.status == AppointmentStatus.noShow) {
       return ('No-show', const Color(0xFFF7ECE9), AppColors.danger);
     }
     if (a.status == AppointmentStatus.completed) {
       return ('Completed', AppColors.closedBg, AppColors.closedText);
+    }
+    if (a.isPendingConfirmation) {
+      return ('Confirm now', AppColors.terracottaTint, AppColors.terracottaDeep);
     }
     if (a.depositRequired && !a.depositPaid) {
       return ('Deposit due', AppColors.terracottaTint, AppColors.terracottaDeep);

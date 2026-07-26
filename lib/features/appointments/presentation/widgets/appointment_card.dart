@@ -84,6 +84,8 @@ class AppointmentCard extends StatelessWidget {
                           StatusBadge(
                             label: StatusColors.appointmentStatusLabel(
                               appointment.status,
+                              cancellationReason:
+                                  appointment.cancellationReason,
                             ),
                             color: StatusColors.appointmentStatus(
                               appointment.status,

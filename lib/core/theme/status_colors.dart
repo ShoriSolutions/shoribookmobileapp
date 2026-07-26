@@ -10,6 +10,7 @@ class StatusColors {
   static Color appointmentStatus(String status) {
     switch (status) {
       case 'pending':
+      case 'pending_confirmation':
         return AppColors.terracotta;
       case 'confirmed':
         return AppColors.sage;
@@ -24,8 +25,17 @@ class StatusColors {
     }
   }
 
-  static String appointmentStatusLabel(String status) {
+  /// [cancellationReason] lets a cancelled booking read "Confirmation expired"
+  /// when the confirmation window elapsed, rather than a plain "Cancelled".
+  static String appointmentStatusLabel(String status,
+      {String? cancellationReason}) {
     switch (status) {
+      case 'pending_confirmation':
+        return 'Awaiting confirmation';
+      case 'cancelled':
+        return cancellationReason == 'confirmation_expired'
+            ? 'Confirmation expired'
+            : 'Cancelled';
       case 'no_show':
         return 'No-show';
       default:

@@ -115,6 +115,25 @@ class MyBookingsRepository {
     }
   }
 
+  /// Confirms a pending-confirmation booking (a signed-in customer uses the
+  /// auth-scoped RPC; a guest passes [guestPhone]). Returns true once it's
+  /// confirmed (or already was); false if it could no longer be confirmed
+  /// (e.g. the confirmation window already elapsed).
+  Future<bool> confirm(String id, {String? guestPhone}) async {
+    try {
+      final result = guestPhone != null
+          ? await _client.rpc('confirm_guest_appointment',
+              params: {'p_booking_id': id, 'p_phone': guestPhone})
+          : await _client.rpc('confirm_appointment',
+              params: {'p_booking_id': id});
+      final map = result as Map<String, dynamic>;
+      final status = map['status'] as String?;
+      return status == 'confirmed' || status == 'already_confirmed';
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   Future<ManageBookingResult> reschedule(String id, DateTime newStart,
       {String? guestPhone}) async {
     try {
