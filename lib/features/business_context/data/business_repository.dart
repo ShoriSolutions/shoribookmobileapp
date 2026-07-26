@@ -159,6 +159,8 @@ class BusinessRepository {
     int? maxPerDay,
     int? maxPerHour,
     int? maxSimultaneous,
+    bool? requireConfirmation,
+    int? confirmationWindowMinutes,
   }) async {
     try {
       await _client.rpc('save_booking_rules', params: {
@@ -167,6 +169,8 @@ class BusinessRepository {
         'p_max_per_day': maxPerDay,
         'p_max_per_hour': maxPerHour,
         'p_max_simultaneous': maxSimultaneous,
+        'p_require_confirmation': requireConfirmation,
+        'p_confirmation_window': confirmationWindowMinutes,
       });
     } catch (e) {
       throw AppException.from(e);

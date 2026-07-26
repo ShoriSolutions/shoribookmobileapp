@@ -21,10 +21,15 @@ class BookingRulesTab extends ConsumerStatefulWidget {
 class _BookingRulesTabState extends ConsumerState<BookingRulesTab> {
   static const _bufferPresets = [0, 10, 15, 30, 60];
 
+  // Confirmation-window duration presets, in minutes.
+  static const _windowPresets = <int>[15, 30, 60, 120, 240, 360, 720, 1440];
+
   int? _buffer;
   final _perDay = TextEditingController();
   final _perHour = TextEditingController();
   final _simultaneous = TextEditingController();
+  bool _requireConfirmation = false;
+  int _confirmationWindow = 120;
   bool _seeded = false;
   bool _saving = false;
 
@@ -36,12 +41,88 @@ class _BookingRulesTabState extends ConsumerState<BookingRulesTab> {
     super.dispose();
   }
 
-  void _seed(int buffer, int? perDay, int? perHour, int? simultaneous) {
+  void _seed(
+    int buffer,
+    int? perDay,
+    int? perHour,
+    int? simultaneous,
+    bool requireConfirmation,
+    int confirmationWindow,
+  ) {
     _buffer = buffer;
     _perDay.text = perDay?.toString() ?? '';
     _perHour.text = perHour?.toString() ?? '';
     _simultaneous.text = simultaneous?.toString() ?? '';
+    _requireConfirmation = requireConfirmation;
+    _confirmationWindow = confirmationWindow;
     _seeded = true;
+  }
+
+  /// Human label for a window given in minutes (e.g. 90 -> "1h 30m").
+  static String windowLabel(int minutes) {
+    if (minutes % 1440 == 0) {
+      final d = minutes ~/ 1440;
+      return d == 1 ? '24 hours' : '$d days';
+    }
+    if (minutes % 60 == 0) {
+      final h = minutes ~/ 60;
+      return h == 1 ? '1 hour' : '$h hours';
+    }
+    if (minutes < 60) return '$minutes min';
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    return '${h}h ${m}m';
+  }
+
+  Future<void> _addCustomWindow() async {
+    final valueCtrl = TextEditingController();
+    var unit = 60; // 1=min, 60=hour
+    final added = await showDialog<int>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          title: const Text('Custom window'),
+          content: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: valueCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Amount'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              DropdownButton<int>(
+                value: unit,
+                items: const [
+                  DropdownMenuItem(value: 1, child: Text('minutes')),
+                  DropdownMenuItem(value: 60, child: Text('hours')),
+                ],
+                onChanged: (v) => setD(() => unit = v ?? 60),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final n = int.tryParse(valueCtrl.text.trim());
+                if (n != null && n > 0) Navigator.pop(ctx, n * unit);
+              },
+              child: const Text('Set'),
+            ),
+          ],
+        ),
+      ),
+    );
+    valueCtrl.dispose();
+    // Clamp to the server's 5 min .. 7 day range.
+    if (added != null) {
+      setState(() => _confirmationWindow = added.clamp(5, 10080));
+    }
   }
 
   int? _parseLimit(TextEditingController c) {
@@ -61,6 +142,8 @@ class _BookingRulesTabState extends ConsumerState<BookingRulesTab> {
             maxPerDay: _parseLimit(_perDay),
             maxPerHour: _parseLimit(_perHour),
             maxSimultaneous: _parseLimit(_simultaneous),
+            requireConfirmation: _requireConfirmation,
+            confirmationWindowMinutes: _confirmationWindow,
           );
       ref.invalidate(activeMembershipProvider);
       if (mounted) showAppSnackBar(context, message: 'Booking rules saved');
@@ -86,11 +169,19 @@ class _BookingRulesTabState extends ConsumerState<BookingRulesTab> {
     final canManage = can(membership.role, Permission.manageSettings);
     final biz = membership.business;
     if (!_seeded) {
-      _seed(biz.bufferMinutes, biz.maxBookingsPerDay, biz.maxBookingsPerHour,
-          biz.maxSimultaneousBookings);
+      _seed(
+        biz.bufferMinutes,
+        biz.maxBookingsPerDay,
+        biz.maxBookingsPerHour,
+        biz.maxSimultaneousBookings,
+        biz.requireConfirmation,
+        biz.confirmationWindowMinutes,
+      );
     }
 
     final bufferOptions = {..._bufferPresets, _buffer ?? 0}.toList()..sort();
+    final windowOptions = {..._windowPresets, _confirmationWindow}.toList()
+      ..sort();
 
     return Column(
       children: [
@@ -168,6 +259,64 @@ class _BookingRulesTabState extends ConsumerState<BookingRulesTab> {
                 label: 'Max simultaneous bookings',
                 suffix: 'at once',
               ),
+              const SizedBox(height: 24),
+
+              // Booking confirmation window
+              _SectionLabel('Booking confirmation window'),
+              const SizedBox(height: 4),
+              Text(
+                'Require customers to confirm an online booking within a set '
+                'time. If they do not, it is automatically cancelled and the '
+                'slot reopens. Deposit and vendor-created bookings are never '
+                'affected.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: AppColors.muted),
+              ),
+              const SizedBox(height: 10),
+              Card(
+                margin: EdgeInsets.zero,
+                child: SwitchListTile(
+                  title: const Text('Require customer confirmation'),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12),
+                  value: _requireConfirmation,
+                  onChanged: canManage
+                      ? (v) => setState(() => _requireConfirmation = v)
+                      : null,
+                ),
+              ),
+              if (_requireConfirmation) ...[
+                const SizedBox(height: 14),
+                Text(
+                  'Customers must confirm within',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: AppColors.muted),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    for (final m in windowOptions)
+                      ChoiceChip(
+                        label: Text(windowLabel(m)),
+                        selected: _confirmationWindow == m,
+                        onSelected: canManage
+                            ? (_) => setState(() => _confirmationWindow = m)
+                            : null,
+                      ),
+                    ActionChip(
+                      avatar: const Icon(Icons.add, size: 18),
+                      label: const Text('Custom'),
+                      onPressed: canManage ? _addCustomWindow : null,
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
