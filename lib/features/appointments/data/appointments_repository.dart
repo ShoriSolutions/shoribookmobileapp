@@ -89,6 +89,17 @@ class AppointmentsRepository {
     }
   }
 
+  /// Confirms a pending-confirmation booking via the confirm_appointment RPC
+  /// (staff-allowed) rather than a raw status write, so it also cancels the
+  /// confirmation nudges and (re)generates the normal appointment reminders.
+  Future<void> confirmAppointment(String id) async {
+    try {
+      await _client.rpc('confirm_appointment', params: {'p_booking_id': id});
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   Future<void> markDepositPaid(
     String id, {
     required String paymentMethod,

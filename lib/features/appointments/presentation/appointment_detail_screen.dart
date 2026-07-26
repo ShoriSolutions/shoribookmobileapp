@@ -120,6 +120,7 @@ class AppointmentDetailScreen extends ConsumerWidget {
                   appointment: appt,
                   onSetStatus: (status) =>
                       _setStatus(context, ref, appt, status),
+                  onConfirm: () => _confirmBooking(context, ref),
                 ),
               if (canEdit && appt.isActive) ...[
                 const SizedBox(height: 10),
@@ -167,6 +168,19 @@ class AppointmentDetailScreen extends ConsumerWidget {
       showAppSnackBar(
         context,
         message: ok ? 'Appointment updated' : 'Could not update appointment',
+        isError: !ok,
+      );
+    }
+  }
+
+  Future<void> _confirmBooking(BuildContext context, WidgetRef ref) async {
+    final ok = await ref
+        .read(appointmentDetailControllerProvider(appointmentId).notifier)
+        .confirmBooking();
+    if (context.mounted) {
+      showAppSnackBar(
+        context,
+        message: ok ? 'Booking confirmed' : 'Could not confirm booking',
         isError: !ok,
       );
     }
@@ -630,8 +644,13 @@ class _InternalNotesCardState extends State<_InternalNotesCard> {
 class _StatusActions extends StatelessWidget {
   final Appointment appointment;
   final ValueChanged<String> onSetStatus;
+  final VoidCallback onConfirm;
 
-  const _StatusActions({required this.appointment, required this.onSetStatus});
+  const _StatusActions({
+    required this.appointment,
+    required this.onSetStatus,
+    required this.onConfirm,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -640,6 +659,18 @@ class _StatusActions extends StatelessWidget {
     }
     return Column(
       children: [
+        if (appointment.status == AppointmentStatus.pendingConfirmation) ...[
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: onConfirm,
+              child: const Text('Confirm booking',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         if (appointment.status == AppointmentStatus.pending) ...[
           SizedBox(
             width: double.infinity,

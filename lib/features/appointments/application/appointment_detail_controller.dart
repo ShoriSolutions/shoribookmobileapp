@@ -28,6 +28,19 @@ class AppointmentDetailController
     }
   }
 
+  /// Manually confirms a pending-confirmation booking (goes through the
+  /// confirm_appointment RPC so confirmation nudges are cancelled).
+  Future<bool> confirmBooking() async {
+    try {
+      await ref.read(appointmentsRepositoryProvider).confirmAppointment(arg);
+      await _reload();
+      return true;
+    } catch (e) {
+      state = AsyncError(AppException.from(e), StackTrace.current);
+      return false;
+    }
+  }
+
   Future<bool> markDepositPaid({
     required String paymentMethod,
     String? paymentReference,
