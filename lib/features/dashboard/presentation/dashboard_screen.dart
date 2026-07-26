@@ -64,6 +64,11 @@ class DashboardScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   _trialBanner(context, business),
                 ],
+                if (data.stats.pendingConfirmationsCount > 0) ...[
+                  const SizedBox(height: 12),
+                  _pendingConfirmationsBanner(
+                      context, data.stats.pendingConfirmationsCount),
+                ],
                 const SizedBox(height: 22),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -238,6 +243,42 @@ class DashboardScreen extends ConsumerWidget {
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: AppColors.terracottaDeep)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Actionable alert shown when bookings are waiting on customer confirmation.
+  /// Taps through to the schedule, where each shows an "Awaiting confirmation"
+  /// badge and the owner can confirm or let it expire.
+  Widget _pendingConfirmationsBanner(BuildContext context, int count) {
+    return GestureDetector(
+      onTap: () => context.push(RoutePaths.calendar),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.terracottaTint,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.terracottaTintBorder),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.hourglass_top,
+                size: 18, color: AppColors.terracottaDeep),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                count == 1
+                    ? '1 booking awaiting confirmation'
+                    : '$count bookings awaiting confirmation',
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.terracottaDeep),
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.terracottaDeep),
           ],
         ),
       ),

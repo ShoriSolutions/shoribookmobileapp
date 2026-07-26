@@ -7,6 +7,8 @@ class DashboardStats {
   final int noShowsToday;
   final int cancelledToday;
   final int pendingDepositsCount;
+  // Bookings currently awaiting the customer's confirmation (all dates).
+  final int pendingConfirmationsCount;
   final int staffOnDuty;
   final int staffTotal;
 
@@ -17,6 +19,7 @@ class DashboardStats {
     required this.noShowsToday,
     required this.cancelledToday,
     required this.pendingDepositsCount,
+    required this.pendingConfirmationsCount,
     required this.staffOnDuty,
     required this.staffTotal,
   });
@@ -28,6 +31,7 @@ class DashboardStats {
     noShowsToday: 0,
     cancelledToday: 0,
     pendingDepositsCount: 0,
+    pendingConfirmationsCount: 0,
     staffOnDuty: 0,
     staffTotal: 0,
   );

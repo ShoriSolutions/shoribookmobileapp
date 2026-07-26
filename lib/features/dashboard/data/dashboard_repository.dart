@@ -118,6 +118,19 @@ class DashboardRepository {
       }
       final pendingDepositRows = await pendingDepositQuery as List;
 
+      // Bookings awaiting the customer's confirmation (all upcoming dates, not
+      // just today — a confirmation deadline can fall any time before the appt).
+      var pendingConfirmQuery = _client
+          .from('appointments')
+          .select('id')
+          .eq('business_id', businessId)
+          .eq('status', AppointmentStatus.pendingConfirmation);
+      if (staffProfileId != null) {
+        pendingConfirmQuery =
+            pendingConfirmQuery.eq('staff_profile_id', staffProfileId);
+      }
+      final pendingConfirmRows = await pendingConfirmQuery as List;
+
       // Staff on duty right now = active/bookable staff whose availability
       // window covers the current business-local time.
       final localNow = utcToBusinessLocal(now, timezone);
@@ -179,6 +192,7 @@ class DashboardRepository {
         noShowsToday: noShowsToday,
         cancelledToday: cancelledToday,
         pendingDepositsCount: pendingDepositRows.length,
+        pendingConfirmationsCount: pendingConfirmRows.length,
         staffOnDuty: staffOnDuty,
         staffTotal: staffTotal,
       );
