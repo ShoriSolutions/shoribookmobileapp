@@ -285,3 +285,54 @@ an email provider key (`RESEND_API_KEY`) or invites hang.
 - **`service_staff`** links → per-staff availability, commission by service.
 - Every booking carries `staff_profile_id` → staff schedules, commission,
   team performance analytics, multi-location scoping (add `location_id`).
+
+---
+
+## Booking Confirmation Window (Phase 1)
+
+Vendors can require customers to **confirm** an online booking within a
+configurable window; unconfirmed bookings auto-cancel and the slot reopens.
+
+**Scope decision:** applies to **online, no-deposit** bookings only. Deposit
+bookings keep their own `pending` gate; vendor-created (walk-in/phone) bookings
+are never affected. Waitlist + analytics are later phases.
+
+**Schema** (`20260726000001`, `20260726000002`):
+- `businesses.require_confirmation`, `confirmation_window_minutes` (default 120),
+  `waitlist_enabled` (reserved for Phase 2). Set via `save_booking_rules`
+  (two new trailing args, backward-compatible).
+- `appointments.confirmation_required`, `confirmation_deadline`, `confirmed_at`,
+  `cancellation_reason`; new status `pending_confirmation`; partial index on
+  the pending rows for the cron sweep.
+- `reminder_queue.kind` + `payload` — confirmation reminders and expiry notices
+  reuse the existing `process-reminders` pipeline (no new dispatcher).
+
+**Flow:**
+1. `create_customer_appointment_safe` — online no-deposit booking at a
+   confirmation-required business is created `pending_confirmation` with
+   `confirmation_deadline = LEAST(now()+window, start_time)`; imminent bookings
+   (no useful window) auto-confirm. It enqueues confirmation nudges
+   (`generate_confirmation_reminders`: halfway / 30m / 10m before the deadline,
+   future-only) and returns `confirmation_required` + `confirmation_deadline`.
+2. `confirm_appointment` (customer/staff) / `confirm_guest_appointment`
+   (id + phone) — flips to `confirmed`, cancels the nudges; the status trigger
+   regenerates the normal appointment reminders. `generate_reminders` now skips
+   `pending_confirmation` rows so appointment reminders only start on confirm.
+3. `expire_unconfirmed_appointments()` — pg_cron every minute
+   (`expire-unconfirmed-bookings`); cancels past-deadline bookings, sets
+   `cancellation_reason='confirmation_expired'`, and enqueues customer + vendor
+   email notices. The status trigger cancels remaining reminders on cancel.
+
+**Client:** Booking Rules tab (toggle + duration picker); wizard "Almost done"
+screen with a live countdown + Confirm button; My Bookings card/detail badges +
+confirm CTA (guest via id+phone); vendor manual confirm on the appointment
+detail; dashboard "N bookings awaiting confirmation" banner.
+
+**Ops (run manually):** run `20260726000001` + `20260726000002`; redeploy
+`process-reminders`; ensure the per-minute cron is scheduled (guarded in the
+migration — schedule `expire-unconfirmed-bookings` by hand if pg_cron wasn't
+available). Email is the guaranteed channel today (push/WhatsApp are stubs).
+
+**Later phases:** waitlist (`waitlist_enabled` + a `waitlist_entries` table,
+notify on slot free), analytics (confirmation rate, expired count, avg confirm
+time, waitlist conversion), per-service/staff windows, deposit interaction.
