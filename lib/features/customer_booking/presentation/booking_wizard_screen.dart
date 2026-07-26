@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/phone_input.dart';
 import '../../../core/time/customer_time_zone.dart';
 import '../../../core/time/time_zone_service.dart';
 import '../../../core/utils/calendar_export.dart';
@@ -890,6 +892,8 @@ class _ConfirmScreenState extends ConsumerState<_ConfirmScreen> {
                 controller: _phone,
                 keyboardType: TextInputType.phone,
                 hint: kPhoneHint,
+                inputFormatters:
+                    phoneInputFormatters(widget.data.business.countryCode),
                 onChanged: (v) => controller.updateDetails(phone: v),
               ),
               const SizedBox(height: 12),
@@ -898,6 +902,8 @@ class _ConfirmScreenState extends ConsumerState<_ConfirmScreen> {
                 controller: _whatsapp,
                 keyboardType: TextInputType.phone,
                 hint: kWhatsAppHint,
+                inputFormatters:
+                    phoneInputFormatters(widget.data.business.countryCode),
                 onChanged: (v) => controller.updateDetails(whatsapp: v),
               ),
               const SizedBox(height: 12),
@@ -1282,6 +1288,7 @@ class _Field extends StatelessWidget {
     required this.onChanged,
     this.keyboardType,
     this.hint,
+    this.inputFormatters,
   });
 
   final String label;
@@ -1289,6 +1296,7 @@ class _Field extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final TextInputType? keyboardType;
   final String? hint;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -1304,6 +1312,7 @@ class _Field extends StatelessWidget {
           controller: controller,
           keyboardType: keyboardType,
           onChanged: onChanged,
+          inputFormatters: inputFormatters,
           decoration: InputDecoration(hintText: hint),
         ),
       ],
