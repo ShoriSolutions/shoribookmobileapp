@@ -232,7 +232,9 @@ Deno.serve(async () => {
 
   const { data: due, error } = await supabase
     .from("reminder_queue")
-    .select("id, booking_id, business_id, user_id, channel, retry_count")
+    .select(
+      "id, booking_id, business_id, user_id, channel, retry_count, kind, payload",
+    )
     .eq("status", "pending")
     .lte("scheduled_for", new Date().toISOString())
     .lt("retry_count", MAX_RETRIES)
@@ -252,6 +254,21 @@ Deno.serve(async () => {
     return data;
   }
 
+  // Vendor notices (e.g. auto-cancel) go to the business owner's email.
+  const ownerEmailCache = new Map<string, string | undefined>();
+  async function ownerEmailFor(ownerId: string | null | undefined) {
+    if (!ownerId) return undefined;
+    if (ownerEmailCache.has(ownerId)) return ownerEmailCache.get(ownerId);
+    const { data } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("id", ownerId)
+      .maybeSingle();
+    const email = (data?.email as string | undefined) ?? undefined;
+    ownerEmailCache.set(ownerId, email);
+    return email;
+  }
+
   let processed = 0;
   for (const row of due ?? []) {
     // Build the message + recipient from the appointment.
@@ -259,7 +276,8 @@ Deno.serve(async () => {
       .from("appointments")
       .select(
         "id, customer_name, customer_email, customer_timezone, start_time, " +
-          "services(name), businesses(name, timezone)",
+          "confirmation_deadline, services(name), " +
+          "businesses(name, timezone, owner_id)",
       )
       .eq("id", row.booking_id)
       .maybeSingle();
@@ -290,38 +308,79 @@ Deno.serve(async () => {
       minute: "2-digit",
     }).format(start);
 
-    const settings = await settingsFor(row.business_id);
-    const tpl = settings?.reminder_template ?? DEFAULT_TEMPLATE;
-    let message = renderTemplate(tpl, {
-      customer_name: a.customer_name ?? "there",
-      service_name: a.services?.name ?? "appointment",
-      business_name: a.businesses?.name ?? "us",
-      date,
-      time,
-      booking_reference: String(a.id).slice(0, 8).toUpperCase(),
-    });
-
-    // When the customer booked from a different zone, spell out both times
-    // so the reminder is never off by an hour in their head.
-    const custTz = a.customer_timezone as string | undefined;
-    if (custTz && custTz !== tz) {
-      const custTime = new Intl.DateTimeFormat("en-US", {
-        timeZone: custTz,
+    const svc = a.services?.name ?? "appointment";
+    const biz = a.businesses?.name ?? "us";
+    const kind = (row.kind as string) ?? "appointment";
+    const fmtTime = (iso: string) =>
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: tz,
         hour: "numeric",
         minute: "2-digit",
-      }).format(start);
-      if (custTime !== time) {
-        const bizPlace = tz.split("/").pop()?.replaceAll("_", " ") ?? tz;
-        message += `\n\nBusiness time: ${time} (${bizPlace}) · ` +
-          `Your time: ${custTime}`;
+      }).format(new Date(iso));
+
+    let subject: string;
+    let message: string;
+    let recipient: Recipient;
+
+    if (kind === "confirmation_reminder") {
+      // Nudge the customer to confirm before the window closes.
+      const deadlineIso = (row.payload?.deadline as string | undefined) ??
+        (a.confirmation_deadline as string | undefined);
+      const deadlineStr = deadlineIso ? fmtTime(deadlineIso) : "the deadline";
+      subject = `Confirm your ${svc} booking`;
+      message =
+        `Your ${svc} booking with ${biz} on ${date} at ${time} is awaiting ` +
+        `confirmation. Please confirm before ${deadlineStr} to keep it — ` +
+        `otherwise it will be automatically cancelled and the time may be ` +
+        `offered to another customer. Open Shorivo to confirm.`;
+      recipient = { userId: row.user_id, email: a.customer_email ?? undefined };
+    } else if (kind === "confirmation_expired_customer") {
+      subject = `Your ${svc} booking was cancelled`;
+      message =
+        `Your ${svc} appointment with ${biz} on ${date} at ${time} wasn't ` +
+        `confirmed in time, so it has been cancelled automatically. You're ` +
+        `welcome to book another available time in Shorivo.`;
+      recipient = { userId: row.user_id, email: a.customer_email ?? undefined };
+    } else if (kind === "confirmation_expired_vendor") {
+      const ownerEmail = await ownerEmailFor(a.businesses?.owner_id);
+      subject = `Auto-cancelled: a customer didn't confirm`;
+      message =
+        `An appointment was automatically cancelled because the customer did ` +
+        `not confirm before the deadline.\n\nCustomer: ` +
+        `${a.customer_name ?? "Customer"}\nService: ${svc}\n` +
+        `Time: ${date} at ${time}`;
+      recipient = { userId: row.user_id, email: ownerEmail };
+    } else {
+      // Default: pre-appointment reminder (vendor template).
+      const settings = await settingsFor(row.business_id);
+      const tpl = settings?.reminder_template ?? DEFAULT_TEMPLATE;
+      message = renderTemplate(tpl, {
+        customer_name: a.customer_name ?? "there",
+        service_name: svc,
+        business_name: biz,
+        date,
+        time,
+        booking_reference: String(a.id).slice(0, 8).toUpperCase(),
+      });
+
+      // When the customer booked from a different zone, spell out both times
+      // so the reminder is never off by an hour in their head.
+      const custTz = a.customer_timezone as string | undefined;
+      if (custTz && custTz !== tz) {
+        const custTime = new Intl.DateTimeFormat("en-US", {
+          timeZone: custTz,
+          hour: "numeric",
+          minute: "2-digit",
+        }).format(start);
+        if (custTime !== time) {
+          const bizPlace = tz.split("/").pop()?.replaceAll("_", " ") ?? tz;
+          message += `\n\nBusiness time: ${time} (${bizPlace}) · ` +
+            `Your time: ${custTime}`;
+        }
       }
+      subject = `Reminder: ${svc} at ${biz}`;
+      recipient = { userId: row.user_id, email: a.customer_email ?? undefined };
     }
-    const subject = `Reminder: ${a.services?.name ?? "appointment"} at ` +
-      `${a.businesses?.name ?? "your appointment"}`;
-    const recipient: Recipient = {
-      userId: row.user_id,
-      email: a.customer_email ?? undefined,
-    };
 
     const order = [row.channel, ...(FALLBACK[row.channel] ?? [])];
     let sent = false;
