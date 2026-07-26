@@ -161,6 +161,7 @@ class BusinessRepository {
     int? maxSimultaneous,
     bool? requireConfirmation,
     int? confirmationWindowMinutes,
+    bool? waitlistEnabled,
   }) async {
     try {
       await _client.rpc('save_booking_rules', params: {
@@ -171,6 +172,7 @@ class BusinessRepository {
         'p_max_simultaneous': maxSimultaneous,
         'p_require_confirmation': requireConfirmation,
         'p_confirmation_window': confirmationWindowMinutes,
+        'p_waitlist_enabled': waitlistEnabled,
       });
     } catch (e) {
       throw AppException.from(e);

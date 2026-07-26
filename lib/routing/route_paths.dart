@@ -31,6 +31,7 @@ class RoutePaths {
   static const bookingLink = '/booking-link';
   static const reports = '/reports';
   static const availability = '/availability';
+  static const waitlist = '/waitlist';
   static const profileMarketplace = '/profile-marketplace';
   static const editBusinessProfile = '/business-profile';
   static const notificationSettings = '/notification-settings';

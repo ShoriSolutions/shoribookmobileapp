@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_snackbar.dart';
+import '../../../../routing/route_paths.dart';
 import '../../../business_context/application/active_business_provider.dart';
 import '../../../business_context/application/permissions.dart';
 
@@ -30,6 +32,7 @@ class _BookingRulesTabState extends ConsumerState<BookingRulesTab> {
   final _simultaneous = TextEditingController();
   bool _requireConfirmation = false;
   int _confirmationWindow = 120;
+  bool _waitlistEnabled = false;
   bool _seeded = false;
   bool _saving = false;
 
@@ -48,6 +51,7 @@ class _BookingRulesTabState extends ConsumerState<BookingRulesTab> {
     int? simultaneous,
     bool requireConfirmation,
     int confirmationWindow,
+    bool waitlistEnabled,
   ) {
     _buffer = buffer;
     _perDay.text = perDay?.toString() ?? '';
@@ -55,6 +59,7 @@ class _BookingRulesTabState extends ConsumerState<BookingRulesTab> {
     _simultaneous.text = simultaneous?.toString() ?? '';
     _requireConfirmation = requireConfirmation;
     _confirmationWindow = confirmationWindow;
+    _waitlistEnabled = waitlistEnabled;
     _seeded = true;
   }
 
@@ -144,6 +149,7 @@ class _BookingRulesTabState extends ConsumerState<BookingRulesTab> {
             maxSimultaneous: _parseLimit(_simultaneous),
             requireConfirmation: _requireConfirmation,
             confirmationWindowMinutes: _confirmationWindow,
+            waitlistEnabled: _waitlistEnabled,
           );
       ref.invalidate(activeMembershipProvider);
       if (mounted) showAppSnackBar(context, message: 'Booking rules saved');
@@ -176,6 +182,7 @@ class _BookingRulesTabState extends ConsumerState<BookingRulesTab> {
         biz.maxSimultaneousBookings,
         biz.requireConfirmation,
         biz.confirmationWindowMinutes,
+        biz.waitlistEnabled,
       );
     }
 
@@ -317,6 +324,42 @@ class _BookingRulesTabState extends ConsumerState<BookingRulesTab> {
                   ],
                 ),
               ],
+              const SizedBox(height: 24),
+
+              // Waitlist
+              _SectionLabel('Waitlist'),
+              const SizedBox(height: 4),
+              Text(
+                'Let customers join a waitlist when their time is taken. When a '
+                'slot frees up (a cancellation, no-show, or unconfirmed '
+                'booking), matching customers are notified automatically.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: AppColors.muted),
+              ),
+              const SizedBox(height: 10),
+              Card(
+                margin: EdgeInsets.zero,
+                child: SwitchListTile(
+                  title: const Text('Enable waitlist notifications'),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12),
+                  value: _waitlistEnabled,
+                  onChanged: canManage
+                      ? (v) => setState(() => _waitlistEnabled = v)
+                      : null,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => context.push(RoutePaths.waitlist),
+                  icon: const Icon(Icons.event_seat_outlined, size: 18),
+                  label: const Text('View waitlist'),
+                ),
+              ),
             ],
           ),
         ),
