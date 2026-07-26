@@ -333,6 +333,51 @@ detail; dashboard "N bookings awaiting confirmation" banner.
 migration — schedule `expire-unconfirmed-bookings` by hand if pg_cron wasn't
 available). Email is the guaranteed channel today (push/WhatsApp are stubs).
 
-**Later phases:** waitlist (`waitlist_enabled` + a `waitlist_entries` table,
-notify on slot free), analytics (confirmation rate, expired count, avg confirm
-time, waitlist conversion), per-service/staff windows, deposit interaction.
+**Later phases:** waitlist (done — see below), analytics (confirmation rate,
+expired count, avg confirm time, waitlist conversion), per-service/staff
+windows, deposit interaction.
+
+---
+
+## Waitlist (Phase 2)
+
+Customers join a waitlist for a business/service (+ optional pro, date, time or
+range); when a slot frees up, matching customers are notified. Vendors toggle it.
+
+**Schema** (`20260726000003`, `20260726000004`):
+- `waitlist_entries` (service/staff/date/time optional; status
+  active|booked|cancelled|expired; notified_at/notified_count) + RLS (self +
+  business read; writes via RPCs so guests work).
+- `reminder_queue.booking_id` made nullable + `waitlist_entry_id` added, so
+  "spot opened" notices reuse the `process-reminders` pipeline.
+- `save_booking_rules` gains `p_waitlist_enabled`.
+- Guests get column SELECT on `require_confirmation` /
+  `confirmation_window_minutes` / `waitlist_enabled` so the wizard can show the
+  right UI before a booking exists.
+
+**Flow:**
+1. `join_waitlist` / `leave_waitlist` / `get_guest_waitlist` (guest id+phone).
+2. `trg_appointments_waitlist` — on a booking cancelled/no-show from any active
+   state (customer/guest/vendor cancel + Phase-1 confirmation expiry, uniformly),
+   calls `notify_waitlist_for_slot`; on a new active booking, marks the booker's
+   matching entries `booked`.
+3. `notify_waitlist_for_slot` — matches active entries (service/staff/date),
+   honours the vendor toggle + a 30-min per-entry cooldown (so a run of
+   cancellations can't spam), enqueues `waitlist_open`. Entries stay `active`
+   (keep their place) until booked or left.
+4. `process-reminders` renders `waitlist_open` from the `waitlist_entry` (not an
+   appointment) via a shared `deliver()` helper.
+5. `expire_stale_waitlist_entries()` + a daily cron tidies past-date entries.
+
+**Client:** vendor Waitlist toggle in Booking Rules + a `/waitlist` list screen;
+customer "Join the waitlist" CTA on a full/empty day in the wizard (join sheet:
+name/phone, guest id stored on-device); a "Waitlist" tab in My Bookings with a
+Leave action.
+
+**Matching (MVP):** business + service (or any) + preferred date (or any) +
+staff (or any). Time/range is stored but not yet used to filter — a future
+refinement, along with re-notify tuning and waitlist analytics.
+
+**Ops (run manually):** run `20260726000003` + `20260726000004`; redeploy
+`process-reminders`; ensure the daily `expire-stale-waitlist` cron scheduled
+(guarded in the migration).
