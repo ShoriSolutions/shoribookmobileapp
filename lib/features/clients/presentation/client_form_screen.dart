@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/utils/input_hints.dart';
+import '../../../core/utils/phone_input.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../models/customer.dart';
 import '../../business_context/application/active_business_provider.dart';
@@ -149,6 +150,9 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
                       TextFormField(
                         controller: _phone,
                         keyboardType: TextInputType.phone,
+                        inputFormatters: phoneInputFormatters(
+                            ref.watch(activeMembershipProvider).valueOrNull
+                                ?.business.countryCode),
                         decoration: const InputDecoration(
                           labelText: 'Phone',
                           hintText: kPhoneHint,
@@ -161,6 +165,9 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
                       TextFormField(
                         controller: _whatsapp,
                         keyboardType: TextInputType.phone,
+                        inputFormatters: phoneInputFormatters(
+                            ref.watch(activeMembershipProvider).valueOrNull
+                                ?.business.countryCode),
                         decoration: const InputDecoration(
                           labelText: 'WhatsApp number (optional)',
                           hintText: kWhatsAppHint,

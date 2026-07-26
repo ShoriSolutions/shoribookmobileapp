@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/location/address_form.dart';
+import '../../../core/utils/phone_input.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/input_hints.dart';
 import '../../../core/widgets/app_snackbar.dart';
@@ -223,6 +224,7 @@ class _CustomerProfileEditScreenState
               TextField(
                 controller: _phone,
                 keyboardType: TextInputType.phone,
+                inputFormatters: phoneInputFormatters(null),
                 decoration: const InputDecoration(
                   labelText: 'Phone (optional)',
                   hintText: kPhoneHint,

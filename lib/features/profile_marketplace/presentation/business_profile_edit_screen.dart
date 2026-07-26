@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
@@ -9,6 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/time/time_zone_service.dart';
 import '../../../core/time/timezone_picker.dart';
 import '../../../core/utils/input_hints.dart';
+import '../../../core/utils/phone_input.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/osm_map.dart';
 import '../../../models/business.dart';
@@ -471,7 +473,9 @@ class _BusinessProfileEditScreenState
                     _section(context, 'Contact & location'),
                     _field(_phone, 'Phone', canManage,
                         hint: kPhoneHint,
-                        keyboardType: TextInputType.phone),
+                        keyboardType: TextInputType.phone,
+                        inputFormatters:
+                            phoneInputFormatters(membership.business.countryCode)),
                     _field(_email, 'Email', canManage,
                         keyboardType: TextInputType.emailAddress),
                     _field(_address, 'Address / area', canManage,
@@ -546,7 +550,9 @@ class _BusinessProfileEditScreenState
                     _section(context, 'Social links'),
                     _field(_whatsapp, 'WhatsApp number', canManage,
                         hint: kWhatsAppHint,
-                        keyboardType: TextInputType.phone),
+                        keyboardType: TextInputType.phone,
+                        inputFormatters:
+                            phoneInputFormatters(membership.business.countryCode)),
                     _field(_instagram, 'Instagram URL', canManage),
                     _field(_facebook, 'Facebook URL', canManage),
                     _field(_tiktok, 'TikTok URL', canManage),
@@ -685,6 +691,7 @@ class _BusinessProfileEditScreenState
     bool enabled, {
     String? hint,
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -692,6 +699,7 @@ class _BusinessProfileEditScreenState
         controller: c,
         enabled: enabled,
         keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
         decoration: InputDecoration(labelText: label, hintText: hint),
       ),
     );

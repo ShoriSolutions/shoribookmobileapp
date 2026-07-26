@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/input_hints.dart';
+import '../../../core/utils/phone_input.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../models/appointment.dart';
@@ -268,6 +269,7 @@ class _ClientSectionState extends ConsumerState<_ClientSection> {
                   hintText: kPhoneHint,
                 ),
                 keyboardType: TextInputType.phone,
+                inputFormatters: phoneInputFormatters(null),
                 onChanged: (v) => controller.updateNewCustomerField(phone: v),
               ),
               const SizedBox(height: 8),
@@ -277,6 +279,7 @@ class _ClientSectionState extends ConsumerState<_ClientSection> {
                   hintText: kWhatsAppHint,
                 ),
                 keyboardType: TextInputType.phone,
+                inputFormatters: phoneInputFormatters(null),
                 onChanged: (v) => controller.updateNewCustomerField(whatsapp: v),
               ),
               Align(
