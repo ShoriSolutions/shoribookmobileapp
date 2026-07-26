@@ -233,7 +233,8 @@ Deno.serve(async () => {
   const { data: due, error } = await supabase
     .from("reminder_queue")
     .select(
-      "id, booking_id, business_id, user_id, channel, retry_count, kind, payload",
+      "id, booking_id, business_id, user_id, channel, retry_count, kind, " +
+        "payload, waitlist_entry_id",
     )
     .eq("status", "pending")
     .lte("scheduled_for", new Date().toISOString())
@@ -269,8 +270,99 @@ Deno.serve(async () => {
     return email;
   }
 
+  // Send a queue row through its channel (+ fallbacks) and record the outcome.
+  // deno-lint-ignore no-explicit-any
+  async function deliver(
+    row: any,
+    subject: string,
+    message: string,
+    recipient: Recipient,
+  ) {
+    const order = [row.channel, ...(FALLBACK[row.channel] ?? [])];
+    let sent = false;
+    let lastError = "";
+    for (const ch of order) {
+      const provider = providers[ch];
+      if (!provider) continue;
+      const res = await provider.send(recipient, subject, message);
+      if (res.ok) {
+        await supabase.from("reminder_queue").update({
+          status: "sent",
+          sent_at: new Date().toISOString(),
+          channel: ch,
+        }).eq("id", row.id);
+        sent = true;
+        break;
+      }
+      lastError = res.error ?? "send failed";
+    }
+    if (!sent) {
+      const retry = (row.retry_count ?? 0) + 1;
+      await supabase.from("reminder_queue").update({
+        status: retry >= MAX_RETRIES ? "failed" : "pending",
+        retry_count: retry,
+        failed_at: new Date().toISOString(),
+        error_message: lastError,
+      }).eq("id", row.id);
+    }
+  }
+
   let processed = 0;
   for (const row of due ?? []) {
+    // Waitlist "a spot opened" notices aren't tied to an appointment.
+    if (row.kind === "waitlist_open") {
+      const { data: entry } = await supabase
+        .from("waitlist_entries")
+        .select(
+          "id, customer_name, customer_email, service_id, " +
+            "services(name), businesses(name, timezone)",
+        )
+        .eq("id", row.waitlist_entry_id)
+        .maybeSingle();
+      if (!entry) {
+        await supabase.from("reminder_queue").update({
+          status: "failed",
+          failed_at: new Date().toISOString(),
+          error_message: "waitlist entry not found",
+        }).eq("id", row.id);
+        processed++;
+        continue;
+      }
+      // deno-lint-ignore no-explicit-any
+      const w = entry as any;
+      const wTz = w.businesses?.timezone ?? "America/Barbados";
+      const wSvc = w.services?.name ?? "appointment";
+      const wBiz = w.businesses?.name ?? "the business";
+      const slotIso = (row.payload?.start_time as string | undefined);
+      let whenStr = "";
+      if (slotIso) {
+        const d = new Date(slotIso);
+        const day = new Intl.DateTimeFormat("en-US", {
+          timeZone: wTz,
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        }).format(d);
+        const t = new Intl.DateTimeFormat("en-US", {
+          timeZone: wTz,
+          hour: "numeric",
+          minute: "2-digit",
+        }).format(d);
+        whenStr = ` on ${day} at ${t}`;
+      }
+      const subject = `A spot opened for your ${wSvc} booking`;
+      const message =
+        `Great news! A spot has just become available for your requested ` +
+        `${wSvc} at ${wBiz}${whenStr}. Open Shorivo to book now before ` +
+        `someone else does.`;
+      await deliver(row, subject, message, {
+        userId: row.user_id,
+        email: w.customer_email ?? undefined,
+      });
+      processed++;
+      continue;
+    }
+
     // Build the message + recipient from the appointment.
     const { data: appt } = await supabase
       .from("appointments")
@@ -382,34 +474,7 @@ Deno.serve(async () => {
       recipient = { userId: row.user_id, email: a.customer_email ?? undefined };
     }
 
-    const order = [row.channel, ...(FALLBACK[row.channel] ?? [])];
-    let sent = false;
-    let lastError = "";
-    for (const ch of order) {
-      const provider = providers[ch];
-      if (!provider) continue;
-      const res = await provider.send(recipient, subject, message);
-      if (res.ok) {
-        await supabase.from("reminder_queue").update({
-          status: "sent",
-          sent_at: new Date().toISOString(),
-          channel: ch,
-        }).eq("id", row.id);
-        sent = true;
-        break;
-      }
-      lastError = res.error ?? "send failed";
-    }
-
-    if (!sent) {
-      const retry = (row.retry_count ?? 0) + 1;
-      await supabase.from("reminder_queue").update({
-        status: retry >= MAX_RETRIES ? "failed" : "pending",
-        retry_count: retry,
-        failed_at: new Date().toISOString(),
-        error_message: lastError,
-      }).eq("id", row.id);
-    }
+    await deliver(row, subject, message, recipient);
     processed++;
   }
 
