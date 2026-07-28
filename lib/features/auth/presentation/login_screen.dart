@@ -133,7 +133,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 10),
                 ],
-                Text(business ? 'Vendor log in' : 'Welcome back',
+                Text(business ? 'Professionals Login' : 'Welcome back',
                     style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
