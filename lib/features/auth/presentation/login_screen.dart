@@ -16,7 +16,13 @@ import '../application/login_controller.dart';
 /// email + password, forgot-password by deep link, and optional
 /// Apple/Google sign-in.
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.business = false});
+
+  /// When true the screen wears a business/vendor identity (title, copy,
+  /// accent) — same credentials and auth, just tailored so a vendor arriving
+  /// from "Vendor login" knows they're in the right place. The role is still
+  /// resolved server-side after login and routes them to the dashboard.
+  final bool business;
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -60,6 +66,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final loginState = ref.watch(loginControllerProvider);
     final isLoading = loginState.isLoading;
+    final business = widget.business;
 
     return Scaffold(
       body: SafeArea(
@@ -78,14 +85,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       icon: const Icon(Icons.close, color: AppColors.ink),
                       onPressed: _guest,
                     ),
-                    TextButton(
-                      onPressed: _guest,
-                      child: const Text('Continue as guest',
-                          style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.muted)),
-                    ),
+                    // A vendor logging in isn't browsing as a guest.
+                    if (business)
+                      const SizedBox.shrink()
+                    else
+                      TextButton(
+                        onPressed: _guest,
+                        child: const Text('Continue as guest',
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.muted)),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -93,22 +104,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   width: 76,
                   height: 76,
                   decoration: BoxDecoration(
-                    color: AppColors.sageLight,
+                    color: business
+                        ? AppColors.terracottaTint
+                        : AppColors.sageLight,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   alignment: Alignment.center,
-                  child: const ShoriLogo(markSize: 44, showWordmark: false),
+                  child: business
+                      ? const Icon(Icons.storefront,
+                          size: 42, color: AppColors.terracottaDeep)
+                      : const ShoriLogo(markSize: 44, showWordmark: false),
                 ),
                 const SizedBox(height: 20),
-                const Text('Welcome back',
-                    style: TextStyle(
+                if (business) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.terracottaTint,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Text('BUSINESS',
+                        style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                            color: AppColors.terracottaDeep)),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                Text(business ? 'Vendor log in' : 'Welcome back',
+                    style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.5,
                         color: AppColors.ink)),
                 const SizedBox(height: 6),
-                const Text('Log in to sync your bookings and favourites.',
-                    style: TextStyle(fontSize: 15, color: AppColors.muted)),
+                Text(
+                    business
+                        ? 'Access your dashboard, bookings, staff and payments.'
+                        : 'Log in to sync your bookings and favourites.',
+                    style: const TextStyle(
+                        fontSize: 15, color: AppColors.muted)),
                 const SizedBox(height: 28),
                 AuthField(
                   label: 'Email',
@@ -180,19 +217,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 20),
                 Center(
                   child: GestureDetector(
-                    onTap: () => context.push(RoutePaths.register),
-                    child: const Text.rich(
+                    onTap: () => context.push(business
+                        ? RoutePaths.businessRegister
+                        : RoutePaths.register),
+                    child: Text.rich(
                       TextSpan(children: [
                         TextSpan(
-                            text: 'New here? ',
-                            style: TextStyle(color: AppColors.muted)),
+                            text: business ? 'New to Shorivo? ' : 'New here? ',
+                            style: const TextStyle(color: AppColors.muted)),
                         TextSpan(
-                            text: 'Create account',
-                            style: TextStyle(
+                            text:
+                                business ? 'Become a vendor' : 'Create account',
+                            style: const TextStyle(
                                 color: AppColors.sageDark,
                                 fontWeight: FontWeight.w800)),
                       ]),
-                      style: TextStyle(fontSize: 14.5),
+                      style: const TextStyle(fontSize: 14.5),
                     ),
                   ),
                 ),

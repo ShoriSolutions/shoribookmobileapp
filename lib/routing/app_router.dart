@@ -336,7 +336,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RoutePaths.login,
-        pageBuilder: (c, s) => _fadePage(s, const LoginScreen()),
+        pageBuilder: (c, s) => _fadePage(
+          s,
+          LoginScreen(business: s.uri.queryParameters['role'] == 'business'),
+        ),
       ),
       GoRoute(
         path: RoutePaths.forgotPassword,

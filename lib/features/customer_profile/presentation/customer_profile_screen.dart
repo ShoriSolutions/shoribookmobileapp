@@ -50,7 +50,7 @@ class CustomerProfileScreen extends ConsumerWidget {
               _MenuRow(
                 icon: Icons.login,
                 title: 'Vendor login',
-                onTap: () => context.push(RoutePaths.login),
+                onTap: () => context.push('${RoutePaths.login}?role=business'),
               ),
             ]),
             const SizedBox(height: 24),
