@@ -8,6 +8,8 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../models/service.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../staff/application/staff_providers.dart';
+import '../../subscription/application/plan_caps.dart';
+import '../../subscription/presentation/subscription_modal.dart';
 import '../application/services_providers.dart';
 
 class ServiceFormScreen extends ConsumerStatefulWidget {
@@ -92,6 +94,10 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
       final membership = await ref.read(activeMembershipProvider.future);
       if (membership == null) return;
 
+      // Deposits are a paid-tier feature — never persist one on a plan that
+      // doesn't include them (client gate; the toggle is locked in the UI too).
+      final depositsAllowed = ref.read(activePlanCapsProvider).deposits;
+
       final service = Service(
         id: _existing?.id ?? '',
         businessId: membership.business.id,
@@ -103,7 +109,7 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
         durationMinutes: int.tryParse(_duration.text) ?? 60,
         price: double.tryParse(_price.text) ?? 0,
         currency: membership.business.currency,
-        depositRequired: _depositRequired,
+        depositRequired: depositsAllowed && _depositRequired,
         depositAmount: _depositType == 'FIXED'
             ? double.tryParse(_depositAmount.text)
             : null,
@@ -172,6 +178,7 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final caps = ref.watch(activePlanCapsProvider);
     return Scaffold(
       appBar: AppBar(
         title: Text(_existing == null ? 'New service' : 'Edit service'),
@@ -256,13 +263,29 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Require a deposit'),
-                        value: _depositRequired,
-                        onChanged: (v) => setState(() => _depositRequired = v),
-                      ),
-                      if (_depositRequired) ...[
+                      if (caps.deposits)
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Require a deposit'),
+                          value: _depositRequired,
+                          onChanged: (v) =>
+                              setState(() => _depositRequired = v),
+                        )
+                      else
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.lock_outline,
+                              color: AppColors.muted),
+                          title: const Text('Require a deposit'),
+                          subtitle: const Text(
+                              'Deposits are on Solo Pro & Squad'),
+                          trailing: TextButton(
+                            onPressed: () => showSubscriptionModal(context),
+                            child: const Text('Upgrade'),
+                          ),
+                          onTap: () => showSubscriptionModal(context),
+                        ),
+                      if (caps.deposits && _depositRequired) ...[
                         SegmentedButton<String>(
                           segments: const [
                             ButtonSegment(value: 'FIXED', label: Text('Fixed')),

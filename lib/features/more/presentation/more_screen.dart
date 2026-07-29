@@ -13,6 +13,8 @@ import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
 import '../../messaging/application/messaging_providers.dart';
 import '../../staff/application/staff_providers.dart';
+import '../../subscription/application/plan_caps.dart';
+import '../../subscription/presentation/subscription_modal.dart';
 
 /// V12 · More — the hub for everything that isn't day-to-day. Business
 /// card, then grouped Business / Grow / Account menus with the trial state
@@ -29,6 +31,7 @@ class MoreScreen extends ConsumerWidget {
     final canBill = role != null && can(role, Permission.manageBilling);
     final staffCount = ref.watch(staffListProvider).valueOrNull?.length;
     final unread = ref.watch(unreadConversationsProvider);
+    final caps = ref.watch(activePlanCapsProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -64,15 +67,23 @@ class MoreScreen extends ConsumerWidget {
                   icon: Icons.credit_card_outlined,
                   title: 'Deposits & payments',
                   subtitle: 'No-show protection',
-                  onTap: () => context.push(RoutePaths.deposits),
+                  locked: !caps.deposits,
+                  onTap: caps.deposits
+                      ? () => context.push(RoutePaths.deposits)
+                      : () => showSubscriptionModal(context),
                 ),
                 _MenuRow(
                   icon: Icons.storefront_outlined,
                   title: 'Marketplace profile',
-                  subtitle: business != null && business.isMarketplaceListed
-                      ? 'Live'
-                      : 'Not listed',
-                  onTap: () => context.push(RoutePaths.profileMarketplace),
+                  subtitle: !caps.marketplaceListing
+                      ? 'Solo Pro & Squad'
+                      : business != null && business.isMarketplaceListed
+                          ? 'Live'
+                          : 'Not listed',
+                  locked: !caps.marketplaceListing,
+                  onTap: caps.marketplaceListing
+                      ? () => context.push(RoutePaths.profileMarketplace)
+                      : () => showSubscriptionModal(context),
                 ),
               ]),
               const SizedBox(height: 20),
@@ -82,7 +93,10 @@ class MoreScreen extends ConsumerWidget {
                   icon: Icons.show_chart,
                   title: 'Reports',
                   subtitle: 'Revenue & metrics',
-                  onTap: () => context.push(RoutePaths.reports),
+                  locked: !caps.reports,
+                  onTap: caps.reports
+                      ? () => context.push(RoutePaths.reports)
+                      : () => showSubscriptionModal(context),
                 ),
                 _MenuRow(
                   icon: Icons.notifications_none,
@@ -301,6 +315,7 @@ class _MenuRow extends StatelessWidget {
     this.iconTint = AppColors.sageLight,
     this.iconColor = AppColors.sageDark,
     this.danger = false,
+    this.locked = false,
   });
 
   final IconData icon;
@@ -311,6 +326,7 @@ class _MenuRow extends StatelessWidget {
   final Color iconTint;
   final Color iconColor;
   final bool danger;
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -350,7 +366,8 @@ class _MenuRow extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.faint),
+            Icon(locked ? Icons.lock_outline : Icons.chevron_right,
+                size: locked ? 18 : 24, color: AppColors.faint),
           ],
         ),
       ),
