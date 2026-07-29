@@ -479,15 +479,29 @@ vendor) show "Deposit required" / "Deposit expired".
 **Ops (run manually):** run `20260726000008` + `20260726000009`; redeploy
 `process-reminders`; ensure the `expire-pending-deposits` cron scheduled.
 
-**Deferred:**
-- **Phase 2** -- customer guided 4-step flow (deposit required -> FirstPay
-  details w/ copy/share -> upload proof -> submitted), incl. the **guest
-  upload Edge Function** (guests have no session, so they can't write to
-  storage directly).
-- **Phase 3** -- business Deposit Verification dashboard (approve/reject with
-  reason + view image), the expanded Payment Settings (deposit type/amount,
-  per-service vs all, auto-expiry picker, manual approval), and status badges
-  for the deposit sub-states across the app.
+### Phase 2 -- customer guided flow (done)
+- `get_deposit_payment_details` (`20260726000010`): returns the business
+  FirstPay details + deposit summary to a customer who owns a pending_deposit
+  booking (authed, or guest via id+phone) -- the sanctioned exception to the
+  OWNER/ADMIN-only payment rule.
+- **submit-deposit-proof** Edge Function: guests (no session) upload proof by
+  appointment id + phone; validates, stores the image, records the submission,
+  audits, notifies the vendor via the service role. **Deploy:**
+  `supabase functions deploy submit-deposit-proof --no-verify-jwt`.
+- Client: `DepositFlowScreen` (`/deposit/:id`, `DepositFlowArgs`) -- guided
+  4-step flow (Deposit required -> FirstPay details w/ copy + share -> upload
+  proof from camera/library w/ preview + reference/notes -> submitted).
+  DepositFlowRepository picks the path: authed = storage upload +
+  `submit_deposit` RPC; guest = the edge function. Entered from the booking
+  wizard ("Pay deposit" CTA after a deposit booking) and from My Bookings
+  ("Pay deposit" on a pending_deposit booking).
+- **Ops:** run `20260726000010`; deploy `submit-deposit-proof`.
+
+**Deferred to Phase 3:** business Deposit Verification dashboard (approve/reject
+with reason + view proof image) -- the RPCs (`approve_deposit` / `reject_deposit`)
+already exist; expanded Payment Settings (deposit type/amount, per-service vs
+all, auto-expiry picker, manual approval); provider selection (WiPay / bank /
+card).
 
 ### Phase 2 (client-only, no migration)
 Shared `depositCapabilityProvider` (enabled / needsPayment / needsPlan) drives:
