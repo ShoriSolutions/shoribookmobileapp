@@ -405,3 +405,39 @@ denominator is 0).
 This completes the original Confirmation / Auto-cancel / Waitlist spec. Possible
 follow-ups: trend charts over time, per-service breakdowns, and time/range-aware
 waitlist matching.
+
+---
+
+## Payment profiles + deposit prerequisite (FirstPay) -- Phase 1
+
+A business must complete a **FirstPay** payment profile before it can require
+deposits. Layered on the existing tier gate: deposits need **both** a plan that
+includes them (Solo Pro/Squad) **and** a ready payment method.
+
+**Schema** (`20260726000007`): `payment_profiles` -- one row per
+(business, provider); provider-specific fields in `details` JSONB (FirstPay:
+account_holder_name / account_number / email) + optional deposit_instructions /
+payment_notes. OWNER/ADMIN-only RLS; never exposed to anon/customers.
+- `payment_profile_ready(provider, details)` -- per-provider required-field rule
+  (only FirstPay implemented).
+- `business_has_ready_payment_method(business_id)` -- used by the trigger + app.
+- `save_payment_profile(...)` RPC (OWNER/ADMIN) -- upsert, returns status.
+- `trg_enforce_deposit_requires_payment` on services -- blocks setting
+  `deposit_required = true` (insert or false->true) unless a ready method exists
+  (`payment_setup_required`). Turning deposits off is always allowed.
+
+**Client:** PaymentProfile model (typed FirstPay getters, `PaymentStatus`,
+account masking), PaymentRepository + `firstPayProfileProvider` /
+`depositReadyProvider`; **Payment Settings** screen (`/payment-settings`, masked
+account number, status badge) in More > Business with a status subtitle; the
+service-form deposit toggle shows the **"Complete your FirstPay setup first"**
+dialog (Set Up FirstPay / Cancel) when the plan allows deposits but FirstPay
+isn't ready, with the server trigger as the backstop.
+
+**Ops (run manually):** run `20260726000007`.
+
+**Deferred to Phase 2:** dashboard "Complete your payment setup" reminder card,
+the deposit status line in Business Settings, and the profile completion
+checklist. **Future providers:** WiPay / bank transfer / card each get a
+readiness rule in `payment_profile_ready` + a form; the table + gate already
+support "any ready method enables deposits".
