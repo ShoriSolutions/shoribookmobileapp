@@ -35,6 +35,10 @@ class Business {
   final bool requireConfirmation;
   final int confirmationWindowMinutes;
   final bool waitlistEnabled; // reserved for Phase 2 (waitlist notifications)
+  // Deposit settings: auto-expiry window for unsubmitted deposits (null = off)
+  // and whether every service requires a deposit.
+  final int? depositExpiryMinutes;
+  final bool requireDepositAllServices;
   // 'none' | 'trialing' | 'trial_pending' | 'active' | 'past_due' | 'canceled'
   final String subscriptionStatus;
   final DateTime? trialEndsAt;
@@ -85,6 +89,8 @@ class Business {
     this.requireConfirmation = false,
     this.confirmationWindowMinutes = 120,
     this.waitlistEnabled = false,
+    this.depositExpiryMinutes,
+    this.requireDepositAllServices = false,
     this.subscriptionStatus = 'none',
     this.trialEndsAt,
     this.autoRenew = true,
@@ -156,6 +162,9 @@ class Business {
     confirmationWindowMinutes:
         json['confirmation_window_minutes'] as int? ?? 120,
     waitlistEnabled: json['waitlist_enabled'] as bool? ?? false,
+    depositExpiryMinutes: json['deposit_expiry_minutes'] as int?,
+    requireDepositAllServices:
+        json['require_deposit_all_services'] as bool? ?? false,
     subscriptionStatus: json['subscription_status'] as String? ?? 'none',
     trialEndsAt: json['trial_ends_at'] == null
         ? null
@@ -218,6 +227,8 @@ class Business {
     'require_confirmation': requireConfirmation,
     'confirmation_window_minutes': confirmationWindowMinutes,
     'waitlist_enabled': waitlistEnabled,
+    'deposit_expiry_minutes': depositExpiryMinutes,
+    'require_deposit_all_services': requireDepositAllServices,
     'subscription_status': subscriptionStatus,
     'trial_ends_at': trialEndsAt?.toIso8601String(),
     'auto_renew': autoRenew,

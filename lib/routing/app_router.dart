@@ -57,6 +57,7 @@ import '../features/settings/presentation/settings_screen.dart';
 import '../features/staff/presentation/invite_staff_screen.dart';
 import '../features/staff/presentation/staff_detail_screen.dart';
 import '../features/deposit_flow/presentation/deposit_flow_screen.dart';
+import '../features/deposit_verification/presentation/deposit_verification_screen.dart';
 import '../features/payments/presentation/payment_settings_screen.dart';
 import '../features/setup/presentation/setup_checklist_screen.dart';
 import '../features/staff/presentation/staff_list_screen.dart';
@@ -114,6 +115,7 @@ bool _isOwnerModePath(String path) {
       path == RoutePaths.waitlist ||
       path == RoutePaths.paymentSettings ||
       path == RoutePaths.setupChecklist ||
+      path == RoutePaths.depositVerification ||
       path == RoutePaths.profileMarketplace ||
       path == RoutePaths.editBusinessProfile ||
       path == RoutePaths.notificationSettings ||
@@ -532,6 +534,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.setupChecklist,
         builder: (c, s) => const SetupChecklistScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.depositVerification,
+        builder: (c, s) => const DepositVerificationScreen(),
       ),
       GoRoute(
         path: '/deposit/:id',

@@ -14,6 +14,7 @@ import '../../../models/staff_profile.dart';
 import '../../../routing/route_paths.dart';
 import '../../messaging/application/messaging_providers.dart';
 import '../../app_mode/application/app_mode_provider.dart';
+import '../../deposit_verification/application/deposit_verification_providers.dart';
 import '../../payments/application/payment_providers.dart';
 import '../../booking_link/presentation/booking_share_sheet.dart';
 import '../../business_context/application/active_business_provider.dart';
@@ -74,6 +75,11 @@ class DashboardScreen extends ConsumerWidget {
                     DepositCapability.needsPayment) ...[
                   const SizedBox(height: 12),
                   _paymentSetupBanner(context),
+                ],
+                if (ref.watch(pendingDepositsCountProvider) > 0) ...[
+                  const SizedBox(height: 12),
+                  _depositReviewBanner(
+                      context, ref.watch(pendingDepositsCountProvider)),
                 ],
                 const SizedBox(height: 22),
                 Row(
@@ -293,6 +299,44 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
             const Text('Complete',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.terracottaDeep)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Actionable alert when deposits are waiting to be verified.
+  Widget _depositReviewBanner(BuildContext context, int count) {
+    return GestureDetector(
+      onTap: () => context.push(RoutePaths.depositVerification),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.terracottaTint,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.terracottaTintBorder),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.fact_check_outlined,
+                size: 20, color: AppColors.terracottaDeep),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                count == 1
+                    ? '1 deposit to review'
+                    : '$count deposits to review',
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.terracottaDeep),
+              ),
+            ),
+            const Text('Review',
                 style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,

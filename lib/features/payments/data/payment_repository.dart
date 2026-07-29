@@ -49,6 +49,24 @@ class PaymentRepository {
     }
   }
 
+  /// Saves the business-level deposit settings (auto-expiry window in minutes,
+  /// null = off; and whether every service requires a deposit).
+  Future<void> saveDepositSettings({
+    required String businessId,
+    required int? expiryMinutes,
+    required bool requireAll,
+  }) async {
+    try {
+      await _client.rpc('save_deposit_settings', params: {
+        'p_business_id': businessId,
+        'p_expiry_minutes': expiryMinutes,
+        'p_require_all': requireAll,
+      });
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   /// Whether the business has any fully-configured payment method (so deposits
   /// can be enabled). Mirrors the server-side prerequisite.
   Future<bool> hasReadyPaymentMethod(String businessId) async {

@@ -28,7 +28,12 @@ class _PaymentSettingsScreenState
   final _notes = TextEditingController();
   bool _obscureAccount = true;
   bool _seeded = false;
+  bool _depositSeeded = false;
+  int? _expiryMinutes;
+  bool _requireAll = false;
   bool _saving = false;
+
+  static const _expiryPresets = <int?>[null, 30, 60, 120, 360, 720, 1440];
 
   @override
   void dispose() {
@@ -38,6 +43,13 @@ class _PaymentSettingsScreenState
     _instructions.dispose();
     _notes.dispose();
     super.dispose();
+  }
+
+  static String _expiryLabel(int? m) {
+    if (m == null) return 'Off';
+    if (m % 1440 == 0) return '${m ~/ 1440 * 24}h';
+    if (m % 60 == 0) return '${m ~/ 60}h';
+    return '${m}m';
   }
 
   void _seed(PaymentProfile? p) {
@@ -72,8 +84,14 @@ class _PaymentSettingsScreenState
             depositInstructions: _instructions.text.trim(),
             paymentNotes: _notes.text.trim(),
           );
+      await ref.read(paymentRepositoryProvider).saveDepositSettings(
+            businessId: membership.business.id,
+            expiryMinutes: _expiryMinutes,
+            requireAll: _requireAll,
+          );
       ref.invalidate(firstPayProfileProvider);
       ref.invalidate(depositReadyProvider);
+      ref.invalidate(activeMembershipProvider);
       if (mounted) {
         showAppSnackBar(context,
             message: status == 'ready'
@@ -103,6 +121,13 @@ class _PaymentSettingsScreenState
         ),
         data: (profile) {
           if (!_seeded) _seed(profile);
+          final business =
+              ref.watch(activeMembershipProvider).valueOrNull?.business;
+          if (!_depositSeeded && business != null) {
+            _expiryMinutes = business.depositExpiryMinutes;
+            _requireAll = business.requireDepositAllServices;
+            _depositSeeded = true;
+          }
           final status = PaymentProfile.statusFor(profile);
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -154,6 +179,35 @@ class _PaymentSettingsScreenState
               const SizedBox(height: 16),
               const _FieldLabel('Business payment notes'),
               _field(_notes, hint: 'Private notes for your team', lines: 3),
+              const SizedBox(height: 24),
+              Text('Deposit settings',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Card(
+                margin: EdgeInsets.zero,
+                child: SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                  title: const Text('Require a deposit for all services'),
+                  subtitle: const Text(
+                      'Apply to every service (otherwise set it per service).'),
+                  value: _requireAll,
+                  onChanged: (v) => setState(() => _requireAll = v),
+                ),
+              ),
+              const SizedBox(height: 14),
+              const _FieldLabel('Auto-cancel if no deposit within'),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  for (final m in _expiryPresets)
+                    ChoiceChip(
+                      label: Text(_expiryLabel(m)),
+                      selected: _expiryMinutes == m,
+                      onSelected: (_) => setState(() => _expiryMinutes = m),
+                    ),
+                ],
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,

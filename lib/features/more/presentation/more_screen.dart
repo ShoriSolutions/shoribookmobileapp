@@ -12,6 +12,7 @@ import '../../auth/application/auth_providers.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
 import '../../../models/payment_profile.dart';
+import '../../deposit_verification/application/deposit_verification_providers.dart';
 import '../../messaging/application/messaging_providers.dart';
 import '../../payments/application/payment_providers.dart';
 import '../../staff/application/staff_providers.dart';
@@ -39,6 +40,7 @@ class MoreScreen extends ConsumerWidget {
     // Nudge only businesses whose plan can actually use deposits.
     final payNeedsSetup =
         caps.deposits && payStatus != PaymentStatus.ready;
+    final pendingDeposits = ref.watch(pendingDepositsCountProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -93,6 +95,18 @@ class MoreScreen extends ConsumerWidget {
                       payNeedsSetup ? AppColors.terracottaDeep : null,
                   onTap: () => context.push(RoutePaths.paymentSettings),
                 ),
+                if (caps.deposits)
+                  _MenuRow(
+                    icon: Icons.fact_check_outlined,
+                    title: 'Deposit verification',
+                    subtitle: pendingDeposits > 0
+                        ? '$pendingDeposits awaiting review'
+                        : 'Review deposit proofs',
+                    subtitleColor:
+                        pendingDeposits > 0 ? AppColors.terracottaDeep : null,
+                    onTap: () =>
+                        context.push(RoutePaths.depositVerification),
+                  ),
                 _MenuRow(
                   icon: Icons.storefront_outlined,
                   title: 'Marketplace profile',
