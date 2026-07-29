@@ -440,6 +440,55 @@ isn't ready, with the server trigger as the backstop.
 `payment_profile_ready` + a form; the table + gate already support "any ready
 method enables deposits".
 
+---
+
+## Deposit Verification Flow (FirstPay) -- Phase 1 (backend)
+
+Customers submit **proof of an out-of-band deposit**; the business approves or
+rejects it, which confirms or holds the booking. Composes with the FirstPay
+profile (Step 2 shows those details), the deposit tier/FirstPay gate, and the
+waitlist (an expired deposit cancel notifies the waitlist automatically).
+
+**Schema** (`20260726000008`): `deposit_submissions` (proof_path, reference,
+notes, amount, status submitted|approved|rejected|expired|superseded, reject
+reason/notes, reviewer) + `deposit_audit_log`; appointments `pending_deposit`
+status + `deposit_deadline`; businesses `deposit_expiry_minutes` +
+`require_deposit_all_services`; private `deposit-proofs` storage bucket with
+path-scoped RLS (`<business_id>/<appointment_id>/<file>` -- business reads its
+own, the authed customer reads/writes their own).
+
+**Logic** (`20260726000009`):
+- `set_pending_deposit` (BEFORE INSERT) routes online deposit bookings into
+  `pending_deposit` with a deadline -- no rewrite of
+  `create_customer_appointment_safe`. `generate_reminders` skips it (reminders
+  start once confirmed).
+- `submit_deposit` (authed) records a submission + notifies the vendor;
+  `approve_deposit` -> booking `confirmed` (deposit PAID); `reject_deposit`
+  (reason required) -> stays `pending_deposit` so the customer can resubmit.
+  All write `deposit_audit_log` and notify via the reminder pipeline.
+- `expire_pending_deposits()` + per-minute cron: cancels
+  (`cancellation_reason='deposit_expired'`) only when no proof is awaiting
+  review; the existing cancel triggers handle waitlist + reminder cleanup.
+- `process-reminders` renders deposit_submitted_vendor /
+  deposit_approved_customer / deposit_rejected_customer / deposit_expired_customer.
+
+**Client (Phase 1):** Appointment model gains `pending_deposit` /
+`deposit_deadline` / `wasDepositExpired`; status badges (customer card + detail,
+vendor) show "Deposit required" / "Deposit expired".
+
+**Ops (run manually):** run `20260726000008` + `20260726000009`; redeploy
+`process-reminders`; ensure the `expire-pending-deposits` cron scheduled.
+
+**Deferred:**
+- **Phase 2** -- customer guided 4-step flow (deposit required -> FirstPay
+  details w/ copy/share -> upload proof -> submitted), incl. the **guest
+  upload Edge Function** (guests have no session, so they can't write to
+  storage directly).
+- **Phase 3** -- business Deposit Verification dashboard (approve/reject with
+  reason + view image), the expanded Payment Settings (deposit type/amount,
+  per-service vs all, auto-expiry picker, manual approval), and status badges
+  for the deposit sub-states across the app.
+
 ### Phase 2 (client-only, no migration)
 Shared `depositCapabilityProvider` (enabled / needsPayment / needsPlan) drives:
 - **Dashboard reminder card** — "Complete your payment setup" -> Payment

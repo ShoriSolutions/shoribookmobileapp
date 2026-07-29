@@ -7,6 +7,9 @@ class AppointmentStatus {
   // Awaiting the customer's confirmation before a set deadline; auto-cancels
   // (status -> cancelled, reason 'confirmation_expired') if not confirmed.
   static const pendingConfirmation = 'pending_confirmation';
+  // Awaiting deposit verification: customer must submit proof of a deposit and
+  // the business must approve it before the booking is confirmed.
+  static const pendingDeposit = 'pending_deposit';
   static const completed = 'completed';
   static const cancelled = 'cancelled';
   static const noShow = 'no_show';
@@ -15,16 +18,17 @@ class AppointmentStatus {
     pending,
     confirmed,
     pendingConfirmation,
+    pendingDeposit,
     completed,
     cancelled,
     noShow,
   ];
 }
 
-/// Cancellation reason values written by the server. 'confirmation_expired'
-/// is set when a pending_confirmation booking passes its deadline.
+/// Cancellation reason values written by the server.
 class CancellationReason {
   static const confirmationExpired = 'confirmation_expired';
+  static const depositExpired = 'deposit_expired';
 }
 
 class DepositStatus {
@@ -113,6 +117,7 @@ class Appointment {
   final DateTime? confirmationDeadline;
   final DateTime? confirmedAt;
   final String? cancellationReason;
+  final DateTime? depositDeadline; // deadline to submit deposit proof
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -161,6 +166,7 @@ class Appointment {
     this.confirmationDeadline,
     this.confirmedAt,
     this.cancellationReason,
+    this.depositDeadline,
     required this.createdAt,
     required this.updatedAt,
     this.serviceName,
@@ -189,6 +195,14 @@ class Appointment {
   bool get wasConfirmationExpired =>
       status == AppointmentStatus.cancelled &&
       cancellationReason == CancellationReason.confirmationExpired;
+
+  /// Awaiting a deposit to be submitted/verified before it can be confirmed.
+  bool get isPendingDeposit => status == AppointmentStatus.pendingDeposit;
+
+  /// Cancelled specifically because the deposit deadline elapsed.
+  bool get wasDepositExpired =>
+      status == AppointmentStatus.cancelled &&
+      cancellationReason == CancellationReason.depositExpired;
 
   factory Appointment.fromJson(Map<String, dynamic> json) {
     final service = json['services'] as Map<String, dynamic>?;
@@ -245,6 +259,9 @@ class Appointment {
           ? DateTime.parse(json['confirmed_at'] as String)
           : null,
       cancellationReason: json['cancellation_reason'] as String?,
+      depositDeadline: json['deposit_deadline'] != null
+          ? DateTime.parse(json['deposit_deadline'] as String)
+          : null,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
       serviceName: service?['name'] as String?,
@@ -276,6 +293,7 @@ const String appointmentSelectColumns = '''
   customer_name, customer_phone, customer_email, customer_timezone, notes,
   booking_source, internal_notes,
   confirmation_required, confirmation_deadline, confirmed_at, cancellation_reason,
+  deposit_deadline,
   created_at, updated_at,
   services!appointments_service_id_fkey ( name ),
   staff_profiles!appointments_staff_profile_id_fkey ( name, role ),
@@ -295,6 +313,7 @@ const String customerAppointmentSelectColumns = '''
   customer_name, customer_phone, customer_email, customer_timezone, notes,
   booking_source, internal_notes,
   confirmation_required, confirmation_deadline, confirmed_at, cancellation_reason,
+  deposit_deadline,
   created_at, updated_at,
   services!appointments_service_id_fkey ( name ),
   staff_profiles!appointments_staff_profile_id_fkey ( name, role ),

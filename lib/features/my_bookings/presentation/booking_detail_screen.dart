@@ -459,7 +459,11 @@ class BookingDetailScreen extends ConsumerWidget {
     switch (a.status) {
       case AppointmentStatus.cancelled:
         return (
-          a.wasConfirmationExpired ? 'Confirmation expired' : 'Cancelled',
+          a.wasConfirmationExpired
+              ? 'Confirmation expired'
+              : a.wasDepositExpired
+                  ? 'Deposit expired'
+                  : 'Cancelled',
           AppColors.closedBg,
           AppColors.closedText,
           Icons.cancel_outlined
@@ -473,6 +477,9 @@ class BookingDetailScreen extends ConsumerWidget {
       case AppointmentStatus.pendingConfirmation:
         return ('Awaiting confirmation', AppColors.terracottaTint,
             AppColors.terracottaDeep, Icons.hourglass_top);
+      case AppointmentStatus.pendingDeposit:
+        return ('Deposit required', AppColors.terracottaTint,
+            AppColors.terracottaDeep, Icons.receipt_long_outlined);
       case AppointmentStatus.pending:
         return ('Pending', AppColors.terracottaTint, AppColors.terracottaDeep,
             Icons.hourglass_empty);

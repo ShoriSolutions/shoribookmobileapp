@@ -11,6 +11,7 @@ class StatusColors {
     switch (status) {
       case 'pending':
       case 'pending_confirmation':
+      case 'pending_deposit':
         return AppColors.terracotta;
       case 'confirmed':
         return AppColors.sage;
@@ -32,10 +33,14 @@ class StatusColors {
     switch (status) {
       case 'pending_confirmation':
         return 'Awaiting confirmation';
+      case 'pending_deposit':
+        return 'Awaiting deposit';
       case 'cancelled':
-        return cancellationReason == 'confirmation_expired'
-            ? 'Confirmation expired'
-            : 'Cancelled';
+        return switch (cancellationReason) {
+          'confirmation_expired' => 'Confirmation expired',
+          'deposit_expired' => 'Deposit expired',
+          _ => 'Cancelled',
+        };
       case 'no_show':
         return 'No-show';
       default:
