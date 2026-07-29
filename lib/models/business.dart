@@ -39,6 +39,11 @@ class Business {
   // and whether every service requires a deposit.
   final int? depositExpiryMinutes;
   final bool requireDepositAllServices;
+  // Review rollup (avg + count are public; negatives/quality are vendor/admin).
+  final double ratingAvg;
+  final int ratingCount;
+  final int ratingNegativeCount;
+  final String? qualityStatus;
   // 'none' | 'trialing' | 'trial_pending' | 'active' | 'past_due' | 'canceled'
   final String subscriptionStatus;
   final DateTime? trialEndsAt;
@@ -91,6 +96,10 @@ class Business {
     this.waitlistEnabled = false,
     this.depositExpiryMinutes,
     this.requireDepositAllServices = false,
+    this.ratingAvg = 0,
+    this.ratingCount = 0,
+    this.ratingNegativeCount = 0,
+    this.qualityStatus,
     this.subscriptionStatus = 'none',
     this.trialEndsAt,
     this.autoRenew = true,
@@ -165,6 +174,10 @@ class Business {
     depositExpiryMinutes: json['deposit_expiry_minutes'] as int?,
     requireDepositAllServices:
         json['require_deposit_all_services'] as bool? ?? false,
+    ratingAvg: (json['rating_avg'] as num?)?.toDouble() ?? 0,
+    ratingCount: json['rating_count'] as int? ?? 0,
+    ratingNegativeCount: json['rating_negative_count'] as int? ?? 0,
+    qualityStatus: json['quality_status'] as String?,
     subscriptionStatus: json['subscription_status'] as String? ?? 'none',
     trialEndsAt: json['trial_ends_at'] == null
         ? null
@@ -229,6 +242,10 @@ class Business {
     'waitlist_enabled': waitlistEnabled,
     'deposit_expiry_minutes': depositExpiryMinutes,
     'require_deposit_all_services': requireDepositAllServices,
+    'rating_avg': ratingAvg,
+    'rating_count': ratingCount,
+    'rating_negative_count': ratingNegativeCount,
+    'quality_status': qualityStatus,
     'subscription_status': subscriptionStatus,
     'trial_ends_at': trialEndsAt?.toIso8601String(),
     'auto_renew': autoRenew,
@@ -258,6 +275,7 @@ const String businessMarketplaceColumns = '''
   featured_requested, buffer_minutes, max_bookings_per_day,
   max_bookings_per_hour, max_simultaneous_bookings,
   require_confirmation, confirmation_window_minutes, waitlist_enabled,
+  rating_avg, rating_count,
   subscription_status,
   trial_ends_at, auto_renew, billing_period, current_period_end,
   subscription_package_id, country_code, name_category_locked_until, status,

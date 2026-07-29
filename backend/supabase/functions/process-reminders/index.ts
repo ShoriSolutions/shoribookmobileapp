@@ -471,6 +471,21 @@ Deno.serve(async () => {
         `cancelled because the deposit wasn't submitted in time. You're ` +
         `welcome to book another available time in Shorivo.`;
       recipient = { userId: row.user_id, email: a.customer_email ?? undefined };
+    } else if (kind === "review_request") {
+      subject = `How was your appointment with ${biz}?`;
+      message =
+        `How was your ${svc} with ${biz} on ${date}? Share your experience to ` +
+        `help other customers and support quality service on Shorivo. Open the ` +
+        `app to leave a review.`;
+      recipient = { userId: row.user_id, email: a.customer_email ?? undefined };
+    } else if (kind === "review_new") {
+      const ownerEmail = await ownerEmailFor(a.businesses?.owner_id);
+      const stars = Number(row.payload?.rating ?? 0);
+      subject = `You received a new review`;
+      message =
+        `${a.customer_name ?? "A customer"} left a ${stars}-star review for ` +
+        `their ${svc} on ${date}. Open Shorivo to read it and reply.`;
+      recipient = { userId: row.user_id, email: ownerEmail };
     } else {
       // Default: pre-appointment reminder (vendor template).
       const settings = await settingsFor(row.business_id);

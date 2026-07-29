@@ -517,6 +517,38 @@ stored + saved but not yet enforced at booking time (per-service deposits are
 the source of truth today); provider selection (WiPay / bank / card) remains the
 open future-compatibility item.
 
+---
+
+## Customer Review System -- Phase 1 (backend)
+
+Customers review a **completed** appointment (1-5 stars + text). Thresholds live
+in `app_config` (tunable without a deploy): `review_low_rating_min_words` (75),
+`review_min_for_evaluation` (20), `review_nrr_warning` (0.30),
+`review_nrr_investigation` (0.50), `review_edit_window_hours` (24).
+
+**Schema** (`20260726000012`): `reviews` (1 per appointment; rating + body;
+status published/reported/flagged/removed/hidden; business_reply; is_flagged).
+Public-read RLS (published to everyone; author/business/admin see the rest).
+Business rating rollup on `businesses` (`rating_avg` / `rating_count` via a
+trigger; `rating_negative_count` + `quality_status` for later) -- avg + count
+granted to anon for the marketplace.
+
+**RPCs:** `submit_review` (completed-only; a 1-2 star rating requires >= the
+configured word count; one per appointment; notifies the vendor),
+`edit_review` (within the edit window), `reply_to_review` (OWNER/ADMIN),
+`report_own_review`. A **review request** is queued when an appointment is
+completed (trigger -> `reminder_queue` `review_request`, deduped).
+`process-reminders` renders `review_request` (customer) + `review_new` (vendor).
+Business model gains `ratingAvg`/`ratingCount` (+ negatives/quality for vendor).
+
+**Ops:** run `20260726000012`; redeploy `process-reminders`.
+
+**Deferred:** Phase 2 -- customer review UI (stars, low-rating word gate, edit/
+report; reviews on the business profile) + vendor "Customer Feedback" dashboard
+(avg/count/recent + reply). Phase 3 -- quality monitoring (NRR, health status,
+business warning, admin moderation cases + audit) and abuse detection; admin
+*actions* live in the web admin.
+
 ### Phase 2 (client-only, no migration)
 Shared `depositCapabilityProvider` (enabled / needsPayment / needsPlan) drives:
 - **Dashboard reminder card** — "Complete your payment setup" -> Payment
