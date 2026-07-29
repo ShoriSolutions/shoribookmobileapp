@@ -442,6 +442,35 @@ Deno.serve(async () => {
         `${a.customer_name ?? "Customer"}\nService: ${svc}\n` +
         `Time: ${date} at ${time}`;
       recipient = { userId: row.user_id, email: ownerEmail };
+    } else if (kind === "deposit_submitted_vendor") {
+      const ownerEmail = await ownerEmailFor(a.businesses?.owner_id);
+      subject = `New deposit received`;
+      message =
+        `${a.customer_name ?? "A customer"} has submitted proof of payment ` +
+        `for:\n\n${svc}\n${date} at ${time}\n\nReview it in Shorivo to ` +
+        `confirm the booking.`;
+      recipient = { userId: row.user_id, email: ownerEmail };
+    } else if (kind === "deposit_approved_customer") {
+      subject = `Your ${svc} booking is confirmed`;
+      message =
+        `Your deposit has been verified and your appointment with ${biz} on ` +
+        `${date} at ${time} is now confirmed. See you then!`;
+      recipient = { userId: row.user_id, email: a.customer_email ?? undefined };
+    } else if (kind === "deposit_rejected_customer") {
+      subject = `Your deposit couldn't be verified`;
+      message =
+        `Your deposit for ${svc} with ${biz} couldn't be verified.\n\n` +
+        `Reason: ${(row.payload?.reason as string | undefined) ?? "Not specified"}` +
+        `\n\nPlease open Shorivo and upload a new proof of payment to keep ` +
+        `your booking.`;
+      recipient = { userId: row.user_id, email: a.customer_email ?? undefined };
+    } else if (kind === "deposit_expired_customer") {
+      subject = `Your ${svc} booking was cancelled`;
+      message =
+        `Your ${svc} appointment with ${biz} on ${date} at ${time} was ` +
+        `cancelled because the deposit wasn't submitted in time. You're ` +
+        `welcome to book another available time in Shorivo.`;
+      recipient = { userId: row.user_id, email: a.customer_email ?? undefined };
     } else {
       // Default: pre-appointment reminder (vendor template).
       const settings = await settingsFor(row.business_id);
