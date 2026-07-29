@@ -56,6 +56,7 @@ import '../features/settings/presentation/account_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/staff/presentation/invite_staff_screen.dart';
 import '../features/staff/presentation/staff_detail_screen.dart';
+import '../features/deposit_flow/presentation/deposit_flow_screen.dart';
 import '../features/payments/presentation/payment_settings_screen.dart';
 import '../features/setup/presentation/setup_checklist_screen.dart';
 import '../features/staff/presentation/staff_list_screen.dart';
@@ -92,7 +93,8 @@ bool _isCustomerModePath(String path) {
       path == RoutePaths.account ||
       path.startsWith('${RoutePaths.account}/') ||
       path.startsWith('/business/') ||
-      path.startsWith('/book/');
+      path.startsWith('/book/') ||
+      path.startsWith('/deposit/');
 }
 
 /// True for any route that belongs to the Business Owner/Staff shell.
@@ -530,6 +532,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.setupChecklist,
         builder: (c, s) => const SetupChecklistScreen(),
+      ),
+      GoRoute(
+        path: '/deposit/:id',
+        builder: (c, s) {
+          final args = s.extra as DepositFlowArgs?;
+          return DepositFlowScreen(
+            appointmentId: s.pathParameters['id']!,
+            businessId: args?.businessId ?? '',
+            guestPhone: args?.guestPhone,
+          );
+        },
       ),
       GoRoute(
         path: RoutePaths.notificationPreferences,

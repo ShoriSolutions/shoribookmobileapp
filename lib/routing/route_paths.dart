@@ -77,4 +77,5 @@ class RoutePaths {
   static String bookingWizardService(String slug, String serviceId) =>
       '/book/$slug?service=$serviceId';
   static String bookingDetail(String id) => '/bookings/$id';
+  static String depositFlow(String id) => '/deposit/$id';
 }

@@ -17,6 +17,7 @@ import '../../../core/widgets/osm_map.dart';
 import '../../../models/appointment.dart';
 import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
+import '../../deposit_flow/presentation/deposit_flow_screen.dart';
 import '../../marketplace/presentation/widgets/category_visuals.dart';
 import '../../messaging/application/messaging_providers.dart';
 import '../application/my_bookings_providers.dart';
@@ -338,6 +339,46 @@ class BookingDetailScreen extends ConsumerWidget {
                   ),
                 ],
                 const SizedBox(height: 16),
+                if (appt.isPendingDeposit && canManage) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.terracottaTint,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.receipt_long_outlined,
+                            size: 18, color: AppColors.terracottaDeep),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'A deposit is required to confirm this booking. '
+                            'Submit your proof of payment to secure it.',
+                            style: TextStyle(
+                                fontSize: 13, height: 1.4, color: AppColors.ink),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _ActionBtn(
+                    label: 'Pay deposit',
+                    icon: Icons.receipt_long_outlined,
+                    bg: AppColors.terracotta,
+                    fg: Colors.white,
+                    onTap: () => context.push(
+                      RoutePaths.depositFlow(appt.id),
+                      extra: DepositFlowArgs(
+                        businessId: appt.businessId,
+                        guestPhone: signedIn ? null : guestPhone,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 if (appt.isPendingConfirmation && canManage) ...[
                   Container(
                     padding: const EdgeInsets.all(12),

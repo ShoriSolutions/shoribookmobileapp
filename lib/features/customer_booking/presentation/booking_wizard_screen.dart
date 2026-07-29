@@ -22,6 +22,7 @@ import '../../auth/application/auth_providers.dart';
 import '../../guest_prompt/presentation/guest_account_prompt.dart';
 import '../../marketplace/application/marketplace_providers.dart';
 import '../../marketplace/presentation/widgets/category_visuals.dart';
+import '../../deposit_flow/presentation/deposit_flow_screen.dart';
 import '../../waitlist/presentation/join_waitlist_sheet.dart';
 import '../application/booking_wizard_controller.dart';
 import '../application/booking_wizard_state.dart';
@@ -1358,6 +1359,103 @@ class _ConfirmScreenState extends ConsumerState<_ConfirmScreen> {
   }
 }
 
+/// Shown after a deposit-required booking is created: the slot is reserved but
+/// needs a deposit, so we send the customer into the guided deposit flow.
+class _DepositRequiredCta extends StatelessWidget {
+  const _DepositRequiredCta({
+    required this.appointmentId,
+    required this.businessId,
+    required this.currency,
+    this.guestPhone,
+    this.amount,
+  });
+
+  final String appointmentId;
+  final String businessId;
+  final String currency;
+  final String? guestPhone;
+  final double? amount;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+              children: [
+                Center(
+                  child: Container(
+                    width: 92,
+                    height: 92,
+                    decoration: const BoxDecoration(
+                        color: AppColors.terracottaTint, shape: BoxShape.circle),
+                    child: const Icon(Icons.receipt_long_outlined,
+                        color: AppColors.terracottaDeep, size: 46),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text('Almost there — deposit required',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink)),
+                const SizedBox(height: 8),
+                Text(
+                  amount != null
+                      ? 'Your slot is reserved. Pay a '
+                          '${formatCurrency(amount, currency)} deposit to secure '
+                          'your appointment — it isn\'t confirmed until the '
+                          'business verifies it.'
+                      : 'Your slot is reserved. Pay your deposit to secure the '
+                          'appointment — it isn\'t confirmed until the business '
+                          'verifies it.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 15, height: 1.4, color: AppColors.muted),
+                ),
+              ],
+            ),
+          ),
+          SafeArea(
+            top: false,
+            minimum: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 54,
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => context.push(
+                      RoutePaths.depositFlow(appointmentId),
+                      extra: DepositFlowArgs(
+                          businessId: businessId, guestPhone: guestPhone),
+                    ),
+                    child: const Text('Pay deposit',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w700)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 52,
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => context.go(RoutePaths.bookings),
+                    child: const Text("I'll do it later"),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Field extends StatelessWidget {
   const _Field({
     required this.label,
@@ -1425,6 +1523,19 @@ class _ConfirmedScreen extends ConsumerWidget {
     final signedIn = ref.watch(authStatusProvider) == AuthStatus.authenticated;
     final needsConfirmation = state.createdRequireConfirmation &&
         state.createdConfirmationDeadline != null;
+    final needsDeposit =
+        (state.selectedService?.depositRequired ?? false) && apptId != null;
+
+    // A deposit-required booking goes to the guided deposit flow to secure it.
+    if (needsDeposit) {
+      return _DepositRequiredCta(
+        appointmentId: apptId,
+        businessId: business.id,
+        guestPhone: signedIn ? null : state.phone.trim(),
+        amount: state.selectedService!.effectiveDepositAmount,
+        currency: business.currency,
+      );
+    }
 
     // After a guest completes a booking, gently nudge them to make an account
     // (respects the once-per-30-days cooldown; no-op for signed-in users).
