@@ -11,7 +11,9 @@ import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
+import '../../../models/payment_profile.dart';
 import '../../messaging/application/messaging_providers.dart';
+import '../../payments/application/payment_providers.dart';
 import '../../staff/application/staff_providers.dart';
 import '../../subscription/application/plan_caps.dart';
 import '../../subscription/presentation/subscription_modal.dart';
@@ -32,6 +34,11 @@ class MoreScreen extends ConsumerWidget {
     final staffCount = ref.watch(staffListProvider).valueOrNull?.length;
     final unread = ref.watch(unreadConversationsProvider);
     final caps = ref.watch(activePlanCapsProvider);
+    final payStatus = PaymentProfile.statusFor(
+        ref.watch(firstPayProfileProvider).valueOrNull);
+    // Nudge only businesses whose plan can actually use deposits.
+    final payNeedsSetup =
+        caps.deposits && payStatus != PaymentStatus.ready;
 
     return Scaffold(
       body: SafeArea(
@@ -71,6 +78,14 @@ class MoreScreen extends ConsumerWidget {
                   onTap: caps.deposits
                       ? () => context.push(RoutePaths.deposits)
                       : () => showSubscriptionModal(context),
+                ),
+                _MenuRow(
+                  icon: Icons.account_balance_wallet_outlined,
+                  title: 'Payment settings',
+                  subtitle: 'FirstPay · ${payStatus.label}',
+                  subtitleColor:
+                      payNeedsSetup ? AppColors.terracottaDeep : null,
+                  onTap: () => context.push(RoutePaths.paymentSettings),
                 ),
                 _MenuRow(
                   icon: Icons.storefront_outlined,

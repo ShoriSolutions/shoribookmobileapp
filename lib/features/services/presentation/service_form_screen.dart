@@ -6,7 +6,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../models/service.dart';
+import '../../../routing/route_paths.dart';
 import '../../business_context/application/active_business_provider.dart';
+import '../../payments/application/payment_providers.dart';
 import '../../staff/application/staff_providers.dart';
 import '../../subscription/application/plan_caps.dart';
 import '../../subscription/presentation/subscription_modal.dart';
@@ -142,7 +144,9 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
           context,
           message: msg.contains('service_limit_reached')
               ? "You've reached your plan's service limit. Upgrade to add more."
-              : msg,
+              : msg.contains('payment_setup_required')
+                  ? 'Complete your FirstPay setup before requiring deposits.'
+                  : msg,
           isError: true,
         );
       }
@@ -176,9 +180,33 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
     }
   }
 
+  Future<void> _showFirstPaySetupDialog() async {
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Complete your FirstPay setup first'),
+        content: const Text(
+            "Before you can require deposits for bookings, you'll need to "
+            'finish setting up your FirstPay payment details.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Set Up FirstPay'),
+          ),
+        ],
+      ),
+    );
+    if (go == true && mounted) context.push(RoutePaths.paymentSettings);
+  }
+
   @override
   Widget build(BuildContext context) {
     final caps = ref.watch(activePlanCapsProvider);
+    final depositReady = ref.watch(depositReadyProvider).valueOrNull ?? false;
     return Scaffold(
       appBar: AppBar(
         title: Text(_existing == null ? 'New service' : 'Edit service'),
@@ -267,9 +295,18 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
                           title: const Text('Require a deposit'),
+                          subtitle: depositReady
+                              ? null
+                              : const Text('FirstPay setup required'),
                           value: _depositRequired,
-                          onChanged: (v) =>
-                              setState(() => _depositRequired = v),
+                          onChanged: (v) {
+                            // Can't require a deposit until FirstPay is ready.
+                            if (v && !depositReady) {
+                              _showFirstPaySetupDialog();
+                            } else {
+                              setState(() => _depositRequired = v);
+                            }
+                          },
                         )
                       else
                         ListTile(

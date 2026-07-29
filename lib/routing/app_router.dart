@@ -56,6 +56,7 @@ import '../features/settings/presentation/account_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/staff/presentation/invite_staff_screen.dart';
 import '../features/staff/presentation/staff_detail_screen.dart';
+import '../features/payments/presentation/payment_settings_screen.dart';
 import '../features/staff/presentation/staff_list_screen.dart';
 import '../features/waitlist/presentation/waitlist_screen.dart';
 import '../features/messaging/presentation/conversation_thread_screen.dart';
@@ -108,6 +109,7 @@ bool _isOwnerModePath(String path) {
       path == RoutePaths.reports ||
       path == RoutePaths.availability ||
       path == RoutePaths.waitlist ||
+      path == RoutePaths.paymentSettings ||
       path == RoutePaths.profileMarketplace ||
       path == RoutePaths.editBusinessProfile ||
       path == RoutePaths.notificationSettings ||
@@ -518,6 +520,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.waitlist,
         builder: (c, s) => const WaitlistScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.paymentSettings,
+        builder: (c, s) => const PaymentSettingsScreen(),
       ),
       GoRoute(
         path: RoutePaths.notificationPreferences,
