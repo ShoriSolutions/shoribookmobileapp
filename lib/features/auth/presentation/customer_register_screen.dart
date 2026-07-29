@@ -182,12 +182,6 @@ class _CustomerRegisterScreenState
                           TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             ),
           ),
-          const SizedBox(height: 12),
-          const Center(
-            child: Text('By continuing you agree to our Terms & Privacy Policy.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12.5, color: AppColors.muted)),
-          ),
           const SizedBox(height: 16),
           Center(
             child: GestureDetector(

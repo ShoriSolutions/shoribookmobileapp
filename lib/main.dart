@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'core/env/env.dart';
 import 'core/time/time_zone_service.dart';
+import 'features/legal/application/terms_providers.dart';
+import 'features/legal/data/terms_prefs.dart';
 import 'features/onboarding/application/onboarding_providers.dart';
 import 'features/onboarding/data/onboarding_prefs.dart';
 
@@ -25,13 +27,17 @@ Future<void> main() async {
     publishableKey: Env.supabaseAnonKey,
   );
 
-  // Load the first-run flag before the router's redirect reads it, so a
-  // returning session goes straight to the marketplace with no intro flash.
+  // Load the first-run flags before the router's redirect reads them, so a
+  // returning session goes straight through with no intro/terms flash.
   final onboardingSeen = await OnboardingPrefs().seen();
+  final termsAccepted = await TermsPrefs().accepted();
 
   runApp(
     ProviderScope(
-      overrides: [onboardingSeenProvider.overrideWith((ref) => onboardingSeen)],
+      overrides: [
+        onboardingSeenProvider.overrideWith((ref) => onboardingSeen),
+        termsAcceptedProvider.overrideWith((ref) => termsAccepted),
+      ],
       child: const ShorivoApp(),
     ),
   );

@@ -57,6 +57,8 @@ import '../features/settings/presentation/settings_screen.dart';
 import '../features/staff/presentation/invite_staff_screen.dart';
 import '../features/staff/presentation/staff_detail_screen.dart';
 import '../features/deposit_flow/presentation/deposit_flow_screen.dart';
+import '../features/legal/application/terms_providers.dart';
+import '../features/legal/presentation/terms_gate_screen.dart';
 import '../features/deposit_verification/presentation/deposit_verification_screen.dart';
 import '../features/payments/presentation/payment_settings_screen.dart';
 import '../features/setup/presentation/setup_checklist_screen.dart';
@@ -194,6 +196,15 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final authStatus = ref.read(authStatusProvider);
       final loc = state.matchedLocation;
+
+      // First-launch gate: everyone must agree to Terms & Privacy before using
+      // the app (device-level, per terms version). Comes before everything else.
+      if (!ref.read(termsAcceptedProvider)) {
+        return loc == RoutePaths.termsGate ? null : RoutePaths.termsGate;
+      }
+      if (loc == RoutePaths.termsGate) {
+        return RoutePaths.splash; // already agreed -> resolve normally
+      }
 
       // Cold-start branded hold: stay on the splash for its minimum window
       // even if auth already resolved, so the fade-in isn't cut short.
@@ -341,6 +352,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.splash,
         pageBuilder: (c, s) => _fadeThroughPage(s, const SplashScreen()),
+      ),
+      GoRoute(
+        path: RoutePaths.termsGate,
+        pageBuilder: (c, s) => _fadeThroughPage(s, const TermsGateScreen()),
       ),
       GoRoute(
         path: RoutePaths.login,
@@ -685,6 +700,7 @@ class GoRouterRefreshNotifier extends ChangeNotifier {
     ref.listen(activeMembershipProvider, (_, __) => notifyListeners());
     ref.listen(passwordRecoveryProvider, (_, __) => notifyListeners());
     ref.listen(onboardingSeenProvider, (_, __) => notifyListeners());
+    ref.listen(termsAcceptedProvider, (_, __) => notifyListeners());
     // Hold the branded splash for a minimum moment on cold start so its
     // fade-in can play fully even when auth resolves instantly. Fires one
     // redirect re-evaluation when the window elapses.

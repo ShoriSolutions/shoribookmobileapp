@@ -30,6 +30,7 @@ class RoutePaths {
   static const deposits = '/deposits';
   static const bookingLink = '/booking-link';
   static const reports = '/reports';
+  static const termsGate = '/welcome';
   static const availability = '/availability';
   static const waitlist = '/waitlist';
   static const paymentSettings = '/payment-settings';
