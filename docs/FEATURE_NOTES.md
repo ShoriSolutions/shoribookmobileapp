@@ -497,11 +497,25 @@ vendor) show "Deposit required" / "Deposit expired".
   ("Pay deposit" on a pending_deposit booking).
 - **Ops:** run `20260726000010`; deploy `submit-deposit-proof`.
 
-**Deferred to Phase 3:** business Deposit Verification dashboard (approve/reject
-with reason + view proof image) -- the RPCs (`approve_deposit` / `reject_deposit`)
-already exist; expanded Payment Settings (deposit type/amount, per-service vs
-all, auto-expiry picker, manual approval); provider selection (WiPay / bank /
-card).
+### Phase 3 -- vendor verification dashboard + settings (done)
+- `save_deposit_settings` (`20260726000011`): OWNER/ADMIN saves auto-expiry
+  minutes (null = off) + `require_deposit_all_services`. Business model +
+  `PaymentRepository.saveDepositSettings`.
+- **Deposit Verification** screen (`/deposit-verification`, More > Business +
+  a dashboard "N deposits to review" banner): pending submissions with a proof
+  thumbnail + full-image viewer, **Approve** (-> `approve_deposit`, confirms the
+  booking) and **Reject** via a reason sheet (Payment not received / Incorrect
+  amount / Image unclear / Wrong account / Other + notes -> `reject_deposit`).
+  DepositSubmission model + repo (list / signed proof URL / approve / reject) +
+  `pendingDepositsProvider` / `pendingDepositsCountProvider`.
+- Payment Settings gains a "require deposit for all services" toggle + an
+  auto-cancel window picker (Off / 30m / 1h / 2h / 6h / 12h / 24h).
+- **Ops:** run `20260726000011`.
+
+This completes the Deposit Verification spec. `require_deposit_all_services` is
+stored + saved but not yet enforced at booking time (per-service deposits are
+the source of truth today); provider selection (WiPay / bank / card) remains the
+open future-compatibility item.
 
 ### Phase 2 (client-only, no migration)
 Shared `depositCapabilityProvider` (enabled / needsPayment / needsPlan) drives:
