@@ -59,6 +59,12 @@ class MoreScreen extends ConsumerWidget {
               const _GroupLabel('Business'),
               _MenuCard(rows: [
                 _MenuRow(
+                  icon: Icons.checklist_rtl,
+                  title: 'Business setup',
+                  subtitle: 'Finish setting up your business',
+                  onTap: () => context.push(RoutePaths.setupChecklist),
+                ),
+                _MenuRow(
                   icon: Icons.groups_outlined,
                   title: 'Staff',
                   subtitle: staffCount != null ? '$staffCount active' : null,

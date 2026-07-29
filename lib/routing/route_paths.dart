@@ -33,6 +33,7 @@ class RoutePaths {
   static const availability = '/availability';
   static const waitlist = '/waitlist';
   static const paymentSettings = '/payment-settings';
+  static const setupChecklist = '/setup-checklist';
   static const profileMarketplace = '/profile-marketplace';
   static const editBusinessProfile = '/business-profile';
   static const notificationSettings = '/notification-settings';

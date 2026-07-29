@@ -436,8 +436,20 @@ isn't ready, with the server trigger as the backstop.
 
 **Ops (run manually):** run `20260726000007`.
 
-**Deferred to Phase 2:** dashboard "Complete your payment setup" reminder card,
-the deposit status line in Business Settings, and the profile completion
-checklist. **Future providers:** WiPay / bank transfer / card each get a
-readiness rule in `payment_profile_ready` + a form; the table + gate already
-support "any ready method enables deposits".
+**Future providers:** WiPay / bank transfer / card each get a readiness rule in
+`payment_profile_ready` + a form; the table + gate already support "any ready
+method enables deposits".
+
+### Phase 2 (client-only, no migration)
+Shared `depositCapabilityProvider` (enabled / needsPayment / needsPlan) drives:
+- **Dashboard reminder card** — "Complete your payment setup" -> Payment
+  Settings, shown only when the plan includes deposits but FirstPay isn't ready
+  (`needsPayment`); auto-hides once ready.
+- **Deposit status** on the business Settings screen — "Deposits Enabled" /
+  "Deposits Disabled" with the reason ("FirstPay setup required before deposits
+  can be enabled." or an upgrade prompt) + a shortcut.
+- **Business setup checklist** (`/setup-checklist`, More > Business): Business
+  information / Address / Services / Staff / Payment settings (Required for
+  deposits) / Availability, each ✅/⚠️ and tap-to-navigate. Completion is
+  derived from existing providers (business fields, services/staff counts,
+  business hours, depositReady).

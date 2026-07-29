@@ -14,6 +14,7 @@ import '../../../models/staff_profile.dart';
 import '../../../routing/route_paths.dart';
 import '../../messaging/application/messaging_providers.dart';
 import '../../app_mode/application/app_mode_provider.dart';
+import '../../payments/application/payment_providers.dart';
 import '../../booking_link/presentation/booking_share_sheet.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../staff/application/staff_providers.dart';
@@ -68,6 +69,11 @@ class DashboardScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   _pendingConfirmationsBanner(
                       context, data.stats.pendingConfirmationsCount),
+                ],
+                if (ref.watch(depositCapabilityProvider) ==
+                    DepositCapability.needsPayment) ...[
+                  const SizedBox(height: 12),
+                  _paymentSetupBanner(context),
                 ],
                 const SizedBox(height: 22),
                 Row(
@@ -252,6 +258,51 @@ class DashboardScreen extends ConsumerWidget {
   /// Actionable alert shown when bookings are waiting on customer confirmation.
   /// Taps through to the schedule, where each shows an "Awaiting confirmation"
   /// badge and the owner can confirm or let it expire.
+  /// Nudge to finish FirstPay setup so deposits can be turned on. Only shown
+  /// when the plan includes deposits but the payment profile isn't ready; hides
+  /// itself once setup is complete.
+  Widget _paymentSetupBanner(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push(RoutePaths.paymentSettings),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.terracottaTint,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.terracottaTintBorder),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded,
+                size: 20, color: AppColors.terracottaDeep),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Complete your payment setup',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.terracottaDeep)),
+                  SizedBox(height: 2),
+                  Text('Finish setting up FirstPay to start accepting deposits.',
+                      style: TextStyle(
+                          fontSize: 12.5, color: AppColors.terracottaDeep)),
+                ],
+              ),
+            ),
+            const Text('Complete',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.terracottaDeep)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _pendingConfirmationsBanner(BuildContext context, int count) {
     return GestureDetector(
       onTap: () => context.push(RoutePaths.calendar),

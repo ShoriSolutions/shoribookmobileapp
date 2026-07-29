@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
+import '../../payments/application/payment_providers.dart';
+import '../../subscription/presentation/subscription_modal.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -59,6 +63,8 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
+          const SizedBox(height: 20),
+          _DepositStatusCard(canManage: canManage),
           const SizedBox(height: 20),
           Card(
             child: ListTile(
@@ -115,6 +121,75 @@ class _Row extends StatelessWidget {
           ),
           Expanded(child: Text(value)),
         ],
+      ),
+    );
+  }
+}
+
+/// Current deposit capability: enabled, or disabled with the reason (FirstPay
+/// setup, or a plan upgrade) and a shortcut to fix it.
+class _DepositStatusCard extends ConsumerWidget {
+  const _DepositStatusCard({required this.canManage});
+  final bool canManage;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cap = ref.watch(depositCapabilityProvider);
+    final enabled = cap == DepositCapability.enabled;
+
+    final String? reason;
+    final Widget? action;
+    switch (cap) {
+      case DepositCapability.enabled:
+        reason = 'Customers can be asked for a deposit to secure a booking.';
+        action = null;
+      case DepositCapability.needsPayment:
+        reason = 'FirstPay setup required before deposits can be enabled.';
+        action = canManage
+            ? TextButton(
+                onPressed: () => context.push(RoutePaths.paymentSettings),
+                child: const Text('Set up FirstPay'),
+              )
+            : null;
+      case DepositCapability.needsPlan:
+        reason = 'Upgrade to Solo Pro or Squad to enable deposits.';
+        action = canManage
+            ? TextButton(
+                onPressed: () => showSubscriptionModal(context),
+                child: const Text('Upgrade'),
+              )
+            : null;
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(enabled ? Icons.circle : Icons.circle_outlined,
+                    size: 14,
+                    color: enabled ? AppColors.sage : AppColors.muted),
+                const SizedBox(width: 8),
+                Text(enabled ? 'Deposits Enabled' : 'Deposits Disabled',
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(reason,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: AppColors.muted)),
+            if (action != null)
+              Align(alignment: Alignment.centerLeft, child: action),
+          ],
+        ),
       ),
     );
   }
