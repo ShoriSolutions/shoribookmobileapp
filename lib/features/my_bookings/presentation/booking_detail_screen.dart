@@ -207,6 +207,11 @@ class BookingDetailScreen extends ConsumerWidget {
             final hasCoords = appt.businessLatitude != null &&
                 appt.businessLongitude != null;
             final (label, bg, fg, icon) = _banner(appt);
+            // A deposit-due booking: tapping the banner opens the deposit flow.
+            final depositDue = appt.isActive &&
+                appt.depositRequired &&
+                !appt.depositPaid &&
+                canManage;
 
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
@@ -226,24 +231,39 @@ class BookingDetailScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                // Status banner
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  decoration: BoxDecoration(
-                    color: bg,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(icon, color: fg, size: 22),
-                      const SizedBox(width: 10),
-                      Text(label,
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: fg)),
-                    ],
+                // Status banner (tappable when a deposit is due -> deposit flow)
+                GestureDetector(
+                  onTap: depositDue
+                      ? () => context.push(
+                            RoutePaths.depositFlow(appt.id),
+                            extra: DepositFlowArgs(
+                              businessId: appt.businessId,
+                              guestPhone: signedIn ? null : guestPhone,
+                            ),
+                          )
+                      : null,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: bg,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(icon, color: fg, size: 22),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(label,
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: fg)),
+                        ),
+                        if (depositDue)
+                          Icon(Icons.chevron_right, color: fg),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),

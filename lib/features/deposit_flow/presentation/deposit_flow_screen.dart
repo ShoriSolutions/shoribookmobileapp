@@ -225,11 +225,11 @@ class _DepositFlowScreenState extends ConsumerState<DepositFlowScreen> {
           ),
           child: Column(
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.account_balance, color: AppColors.sageDark),
-                  SizedBox(width: 8),
-                  Text('FirstPay',
+                  Image.asset('assets/branding/CIBC-Logo.png', height: 24),
+                  const SizedBox(width: 8),
+                  const Text('FirstPay',
                       style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
@@ -238,9 +238,10 @@ class _DepositFlowScreenState extends ConsumerState<DepositFlowScreen> {
               ),
               const SizedBox(height: 12),
               _CopyRow(
-                  label: 'Account number',
+                  label: 'FirstPay phone number',
                   value: d.accountNumber ?? '—',
-                  onCopy: () => _copy(d.accountNumber, 'Account number')),
+                  onCopy: () =>
+                      _copy(d.accountNumber, 'FirstPay phone number')),
               if (d.accountHolderName != null)
                 _CopyRow(
                     label: 'Account holder',
@@ -456,7 +457,7 @@ class _DepositFlowScreenState extends ConsumerState<DepositFlowScreen> {
           '${d.businessName != null ? ' at ${d.businessName}' : ''}',
       if (d.depositAmount != null)
         'Amount: ${formatCurrency(d.depositAmount, d.currency)}',
-      'FirstPay account: ${d.accountNumber ?? ''}',
+      'FirstPay phone: ${d.accountNumber ?? ''}',
       if (d.accountHolderName != null) 'Account holder: ${d.accountHolderName}',
       if (d.email != null) 'Email: ${d.email}',
     ];

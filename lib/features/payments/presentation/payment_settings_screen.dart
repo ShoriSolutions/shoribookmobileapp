@@ -149,10 +149,11 @@ class _PaymentSettingsScreenState
               const _FieldLabel('Account holder name'),
               _field(_holder, hint: 'e.g. Jane Doe', cap: true),
               const SizedBox(height: 16),
-              const _FieldLabel('FirstPay account number'),
+              const _FieldLabel('FirstPay phone number'),
               _field(
                 _account,
-                hint: 'Your FirstPay account number',
+                hint: 'Your FirstPay phone number',
+                keyboard: TextInputType.phone,
                 obscure: _obscureAccount,
                 suffix: IconButton(
                   icon: Icon(
@@ -295,8 +296,7 @@ class _ProviderHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.account_balance_wallet_outlined,
-              color: AppColors.sageDark),
+          Image.asset('assets/branding/CIBC-Logo.png', height: 22),
           const SizedBox(width: 12),
           Expanded(
             child: Text(name,
