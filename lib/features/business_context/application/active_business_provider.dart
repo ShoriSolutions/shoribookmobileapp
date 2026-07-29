@@ -40,19 +40,23 @@ class ActiveMembershipNotifier extends AsyncNotifier<ActiveMembership?> {
     if (userId == null) return null;
 
     final repo = ref.read(businessRepositoryProvider);
-    // Just after a fresh sign-in the client's session can lag by a beat, so
-    // this first business_members read occasionally fails. Without a retry
-    // that failure surfaces as a false "No business found" (the router reads
-    // an errored membership the same as an empty one) that a relogin clears.
-    // Retry a few times with backoff so it self-heals. A genuine no-business
-    // account returns null WITHOUT throwing, so it isn't delayed by this.
+    // Just after a fresh sign-in the session token can lag by a beat before
+    // it's attached to requests. `profiles` is public-readable so myProfile
+    // succeeds and masks the lag, but `business_members` is gated by
+    // auth.uid(), so this first read can come back EMPTY (not an error) --
+    // which the router reads as a false "No business found" that a relogin
+    // clears. Retry on empty-or-error a few times so it self-heals; a
+    // genuinely business-less account just settles to null after the retries.
     for (var attempt = 0;; attempt++) {
       try {
-        return await repo.getActiveMembership(userId);
+        final membership = await repo.getActiveMembership(userId);
+        if (membership != null || attempt >= _retryDelays.length) {
+          return membership;
+        }
       } catch (_) {
         if (attempt >= _retryDelays.length) rethrow;
-        await Future.delayed(_retryDelays[attempt]);
       }
+      await Future.delayed(_retryDelays[attempt]);
     }
   }
 
