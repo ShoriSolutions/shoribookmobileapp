@@ -37,9 +37,14 @@ class CustomerFeedbackScreen extends ConsumerWidget {
             final count = business?.ratingCount ?? 0;
             final neg = business?.ratingNegativeCount ?? 0;
             final nrr = count > 0 ? (neg / count * 100).round() : 0;
+            final qualityBanner = _qualityBanner(business?.qualityStatus);
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                if (qualityBanner != null) ...[
+                  qualityBanner,
+                  const SizedBox(height: 16),
+                ],
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -100,6 +105,62 @@ class CustomerFeedbackScreen extends ConsumerWidget {
             );
           },
         ),
+      ),
+    );
+  }
+
+  /// Warning surface for the business when its quality status is elevated.
+  Widget? _qualityBanner(String? status) {
+    if (status == null || status == 'excellent') return null;
+    final (title, body) = switch (status) {
+      'warning' => (
+          "We've noticed an increase in negative feedback",
+          'Please review your recent appointments and reviews. Continued '
+              'negative feedback may result in an administrative review.'
+        ),
+      'under_review' => (
+          'Your account is under administrative review',
+          'Recent feedback triggered a review by our team. Keep serving '
+              'customers well while we look into it.'
+        ),
+      _ => (
+          'Account restrictions applied',
+          'An administrator has applied restrictions to your account. Please '
+              'contact support.'
+        ),
+    };
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.terracottaTint,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.terracottaTintBorder),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warning_amber_rounded,
+              size: 20, color: AppColors.terracottaDeep),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.terracottaDeep)),
+                const SizedBox(height: 3),
+                Text(body,
+                    style: const TextStyle(
+                        fontSize: 12.5,
+                        height: 1.35,
+                        color: AppColors.terracottaDeep)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

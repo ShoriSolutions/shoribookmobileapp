@@ -559,9 +559,30 @@ Business model gains `ratingAvg`/`ratingCount` (+ negatives/quality for vendor).
 - **Vendor Customer Feedback** (`/customer-feedback`, More > Grow): average /
   total / negative-ratio header + the review list with a public **Reply** sheet.
 
-**Deferred:** Phase 3 -- quality monitoring (NRR health status, business
-warning, admin moderation cases + audit) and abuse detection; admin *actions*
-live in the web admin.
+### Phase 3 -- quality monitoring + moderation + abuse (done)
+`20260726000013`:
+- `evaluate_business_quality` (wired into the reviews rollup trigger): once
+  `rating_count >= review_min_for_evaluation`, NRR = negatives / total sets
+  `businesses.quality_status` = excellent / warning / under_review. Crossing
+  warning or investigation notifies the business (`quality_warning`);
+  under_review opens a `business_review_cases` row. **Never** auto-enforcement.
+- Abuse: `review_flag_reason` flags a low rating from an account newer than
+  `review_new_account_hours` (24); flagged reviews are stored `flagged` -- out of
+  public + the rating rollup, and don't alert the vendor -- for admin review.
+  `submit_review` recreated with the check.
+- `business_review_cases` + `business_moderation_log` (business + admin read).
+  `record_moderation_action` (is_admin; audit + suspend/hide/remove_suspension/
+  dismiss) and `admin_set_review_status` for the **web admin** (admin actions
+  are web; enforcement is applied only here).
+- `process-reminders` renders `quality_warning` (business-only). Vendor sees a
+  quality banner on Customer Feedback + a dashboard nudge -> Customer Feedback.
+- **Ops:** run `20260726000013`; redeploy `process-reminders`.
+
+This completes the Customer Review System spec (mobile customer + vendor +
+backend). Web-admin surfaces the moderation cases/log + calls the admin RPCs.
+Open future items: photo/video reviews, likes, verified reviews, AI sentiment,
+category ratings, review filtering/analytics/exports; richer abuse heuristics
+(device fingerprint, coordinated activity, offensive-language filter).
 
 ### Phase 2 (client-only, no migration)
 Shared `depositCapabilityProvider` (enabled / needsPayment / needsPlan) drives:

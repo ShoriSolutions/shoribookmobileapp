@@ -309,6 +309,29 @@ Deno.serve(async () => {
 
   let processed = 0;
   for (const row of due ?? []) {
+    // Quality warning goes to the business owner; no appointment involved.
+    if (row.kind === "quality_warning") {
+      const { data: biz } = await supabase
+        .from("businesses")
+        .select("name, owner_id")
+        .eq("id", row.business_id)
+        .maybeSingle();
+      // deno-lint-ignore no-explicit-any
+      const b = biz as any;
+      const ownerEmail = await ownerEmailFor(b?.owner_id);
+      const subject = `A note about your recent customer feedback`;
+      const message =
+        `We've noticed an increase in negative customer feedback for ` +
+        `${b?.name ?? "your business"}. Please review your recent ` +
+        `appointments and reviews in Shorivo. Continued negative feedback may ` +
+        `result in an administrative review — we're here to help you improve.`;
+      await deliver(row, subject, message, {
+        userId: row.user_id,
+        email: ownerEmail,
+      });
+      processed++;
+      continue;
+    }
     // Waitlist "a spot opened" notices aren't tied to an appointment.
     if (row.kind === "waitlist_open") {
       const { data: entry } = await supabase

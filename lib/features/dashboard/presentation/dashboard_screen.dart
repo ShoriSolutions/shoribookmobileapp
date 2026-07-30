@@ -81,6 +81,11 @@ class DashboardScreen extends ConsumerWidget {
                   _depositReviewBanner(
                       context, ref.watch(pendingDepositsCountProvider)),
                 ],
+                if (business.qualityStatus != null &&
+                    business.qualityStatus != 'excellent') ...[
+                  const SizedBox(height: 12),
+                  _qualityWarningBanner(context, business.qualityStatus!),
+                ],
                 const SizedBox(height: 22),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -303,6 +308,41 @@ class DashboardScreen extends ConsumerWidget {
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: AppColors.terracottaDeep)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Quality-status nudge -> Customer feedback.
+  Widget _qualityWarningBanner(BuildContext context, String status) {
+    final label = switch (status) {
+      'warning' => 'Negative feedback is rising — review your feedback',
+      'under_review' => 'Your account is under review — see your feedback',
+      _ => 'Account restrictions applied — see details',
+    };
+    return GestureDetector(
+      onTap: () => context.push(RoutePaths.customerFeedback),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.terracottaTint,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.terracottaTintBorder),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded,
+                size: 20, color: AppColors.terracottaDeep),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(label,
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.terracottaDeep)),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.terracottaDeep),
           ],
         ),
       ),
