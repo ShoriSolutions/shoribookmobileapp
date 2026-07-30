@@ -148,8 +148,9 @@ BEGIN
 END;
 $$;
 
--- Recreate submit_review to flag suspicious reviews (copied from 20260726000012
--- with the flag check + status/notify tweaks).
+-- Recreate submit_review to flag suspicious reviews. Matches the existing
+-- reviews schema (no user_id; authorship via the appointment; is_published +
+-- status govern visibility; denormalized customer_name).
 CREATE OR REPLACE FUNCTION public.submit_review(
   p_appointment_id UUID,
   p_rating         INT,
@@ -172,7 +173,7 @@ BEGIN
     RAISE EXCEPTION 'rating must be 1-5';
   END IF;
 
-  SELECT a.id, a.business_id, a.status, c.user_id AS cust_uid
+  SELECT a.id, a.business_id, a.status, a.customer_name, c.user_id AS cust_uid
     INTO v_appt
     FROM public.appointments a
     JOIN public.customers c ON c.id = a.customer_id
@@ -190,20 +191,20 @@ BEGIN
     END IF;
   END IF;
 
+  IF EXISTS (SELECT 1 FROM public.reviews WHERE appointment_id = p_appointment_id) THEN
+    RETURN jsonb_build_object('status', 'already_reviewed');
+  END IF;
+
   v_flag := public.review_flag_reason(v_uid, p_rating);
   v_status := CASE WHEN v_flag IS NULL THEN 'published' ELSE 'flagged' END;
 
-  INSERT INTO public.reviews(business_id, appointment_id, user_id, rating, body,
-    status, is_flagged, flag_reason)
-  VALUES (v_appt.business_id, p_appointment_id, v_uid, p_rating,
+  INSERT INTO public.reviews(business_id, appointment_id, rating, body,
+    is_published, status, is_flagged, flag_reason, customer_name)
+  VALUES (v_appt.business_id, p_appointment_id, p_rating,
           NULLIF(btrim(COALESCE(p_body, '')), ''),
-          v_status, v_flag IS NOT NULL, v_flag)
-  ON CONFLICT (appointment_id) DO NOTHING
+          v_flag IS NULL, v_status, v_flag IS NOT NULL, v_flag,
+          v_appt.customer_name)
   RETURNING id INTO v_id;
-
-  IF v_id IS NULL THEN
-    RETURN jsonb_build_object('status', 'already_reviewed');
-  END IF;
 
   -- Only alert the vendor about a live (published) review.
   IF v_status = 'published' THEN
@@ -280,7 +281,10 @@ BEGIN
   IF p_status NOT IN ('published', 'removed', 'flagged', 'hidden') THEN
     RAISE EXCEPTION 'invalid status';
   END IF;
-  UPDATE public.reviews SET status = p_status, updated_at = now()
+  -- Keep is_published in sync so the web flag and mobile status agree.
+  UPDATE public.reviews
+     SET status = p_status, is_published = (p_status = 'published'),
+         updated_at = now()
    WHERE id = p_review_id;  -- rollup + re-evaluation fire via the trigger
   RETURN jsonb_build_object('status', 'ok');
 END;

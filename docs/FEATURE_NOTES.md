@@ -526,9 +526,15 @@ in `app_config` (tunable without a deploy): `review_low_rating_min_words` (75),
 `review_min_for_evaluation` (20), `review_nrr_warning` (0.30),
 `review_nrr_investigation` (0.50), `review_edit_window_hours` (24).
 
-**Schema** (`20260726000012`): `reviews` (1 per appointment; rating + body;
-status published/reported/flagged/removed/hidden; business_reply; is_flagged).
-Public-read RLS (published to everyone; author/business/admin see the rest).
+**Schema** (`20260726000012`): a `reviews` table ALREADY EXISTS (web app:
+id/business_id/appointment_id/rating/body/is_published/customer_name/created_at,
+no user_id/status) so the migration ALTERs it -- adds status / business_reply /
+business_reply_at / is_flagged / flag_reason / edited_at / updated_at. Authorship
+is via the appointment (owns_appointment helper), the reviewer name is the
+denormalized customer_name, and a review is publicly visible when
+`is_published AND status='published'` (so the web flag and mobile moderation
+coexist). Public-read RLS (visible to everyone; author/business/admin see the
+rest); admin_set_review_status keeps is_published in sync.
 Business rating rollup on `businesses` (`rating_avg` / `rating_count` via a
 trigger; `rating_negative_count` + `quality_status` for later) -- avg + count
 granted to anon for the marketplace.

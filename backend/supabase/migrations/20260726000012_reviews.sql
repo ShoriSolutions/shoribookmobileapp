@@ -1,11 +1,14 @@
 -- ================================================================
 -- Shorivo -- Customer Review System (Phase 1: data + submission).
 --
--- Customers review a COMPLETED appointment (1-5 stars + text); low ratings
--- (<=2) require a written explanation of a configurable minimum length. The
--- business's average rating is rolled up onto businesses for cheap reads, and a
--- review request is queued when an appointment is completed. Quality monitoring
--- (NRR / health / moderation cases) and the UI come in later phases.
+-- NOTE: a `reviews` table already exists (web app) with:
+--   id, business_id, appointment_id, rating, body, is_published,
+--   customer_name, created_at   (no user_id, no status).
+-- So this migration ADDS the moderation/reply columns to that table rather
+-- than recreating it, keys authorship off the appointment (there is no
+-- user_id), reuses the denormalized customer_name, and treats a review as
+-- publicly visible when is_published AND status = 'published' -- so the web
+-- app's is_published flag keeps working alongside mobile moderation.
 --
 -- Thresholds live in app_config so moderation can be tuned without an app
 -- update. Additive + idempotent. ASCII only. Run manually.
@@ -13,47 +16,50 @@
 
 -- 1. Configurable thresholds -------------------------------------------------
 INSERT INTO public.app_config (key, num_value) VALUES
-  ('review_low_rating_min_words', 75),   -- min words required for a 1-2 star review
-  ('review_min_for_evaluation', 20),     -- min reviews before quality is judged
-  ('review_nrr_warning', 0.30),          -- negative-ratio warning threshold
-  ('review_nrr_investigation', 0.50),    -- negative-ratio investigation threshold
-  ('review_edit_window_hours', 24)       -- how long a customer can edit a review
+  ('review_low_rating_min_words', 75),
+  ('review_min_for_evaluation', 20),
+  ('review_nrr_warning', 0.30),
+  ('review_nrr_investigation', 0.50),
+  ('review_edit_window_hours', 24)
 ON CONFLICT (key) DO NOTHING;
 
--- 2. Reviews -----------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.reviews (
-  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  business_id       UUID NOT NULL REFERENCES public.businesses(id) ON DELETE CASCADE,
-  appointment_id    UUID NOT NULL REFERENCES public.appointments(id) ON DELETE CASCADE,
-  user_id           UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  rating            INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
-  body              TEXT,
-  -- published | reported | flagged | removed | hidden
-  status            TEXT NOT NULL DEFAULT 'published',
-  business_reply    TEXT,
-  business_reply_at TIMESTAMPTZ,
-  is_flagged        BOOLEAN NOT NULL DEFAULT false,
-  flag_reason       TEXT,
-  edited_at         TIMESTAMPTZ,
-  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (appointment_id)  -- one review per appointment
-);
-CREATE INDEX IF NOT EXISTS idx_reviews_business
-  ON public.reviews(business_id, status, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_reviews_user ON public.reviews(user_id);
+-- 2. Extend the existing reviews table --------------------------------------
+ALTER TABLE public.reviews
+  ADD COLUMN IF NOT EXISTS status            TEXT NOT NULL DEFAULT 'published',
+  ADD COLUMN IF NOT EXISTS business_reply    TEXT,
+  ADD COLUMN IF NOT EXISTS business_reply_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS is_flagged        BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS flag_reason       TEXT,
+  ADD COLUMN IF NOT EXISTS edited_at         TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS updated_at        TIMESTAMPTZ NOT NULL DEFAULT now();
+
+CREATE INDEX IF NOT EXISTS idx_reviews_business_created
+  ON public.reviews(business_id, created_at DESC);
+
+-- One review per appointment (guarded: ignore if a constraint or dup data
+-- already exists -- submit_review also guards against duplicates).
+DO $$
+BEGIN
+  ALTER TABLE public.reviews ADD CONSTRAINT reviews_appointment_unique UNIQUE (appointment_id);
+EXCEPTION WHEN duplicate_table OR duplicate_object OR unique_violation THEN NULL;
+END $$;
+
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 
--- Published reviews are public; the author, the business (OWNER/ADMIN/staff),
--- and admins can also see non-published ones. Writes go through the RPCs.
-DROP POLICY IF EXISTS "reviews_read" ON public.reviews;
-CREATE POLICY "reviews_read" ON public.reviews
+-- Read: publicly-visible reviews are public; the author (via the appointment),
+-- the business, and admins see the rest. (Additive to any web-app policy.)
+DROP POLICY IF EXISTS "reviews_read_mobile" ON public.reviews;
+CREATE POLICY "reviews_read_mobile" ON public.reviews
   FOR SELECT TO anon, authenticated
   USING (
-    status = 'published'
-    OR user_id = (SELECT auth.uid())
+    (is_published AND COALESCE(status, 'published') = 'published')
     OR public.get_my_business_role(business_id) IS NOT NULL
     OR public.is_admin()
+    OR EXISTS (
+      SELECT 1 FROM public.appointments a
+      JOIN public.customers c ON c.id = a.customer_id
+      WHERE a.id = reviews.appointment_id AND c.user_id = (SELECT auth.uid())
+    )
   );
 GRANT SELECT ON public.reviews TO anon, authenticated;
 
@@ -64,9 +70,10 @@ ALTER TABLE public.businesses
   ADD COLUMN IF NOT EXISTS rating_negative_count INT NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS quality_status        TEXT;  -- set by Phase 3 evaluation
 
--- Public marketplace reads need the average + count (not the negatives/status).
 GRANT SELECT (rating_avg, rating_count) ON public.businesses TO anon;
 
+-- Counts only publicly-visible reviews (published by the web flag AND not
+-- moderated out).
 CREATE OR REPLACE FUNCTION public.recalc_business_rating(p_business_id UUID)
 RETURNS VOID
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
@@ -77,7 +84,8 @@ BEGIN
          count(*) FILTER (WHERE rating <= 2)
     INTO v_avg, v_count, v_neg
     FROM public.reviews
-   WHERE business_id = p_business_id AND status = 'published';
+   WHERE business_id = p_business_id
+     AND is_published AND COALESCE(status, 'published') = 'published';
   UPDATE public.businesses
      SET rating_avg = v_avg, rating_count = v_count,
          rating_negative_count = v_neg
@@ -117,6 +125,18 @@ AS $$
   SELECT COALESCE((SELECT num_value::int FROM public.app_config WHERE key = p_key), p_default);
 $$;
 
+-- Whether auth.uid() owns the appointment behind a review.
+CREATE OR REPLACE FUNCTION public.owns_appointment(p_appointment_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.appointments a
+    JOIN public.customers c ON c.id = a.customer_id
+    WHERE a.id = p_appointment_id AND c.user_id = (SELECT auth.uid())
+  );
+$$;
+
 -- 5. Submit / edit / reply / report ------------------------------------------
 CREATE OR REPLACE FUNCTION public.submit_review(
   p_appointment_id UUID,
@@ -138,7 +158,7 @@ BEGIN
     RAISE EXCEPTION 'rating must be 1-5';
   END IF;
 
-  SELECT a.id, a.business_id, a.status, c.user_id AS cust_uid
+  SELECT a.id, a.business_id, a.status, a.customer_name, c.user_id AS cust_uid
     INTO v_appt
     FROM public.appointments a
     JOIN public.customers c ON c.id = a.customer_id
@@ -149,7 +169,6 @@ BEGIN
     RETURN jsonb_build_object('status', 'not_completed');
   END IF;
 
-  -- Low ratings need a written explanation of at least the configured length.
   IF p_rating <= 2 THEN
     v_min := public.config_int('review_low_rating_min_words', 75);
     IF public.review_word_count(p_body) < v_min THEN
@@ -157,15 +176,16 @@ BEGIN
     END IF;
   END IF;
 
-  INSERT INTO public.reviews(business_id, appointment_id, user_id, rating, body)
-  VALUES (v_appt.business_id, p_appointment_id, v_uid, p_rating,
-          NULLIF(btrim(COALESCE(p_body, '')), ''))
-  ON CONFLICT (appointment_id) DO NOTHING
-  RETURNING id INTO v_id;
-
-  IF v_id IS NULL THEN
+  IF EXISTS (SELECT 1 FROM public.reviews WHERE appointment_id = p_appointment_id) THEN
     RETURN jsonb_build_object('status', 'already_reviewed');
   END IF;
+
+  INSERT INTO public.reviews(business_id, appointment_id, rating, body,
+    is_published, status, customer_name)
+  VALUES (v_appt.business_id, p_appointment_id, p_rating,
+          NULLIF(btrim(COALESCE(p_body, '')), ''),
+          true, 'published', v_appt.customer_name)
+  RETURNING id INTO v_id;
 
   SELECT owner_id INTO v_owner FROM public.businesses WHERE id = v_appt.business_id;
   INSERT INTO public.reminder_queue(booking_id, business_id, user_id, channel, scheduled_for, kind, payload)
@@ -185,19 +205,17 @@ CREATE OR REPLACE FUNCTION public.edit_review(
 RETURNS JSONB
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
-DECLARE
-  v_uid UUID := (SELECT auth.uid());
-  v_rev RECORD;
-  v_min INT;
-  v_win INT;
+DECLARE v_rev RECORD; v_min INT; v_win INT;
 BEGIN
-  IF v_uid IS NULL THEN RAISE EXCEPTION 'authentication required'; END IF;
+  IF (SELECT auth.uid()) IS NULL THEN RAISE EXCEPTION 'authentication required'; END IF;
   IF p_rating IS NULL OR p_rating < 1 OR p_rating > 5 THEN
     RAISE EXCEPTION 'rating must be 1-5';
   END IF;
   SELECT * INTO v_rev FROM public.reviews WHERE id = p_review_id;
   IF NOT FOUND THEN RAISE EXCEPTION 'review not found'; END IF;
-  IF v_rev.user_id <> v_uid THEN RAISE EXCEPTION 'forbidden'; END IF;
+  IF NOT public.owns_appointment(v_rev.appointment_id) THEN
+    RAISE EXCEPTION 'forbidden';
+  END IF;
 
   v_win := public.config_int('review_edit_window_hours', 24);
   IF v_rev.created_at < now() - (v_win || ' hours')::interval THEN
@@ -245,17 +263,21 @@ END;
 $$;
 GRANT EXECUTE ON FUNCTION public.reply_to_review(UUID, TEXT) TO authenticated;
 
--- Customer reports their own review (e.g. submitted by mistake).
+-- Customer reports their own review (via appointment ownership).
 CREATE OR REPLACE FUNCTION public.report_own_review(p_review_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
-DECLARE v_uid UUID := (SELECT auth.uid()); v_rows INT;
+DECLARE v_rev RECORD;
 BEGIN
+  SELECT * INTO v_rev FROM public.reviews WHERE id = p_review_id;
+  IF NOT FOUND THEN RAISE EXCEPTION 'review not found'; END IF;
+  IF NOT public.owns_appointment(v_rev.appointment_id) THEN
+    RAISE EXCEPTION 'forbidden';
+  END IF;
   UPDATE public.reviews SET status = 'reported', updated_at = now()
-   WHERE id = p_review_id AND user_id = v_uid AND status = 'published';
-  GET DIAGNOSTICS v_rows = ROW_COUNT;
-  RETURN jsonb_build_object('status', CASE WHEN v_rows > 0 THEN 'reported' ELSE 'unchanged' END);
+   WHERE id = p_review_id;
+  RETURN jsonb_build_object('status', 'reported');
 END;
 $$;
 GRANT EXECUTE ON FUNCTION public.report_own_review(UUID) TO authenticated;
@@ -269,7 +291,6 @@ DECLARE v_uid UUID;
 BEGIN
   IF TG_OP = 'UPDATE' AND NEW.status = 'completed'
      AND OLD.status IS DISTINCT FROM 'completed' THEN
-    -- Only if the customer hasn't already reviewed and we haven't asked yet.
     IF NOT EXISTS (SELECT 1 FROM public.reviews WHERE appointment_id = NEW.id)
        AND NOT EXISTS (
          SELECT 1 FROM public.reminder_queue

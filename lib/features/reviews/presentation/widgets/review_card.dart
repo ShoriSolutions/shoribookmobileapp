@@ -50,10 +50,14 @@ class ReviewCard extends StatelessWidget {
                 style: const TextStyle(
                     fontSize: 14, height: 1.4, color: AppColors.ink)),
           ],
-          if (r.status != 'published') ...[
+          if (!r.isVisible) ...[
             const SizedBox(height: 6),
             Text(
-              r.status == 'reported' ? 'Reported' : 'Not shown publicly',
+              r.status == 'reported'
+                  ? 'Reported'
+                  : r.status == 'flagged'
+                      ? 'Flagged for review'
+                      : 'Not shown publicly',
               style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,

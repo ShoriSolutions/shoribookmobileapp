@@ -7,64 +7,48 @@ class ReviewsRepository {
 
   ReviewsRepository(this._client);
 
-  /// Reviews for a business. [publishedOnly] for the public profile; the vendor
-  /// passes false to also see reported/flagged ones (RLS permitting). Reviewer
-  /// first names are resolved from the public profiles table.
+  /// Reviews for a business. [publishedOnly] for the public profile (visible =
+  /// is_published AND status published); the vendor passes false to also see
+  /// reported/flagged ones (RLS permitting). Reviewer name is the denormalized
+  /// customer_name on the row.
   Future<List<Review>> fetchForBusiness(
     String businessId, {
     bool publishedOnly = true,
     int limit = 50,
   }) async {
     try {
-      var query =
-          _client.from('reviews').select(reviewSelectColumns).eq('business_id', businessId);
-      if (publishedOnly) query = query.eq('status', 'published');
-      final rows = (await query.order('created_at', ascending: false).limit(limit))
-          as List;
-      return _withNames(rows.cast<Map<String, dynamic>>());
+      var query = _client
+          .from('reviews')
+          .select(reviewSelectColumns)
+          .eq('business_id', businessId);
+      if (publishedOnly) {
+        query = query.eq('is_published', true).eq('status', 'published');
+      }
+      final rows = (await query
+          .order('created_at', ascending: false)
+          .limit(limit)) as List;
+      return rows
+          .map((r) => Review.fromJson(r as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       throw AppException.from(e);
     }
   }
 
-  /// The signed-in customer's review for an appointment, if any (for the
-  /// "already reviewed / edit" state).
+  /// The customer's review for an appointment, if any (for the "already
+  /// reviewed / edit" state). One review per appointment, and RLS lets the
+  /// appointment's owner read it.
   Future<Review?> fetchMineForAppointment(String appointmentId) async {
     try {
-      final uid = _client.auth.currentUser?.id;
-      if (uid == null) return null;
       final data = await _client
           .from('reviews')
           .select(reviewSelectColumns)
           .eq('appointment_id', appointmentId)
-          .eq('user_id', uid)
           .maybeSingle();
       return data == null ? null : Review.fromJson(data);
     } catch (e) {
       throw AppException.from(e);
     }
-  }
-
-  Future<List<Review>> _withNames(List<Map<String, dynamic>> rows) async {
-    if (rows.isEmpty) return const [];
-    final ids = rows.map((r) => r['user_id'] as String).toSet().toList();
-    final names = <String, String>{};
-    try {
-      final profiles = await _client
-          .from('profiles')
-          .select('id, full_name')
-          .inFilter('id', ids) as List;
-      for (final p in profiles) {
-        final m = p as Map<String, dynamic>;
-        final full = (m['full_name'] as String?)?.trim() ?? '';
-        if (full.isNotEmpty) names[m['id'] as String] = full.split(' ').first;
-      }
-    } catch (_) {
-      // Names are best-effort; fall back to "Customer".
-    }
-    return rows
-        .map((r) => Review.fromJson(r, reviewerName: names[r['user_id']]))
-        .toList();
   }
 
   /// Submit / edit / reply / report all go through the SECURITY DEFINER RPCs.

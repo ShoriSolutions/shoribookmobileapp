@@ -1,12 +1,13 @@
-/// A customer review of a completed appointment. [reviewerName] is filled in by
-/// the repository from a public profiles lookup (reviews don't store the name).
+/// A customer review of a completed appointment. Matches the shared reviews
+/// table: authorship is via the appointment (no user_id), the reviewer name is
+/// the denormalized customer_name, and visibility is is_published AND status.
 class Review {
   final String id;
   final String businessId;
   final String appointmentId;
-  final String userId;
   final int rating;
   final String? body;
+  final bool isPublished;
   final String status; // published | reported | flagged | removed | hidden
   final String? businessReply;
   final DateTime? businessReplyAt;
@@ -18,10 +19,10 @@ class Review {
     required this.id,
     required this.businessId,
     required this.appointmentId,
-    required this.userId,
     required this.rating,
     this.body,
-    required this.status,
+    this.isPublished = true,
+    this.status = 'published',
     this.businessReply,
     this.businessReplyAt,
     this.editedAt,
@@ -29,17 +30,17 @@ class Review {
     this.reviewerName,
   });
 
-  bool get isPublished => status == 'published';
+  /// Shown publicly = published by the web flag AND not moderated out.
+  bool get isVisible => isPublished && status == 'published';
   bool get hasReply => (businessReply ?? '').trim().isNotEmpty;
 
-  factory Review.fromJson(Map<String, dynamic> json, {String? reviewerName}) =>
-      Review(
+  factory Review.fromJson(Map<String, dynamic> json) => Review(
         id: json['id'] as String,
         businessId: json['business_id'] as String,
         appointmentId: json['appointment_id'] as String,
-        userId: json['user_id'] as String,
         rating: json['rating'] as int? ?? 0,
         body: json['body'] as String?,
+        isPublished: json['is_published'] as bool? ?? true,
         status: json['status'] as String? ?? 'published',
         businessReply: json['business_reply'] as String?,
         businessReplyAt: json['business_reply_at'] != null
@@ -49,26 +50,11 @@ class Review {
             ? DateTime.parse(json['edited_at'] as String)
             : null,
         createdAt: DateTime.parse(json['created_at'] as String),
-        reviewerName: reviewerName,
-      );
-
-  Review copyWith({String? reviewerName}) => Review(
-        id: id,
-        businessId: businessId,
-        appointmentId: appointmentId,
-        userId: userId,
-        rating: rating,
-        body: body,
-        status: status,
-        businessReply: businessReply,
-        businessReplyAt: businessReplyAt,
-        editedAt: editedAt,
-        createdAt: createdAt,
-        reviewerName: reviewerName ?? this.reviewerName,
+        reviewerName: json['customer_name'] as String?,
       );
 }
 
 const String reviewSelectColumns = '''
-  id, business_id, appointment_id, user_id, rating, body, status,
-  business_reply, business_reply_at, edited_at, created_at
+  id, business_id, appointment_id, rating, body, is_published, status,
+  business_reply, business_reply_at, edited_at, created_at, customer_name
 ''';
