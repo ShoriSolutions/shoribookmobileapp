@@ -19,6 +19,8 @@ import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../deposit_flow/presentation/deposit_flow_screen.dart';
 import '../../marketplace/presentation/widgets/category_visuals.dart';
+import '../../reviews/application/reviews_providers.dart';
+import '../../reviews/presentation/review_submit_screen.dart';
 import '../../messaging/application/messaging_providers.dart';
 import '../application/my_bookings_providers.dart';
 import '../data/my_bookings_repository.dart';
@@ -481,6 +483,30 @@ class BookingDetailScreen extends ConsumerWidget {
                       style: TextStyle(fontSize: 13, color: AppColors.sageDark),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                ],
+                if (signedIn &&
+                    appt.status == AppointmentStatus.completed) ...[
+                  Builder(builder: (context) {
+                    final reviewed = ref
+                        .watch(reviewForAppointmentProvider(appt.id))
+                        .valueOrNull;
+                    return _ActionBtn(
+                      label: reviewed != null
+                          ? 'Edit your review'
+                          : 'Leave a review',
+                      icon: Icons.star_border_rounded,
+                      bg: AppColors.terracotta,
+                      fg: Colors.white,
+                      onTap: () => context.push(
+                        RoutePaths.reviewSubmit(appt.id),
+                        extra: ReviewSubmitArgs(
+                          businessId: appt.businessId,
+                          businessName: appt.businessName,
+                        ),
+                      ),
+                    );
+                  }),
                   const SizedBox(height: 12),
                 ],
                 if (signedIn) ...[

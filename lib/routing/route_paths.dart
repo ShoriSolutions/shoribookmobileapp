@@ -36,6 +36,7 @@ class RoutePaths {
   static const paymentSettings = '/payment-settings';
   static const setupChecklist = '/setup-checklist';
   static const depositVerification = '/deposit-verification';
+  static const customerFeedback = '/customer-feedback';
   static const profileMarketplace = '/profile-marketplace';
   static const editBusinessProfile = '/business-profile';
   static const notificationSettings = '/notification-settings';
@@ -80,4 +81,5 @@ class RoutePaths {
       '/book/$slug?service=$serviceId';
   static String bookingDetail(String id) => '/bookings/$id';
   static String depositFlow(String id) => '/deposit/$id';
+  static String reviewSubmit(String id) => '/review/$id';
 }

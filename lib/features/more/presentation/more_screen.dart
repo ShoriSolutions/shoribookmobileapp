@@ -134,6 +134,15 @@ class MoreScreen extends ConsumerWidget {
                       : () => showSubscriptionModal(context),
                 ),
                 _MenuRow(
+                  icon: Icons.star_border_rounded,
+                  title: 'Customer feedback',
+                  subtitle: (business?.ratingCount ?? 0) > 0
+                      ? '${business!.ratingAvg.toStringAsFixed(1)} · '
+                          '${business.ratingCount} reviews'
+                      : 'Reviews & replies',
+                  onTap: () => context.push(RoutePaths.customerFeedback),
+                ),
+                _MenuRow(
                   icon: Icons.notifications_none,
                   title: 'Reminders & automations',
                   subtitle: 'WhatsApp reminders',

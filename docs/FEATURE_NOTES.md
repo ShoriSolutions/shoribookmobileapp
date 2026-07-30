@@ -543,11 +543,25 @@ Business model gains `ratingAvg`/`ratingCount` (+ negatives/quality for vendor).
 
 **Ops:** run `20260726000012`; redeploy `process-reminders`.
 
-**Deferred:** Phase 2 -- customer review UI (stars, low-rating word gate, edit/
-report; reviews on the business profile) + vendor "Customer Feedback" dashboard
-(avg/count/recent + reply). Phase 3 -- quality monitoring (NRR, health status,
-business warning, admin moderation cases + audit) and abuse detection; admin
-*actions* live in the web admin.
+### Phase 2 -- customer + vendor review UI (done, no migration)
+- Review model + ReviewsRepository (submit/edit/reply/reportOwn/fetch; reviewer
+  first names resolved via a public profiles lookup, so published reviews render
+  a name for anon too without a schema change) + providers
+  (businessReviews / vendorReviews / reviewForAppointment / reviewMinWords).
+- **ReviewSubmitScreen** (`/review/:id`): star picker + body, with a **live word
+  counter and gate** for 1-2 star ratings (min from app_config). Handles
+  edit mode (prefills the customer's existing review, respects the edit window).
+- **My Bookings** detail shows "Leave a review" / "Edit your review" on a
+  completed booking (signed-in).
+- **Business profile**: average stars + count under the name, and a Reviews
+  section (StarsRow, reviewer, body, business reply) via shared StarsRow /
+  ReviewCard widgets.
+- **Vendor Customer Feedback** (`/customer-feedback`, More > Grow): average /
+  total / negative-ratio header + the review list with a public **Reply** sheet.
+
+**Deferred:** Phase 3 -- quality monitoring (NRR health status, business
+warning, admin moderation cases + audit) and abuse detection; admin *actions*
+live in the web admin.
 
 ### Phase 2 (client-only, no migration)
 Shared `depositCapabilityProvider` (enabled / needsPayment / needsPlan) drives:

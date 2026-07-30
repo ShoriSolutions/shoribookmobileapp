@@ -20,6 +20,9 @@ import '../../auth/application/auth_providers.dart';
 import '../../favorites/presentation/widgets/favorite_button.dart';
 import '../../messaging/application/messaging_providers.dart';
 import '../../messaging/presentation/sign_in_to_message.dart';
+import '../../reviews/application/reviews_providers.dart';
+import '../../reviews/presentation/widgets/review_card.dart';
+import '../../reviews/presentation/widgets/stars.dart';
 import '../application/marketplace_providers.dart';
 import 'widgets/category_visuals.dart';
 
@@ -118,6 +121,23 @@ class _Loaded extends ConsumerWidget {
                           fontSize: 23,
                           fontWeight: FontWeight.w800,
                           color: AppColors.ink)),
+                  if (business.ratingCount > 0) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        StarsRow(rating: business.ratingAvg, size: 18),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${business.ratingAvg.toStringAsFixed(1)} '
+                          '(${business.ratingCount})',
+                          style: const TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.muted),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 10),
                   _chips(business, open),
                   const SizedBox(height: 16),
@@ -170,6 +190,7 @@ class _Loaded extends ConsumerWidget {
             ),
           if (data.staff.isNotEmpty)
             SliverToBoxAdapter(child: _teamSection(context, data)),
+          SliverToBoxAdapter(child: _reviewsSection(context, ref, business)),
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
       ),
@@ -458,6 +479,45 @@ class _Loaded extends ConsumerWidget {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _reviewsSection(
+      BuildContext context, WidgetRef ref, Business business) {
+    final reviews =
+        ref.watch(businessReviewsProvider(business.id)).valueOrNull ??
+            const [];
+    if (reviews.isEmpty) return const SizedBox.shrink();
+    final shown = reviews.take(5).toList();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('Reviews',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink)),
+              const Spacer(),
+              StarsRow(rating: business.ratingAvg, size: 15),
+              const SizedBox(width: 6),
+              Text(
+                '${business.ratingAvg.toStringAsFixed(1)} (${business.ratingCount})',
+                style: const TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.muted),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          for (var i = 0; i < shown.length; i++) ...[
+            if (i > 0) const SizedBox(height: 10),
+            ReviewCard(review: shown[i]),
+          ],
+        ],
       ),
     );
   }

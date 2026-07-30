@@ -59,6 +59,8 @@ import '../features/staff/presentation/staff_detail_screen.dart';
 import '../features/deposit_flow/presentation/deposit_flow_screen.dart';
 import '../features/legal/application/terms_providers.dart';
 import '../features/legal/presentation/terms_gate_screen.dart';
+import '../features/reviews/presentation/customer_feedback_screen.dart';
+import '../features/reviews/presentation/review_submit_screen.dart';
 import '../features/deposit_verification/presentation/deposit_verification_screen.dart';
 import '../features/payments/presentation/payment_settings_screen.dart';
 import '../features/setup/presentation/setup_checklist_screen.dart';
@@ -97,7 +99,8 @@ bool _isCustomerModePath(String path) {
       path.startsWith('${RoutePaths.account}/') ||
       path.startsWith('/business/') ||
       path.startsWith('/book/') ||
-      path.startsWith('/deposit/');
+      path.startsWith('/deposit/') ||
+      path.startsWith('/review/');
 }
 
 /// True for any route that belongs to the Business Owner/Staff shell.
@@ -118,6 +121,7 @@ bool _isOwnerModePath(String path) {
       path == RoutePaths.paymentSettings ||
       path == RoutePaths.setupChecklist ||
       path == RoutePaths.depositVerification ||
+      path == RoutePaths.customerFeedback ||
       path == RoutePaths.profileMarketplace ||
       path == RoutePaths.editBusinessProfile ||
       path == RoutePaths.notificationSettings ||
@@ -555,6 +559,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (c, s) => const DepositVerificationScreen(),
       ),
       GoRoute(
+        path: RoutePaths.customerFeedback,
+        builder: (c, s) => const CustomerFeedbackScreen(),
+      ),
+      GoRoute(
         path: '/deposit/:id',
         builder: (c, s) {
           final args = s.extra as DepositFlowArgs?;
@@ -562,6 +570,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             appointmentId: s.pathParameters['id']!,
             businessId: args?.businessId ?? '',
             guestPhone: args?.guestPhone,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/review/:id',
+        builder: (c, s) {
+          final args = s.extra as ReviewSubmitArgs?;
+          return ReviewSubmitScreen(
+            appointmentId: s.pathParameters['id']!,
+            businessId: args?.businessId ?? '',
+            businessName: args?.businessName,
           );
         },
       ),
