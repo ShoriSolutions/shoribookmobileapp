@@ -180,54 +180,12 @@ class CustomerFeedbackScreen extends ConsumerWidget {
   }
 
   Future<void> _reply(BuildContext context, WidgetRef ref, Review r) async {
-    final controller = TextEditingController(text: r.businessReply ?? '');
     final text = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Reply to review',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.ink)),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                maxLines: 4,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Write a public response…',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: FilledButton(
-                  onPressed: () =>
-                      Navigator.pop(ctx, controller.text.trim()),
-                  child: const Text('Post reply'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      builder: (_) => _ReplySheet(initial: r.businessReply ?? ''),
     );
-    controller.dispose();
     if (text == null || text.isEmpty) return;
     try {
       await ref.read(reviewsRepositoryProvider).reply(r.id, text);
@@ -239,5 +197,70 @@ class CustomerFeedbackScreen extends ConsumerWidget {
             message: AppException.from(e).message, isError: true);
       }
     }
+  }
+}
+
+/// The reply bottom sheet owns its controller so it's disposed with the sheet
+/// (not while it's still animating out).
+class _ReplySheet extends StatefulWidget {
+  const _ReplySheet({required this.initial});
+  final String initial;
+
+  @override
+  State<_ReplySheet> createState() => _ReplySheetState();
+}
+
+class _ReplySheetState extends State<_ReplySheet> {
+  late final TextEditingController _c =
+      TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Reply to review',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _c,
+              maxLines: 4,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: 'Write a public response…',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: FilledButton(
+                onPressed: () => Navigator.pop(context, _c.text.trim()),
+                child: const Text('Post reply'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
