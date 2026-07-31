@@ -159,6 +159,14 @@ class _DepositStatusCard extends ConsumerWidget {
                 child: const Text('Upgrade'),
               )
             : null;
+      case DepositCapability.noRegionProvider:
+        reason = "Deposits aren't available in your country yet.";
+        action = canManage
+            ? TextButton(
+                onPressed: () => context.push(RoutePaths.paymentSettings),
+                child: const Text('Payment settings'),
+              )
+            : null;
     }
 
     return Card(

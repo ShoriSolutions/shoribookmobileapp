@@ -123,6 +123,31 @@ in-app unread only. See `FEATURE_NOTES.md`.
 
 ---
 
+## Payment provider registry (region-based availability)
+
+Payment providers are configurable, not hardcoded. The **web admin** manages the
+`payment_providers` registry — which providers exist, their supported countries,
+and status (active / coming_soon / inactive). The mobile app reads this registry
+and filters providers by each business's country; it never edits the registry.
+
+- **Table `payment_providers`**: `id` (matches `payment_profiles.provider`),
+  `name`, `logo_asset`, `supported_countries text[]` (ISO 3166-1 alpha-2),
+  `status`, `required_fields text[]`, `sort_order`. Anon-readable (display only);
+  all writes go through the RPC below.
+- **`save_payment_provider(p_id, p_name, p_logo, p_countries, p_status,
+  p_required, p_sort)`** — `is_admin()`-gated upsert. Use it to add a provider,
+  open a new country, or flip `coming_soon` → `active`.
+- Seeded today: FirstPay (BB, active), WiPay (TT/JM/BB/GY, coming_soon), Stripe
+  (US/GB/CA/AU, active), PayPal (US/GB/CA, coming_soon).
+- `app_config('default_country_code')` (default `'BB'`) is the fallback country
+  for businesses that haven't set `businesses.country_code`.
+
+Changing a provider's countries/status immediately affects which businesses can
+configure it and whether their existing deposits stay enabled
+(`business_has_ready_payment_method` re-checks region on every read).
+
+---
+
 ## Notes for whoever builds it
 - Everything in **A** is callable today via `supabase.rpc('...')` with an admin
   session — start there for the quickest wins (trust moderation + analytics).

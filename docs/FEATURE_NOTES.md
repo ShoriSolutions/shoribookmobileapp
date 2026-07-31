@@ -603,3 +603,55 @@ Shared `depositCapabilityProvider` (enabled / needsPayment / needsPlan) drives:
   deposits) / Availability, each ✅/⚠️ and tap-to-navigate. Completion is
   derived from existing providers (business fields, services/staff counts,
   business hours, depositReady).
+
+---
+
+## Region-Based Payment Provider Availability
+
+Payment providers are no longer hardcoded. A configurable **registry** decides
+which providers a business can set up, filtered by the business's country.
+
+**Migration `20260726000014_payment_provider_registry.sql`** (run it):
+- `payment_providers` registry (`id`, `name`, `logo_asset`, `supported_countries
+  text[]`, `status` active|coming_soon|inactive, `required_fields`, `sort_order`).
+  Anon-readable (display only). Seeded: **FirstPay** (BB, active, CIBC logo),
+  WiPay (TT/JM/BB/GY, coming_soon), Stripe (US/GB/CA/AU, active), PayPal
+  (US/GB/CA, coming_soon).
+- `app_config('default_country_code','BB')` — the platform default when a
+  business hasn't set its own (existing rows have `country_code = null`, so this
+  keeps Barbados businesses on FirstPay with no regression).
+- `business_country(id)` = `businesses.country_code` else default else `'BB'`.
+- `provider_available_for_country(provider, country)` = active + country supported.
+- `business_has_ready_payment_method` is now **region-aware**: a saved profile
+  only counts if its provider is `active` AND the business country is in the
+  provider's `supported_countries`. So changing country auto-revalidates deposits
+  (the saved profile is preserved, not deleted).
+- `save_payment_profile` drops the hardcoded provider `CHECK` and instead rejects
+  (`provider_not_available`) any provider not supported in the business country.
+- `set_business_country(business_id, country)` (OWNER/ADMIN) and
+  `save_payment_provider(...)` (admin, for the **web** registry manager).
+
+**Central service (no hardcoded country checks anywhere):**
+`PaymentProviderService` (`features/payments/data/`) — `fetchProviders()`,
+`defaultCountry()`, `setBusinessCountry()`. `PaymentProviderInfo`
+(`models/payment_provider_info.dart`) classifies a provider for a country into
+`ProviderAvailability` (available / comingSoon / notInRegion / inactive).
+Providers (`application/payment_providers.dart`): `paymentProviderRegistryProvider`,
+`effectiveBusinessCountryProvider`, `businessPaymentProvidersProvider`
+(classified, inactive hidden), `anyProviderAvailableProvider`.
+
+**Payment Settings** (`/payment-settings`) reworked:
+- **Business country** row + a **Change** picker (`set_business_country`).
+- **Available payment methods** list — each provider tagged *Available* /
+  *Coming soon* / *Not available in your region*.
+- The **FirstPay config form** shows only when FirstPay is available for the
+  country. When none are available: *"Deposits aren't available in your
+  country."* When a saved profile's provider is no longer valid for the current
+  country: a *"Your payment settings need attention"* banner (details preserved).
+
+**Deposit capability** (`depositCapabilityProvider`) gains `noRegionProvider`;
+the Settings deposit-status card surfaces *"Deposits aren't available in your
+country yet."* The customer deposit flow stays gated by the region-aware
+`business_has_ready_payment_method`, so an out-of-region business can't be
+asked-for / take deposits. Admin registry management is the **web** app
+(`save_payment_provider`).
