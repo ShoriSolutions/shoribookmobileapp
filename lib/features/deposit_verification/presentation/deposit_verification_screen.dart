@@ -289,79 +289,99 @@ class _Thumb extends StatelessWidget {
 typedef _RejectResult = ({String reason, String? notes});
 
 Future<_RejectResult?> _showRejectSheet(BuildContext context) {
-  String? reason;
-  final notes = TextEditingController();
   return showModalBottomSheet<_RejectResult>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (ctx) => StatefulBuilder(
-      builder: (ctx, setSheet) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Reject deposit',
-                  style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.ink)),
-              const SizedBox(height: 4),
-              const Text('Choose a reason — the customer is notified and can '
-                  'resubmit.',
-                  style: TextStyle(fontSize: 13.5, color: AppColors.muted)),
-              const SizedBox(height: 12),
-              for (final r in DepositRejectReason.all)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                  leading: Icon(
-                    reason == r
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_off,
-                    color: reason == r ? AppColors.sageDark : AppColors.muted,
-                  ),
-                  title: Text(r),
-                  onTap: () => setSheet(() => reason = r),
+    builder: (_) => const _RejectSheet(),
+  );
+}
+
+/// Owns its controller so it's disposed with the sheet (not mid-animation).
+class _RejectSheet extends StatefulWidget {
+  const _RejectSheet();
+
+  @override
+  State<_RejectSheet> createState() => _RejectSheetState();
+}
+
+class _RejectSheetState extends State<_RejectSheet> {
+  String? _reason;
+  final _notes = TextEditingController();
+
+  @override
+  void dispose() {
+    _notes.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Reject deposit',
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink)),
+            const SizedBox(height: 4),
+            const Text('Choose a reason — the customer is notified and can '
+                'resubmit.',
+                style: TextStyle(fontSize: 13.5, color: AppColors.muted)),
+            const SizedBox(height: 12),
+            for (final r in DepositRejectReason.all)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                leading: Icon(
+                  _reason == r
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: _reason == r ? AppColors.sageDark : AppColors.muted,
                 ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: notes,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Notes (optional)',
-                  border: OutlineInputBorder(),
-                ),
+                title: Text(r),
+                onTap: () => setState(() => _reason = r),
               ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.danger),
-                  onPressed: reason == null
-                      ? null
-                      : () => Navigator.pop(ctx, (
-                            reason: reason!,
-                            notes: notes.text.trim().isEmpty
-                                ? null
-                                : notes.text.trim(),
-                          )),
-                  child: const Text('Reject deposit'),
-                ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _notes,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Notes (optional)',
+                border: OutlineInputBorder(),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: FilledButton(
+                style:
+                    FilledButton.styleFrom(backgroundColor: AppColors.danger),
+                onPressed: _reason == null
+                    ? null
+                    : () => Navigator.pop(context, (
+                          reason: _reason!,
+                          notes: _notes.text.trim().isEmpty
+                              ? null
+                              : _notes.text.trim(),
+                        )),
+                child: const Text('Reject deposit'),
+              ),
+            ),
+          ],
         ),
       ),
-    ),
-  );
+    );
+  }
 }

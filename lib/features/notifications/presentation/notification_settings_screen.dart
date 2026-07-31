@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/amount_unit_dialog.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/notification_settings.dart';
@@ -102,51 +103,12 @@ class _NotificationSettingsScreenState
   }
 
   Future<void> _addCustom() async {
-    final valueCtrl = TextEditingController();
-    var unit = 60; // minutes multiplier: 1=min, 60=hour, 1440=day
-    final added = await showDialog<int>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setD) => AlertDialog(
-          title: const Text('Custom reminder'),
-          content: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: valueCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Amount'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              DropdownButton<int>(
-                value: unit,
-                items: const [
-                  DropdownMenuItem(value: 1, child: Text('minutes')),
-                  DropdownMenuItem(value: 60, child: Text('hours')),
-                  DropdownMenuItem(value: 1440, child: Text('days')),
-                ],
-                onChanged: (v) => setD(() => unit = v ?? 60),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final n = int.tryParse(valueCtrl.text.trim());
-                if (n != null && n > 0) Navigator.pop(ctx, n * unit);
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        ),
-      ),
+    final added = await showAmountUnitDialog(
+      context,
+      title: 'Custom reminder',
+      units: const [(1, 'minutes'), (60, 'hours'), (1440, 'days')],
+      defaultUnit: 60,
     );
-    valueCtrl.dispose();
     if (added != null && added > 0 && added <= 43200) {
       setState(() => _offsets.add(added)); // cap 30 days
     }
