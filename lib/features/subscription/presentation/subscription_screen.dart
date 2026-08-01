@@ -114,12 +114,30 @@ class SubscriptionScreen extends ConsumerWidget {
   }
 
   Widget _planCard(Business? business, List<SubscriptionPackage> packages) {
-    final popular = packages.where((p) => p.isPopular).toList();
-    final plan = popular.isNotEmpty ? popular.first : null;
     final trialing = business?.subscriptionStatus == 'trialing';
     final active = business?.subscriptionStatus == 'active';
+    // Show the plan the business is ACTUALLY on (by subscription_package_id);
+    // only fall back to the popular plan as a reference (e.g. during a trial,
+    // where no package is set yet but every feature is unlocked).
+    SubscriptionPackage? plan;
+    final pkgId = business?.subscriptionPackageId;
+    if (pkgId != null) {
+      for (final p in packages) {
+        if (p.id == pkgId) {
+          plan = p;
+          break;
+        }
+      }
+    }
+    if (plan == null) {
+      final popular = packages.where((p) => p.isPopular).toList();
+      plan = popular.isNotEmpty
+          ? popular.first
+          : (packages.isNotEmpty ? packages.first : null);
+    }
     final ends = business?.trialEndsAt;
     final daysLeft = ends?.difference(DateTime.now()).inDays;
+    final renews = business?.currentPeriodEnd;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -204,6 +222,29 @@ class SubscriptionScreen extends ConsumerWidget {
                   ),
                 ],
               ),
+            ),
+          ],
+          if (active && renews != null) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(
+                  business?.autoRenew ?? true
+                      ? Icons.autorenew
+                      : Icons.event_busy_outlined,
+                  size: 16,
+                  color: Colors.white.withValues(alpha: 0.75),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${(business?.autoRenew ?? true) ? 'Renews' : 'Access ends'} '
+                  '${DateFormat('d MMM yyyy').format(renews.toLocal())}',
+                  style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withValues(alpha: 0.85)),
+                ),
+              ],
             ),
           ],
         ],

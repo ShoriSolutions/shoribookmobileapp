@@ -184,9 +184,15 @@ class Business {
         : DateTime.parse(json['trial_ends_at'] as String),
     autoRenew: json['auto_renew'] as bool? ?? true,
     billingPeriod: json['billing_period'] as String? ?? 'monthly',
-    currentPeriodEnd: json['current_period_end'] == null
-        ? null
-        : DateTime.parse(json['current_period_end'] as String),
+    // Prefer current_period_end (auto-renew prefs), but fall back to
+    // subscription_period_end -- the column both purchase paths
+    // (record_subscription_purchase + the verify-purchase function) actually
+    // write -- so a paid plan's renewal date is populated on the owner read.
+    currentPeriodEnd: json['current_period_end'] != null
+        ? DateTime.parse(json['current_period_end'] as String)
+        : (json['subscription_period_end'] != null
+            ? DateTime.parse(json['subscription_period_end'] as String)
+            : null),
     subscriptionPackageId: json['subscription_package_id'] as String?,
     countryCode: json['country_code'] as String?,
     nameCategoryLockedUntil: json['name_category_locked_until'] == null

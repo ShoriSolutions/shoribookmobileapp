@@ -215,8 +215,14 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
       switch (purchase.status) {
         case PurchaseStatus.purchased:
         case PurchaseStatus.restored:
+          // Match on either the monthly OR the annual store id -- otherwise an
+          // annual purchase (a different product id) would fall through to the
+          // wrong package.
           final pkg = packages.firstWhere(
-            (p) => repo.storeProductId(p) == purchase.productID,
+            (p) =>
+                repo.storeProductId(p) == purchase.productID ||
+                repo.storeProductId(p, period: BillingPeriod.yearly) ==
+                    purchase.productID,
             orElse: () => packages.isNotEmpty
                 ? packages.first
                 : const SubscriptionPackage(id: '', name: ''),
