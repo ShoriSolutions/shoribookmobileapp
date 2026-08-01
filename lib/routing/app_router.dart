@@ -267,6 +267,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       final appMode = ref.read(appModeProvider);
 
       if (appMode == null || appMode == AppMode.unsupported) {
+        // A non-standard role resolves its experience from business
+        // membership (see appModeProvider). While that read is still in
+        // flight the mode is null -- wait on the splash rather than flashing
+        // the "unsupported" screen, which then self-corrects to the business
+        // home once the membership resolves.
+        if (appMode == null && ref.read(activeMembershipProvider).isLoading) {
+          return (loc == RoutePaths.splash || loc == RoutePaths.setPassword)
+              ? null
+              : RoutePaths.splash;
+        }
         return loc == RoutePaths.unsupportedRole
             ? null
             : RoutePaths.unsupportedRole;

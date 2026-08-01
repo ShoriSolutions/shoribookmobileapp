@@ -34,7 +34,13 @@ class ActiveMembershipNotifier extends AsyncNotifier<ActiveMembership?> {
     if (authStatus != AuthStatus.authenticated) return null;
 
     final profile = await ref.watch(myProfileProvider.future);
-    if (profile?.role != 'entrepreneur') return null;
+    // Customers (role 'user') never own a business membership, so skip the
+    // business_members query for them. EVERY other role -- 'entrepreneur',
+    // a web-created professional role, 'admin', or even a missing/blank
+    // profile row -- falls through to the read: if they belong to a business
+    // they are treated as a business user regardless of the exact role
+    // string. (A genuinely business-less account just settles to null.)
+    if (profile?.role == 'user') return null;
 
     final userId = ref.read(authRepositoryProvider).currentUser?.id;
     if (userId == null) return null;
