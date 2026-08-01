@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for all network access (Supabase). The Flutter template only
+         declares this in the debug/profile manifests, so release builds could
+         otherwise ship with no network unless a plugin happened to add it. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <application
         android:label="Shorivo"
         android:name="${applicationName}"

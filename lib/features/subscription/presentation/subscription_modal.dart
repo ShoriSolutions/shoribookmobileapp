@@ -10,6 +10,8 @@ import '../../../core/widgets/app_snackbar.dart';
 import '../../../models/subscription_package.dart';
 import '../../../models/trial_eligibility.dart';
 import '../../business_context/application/active_business_provider.dart';
+import '../../support/presentation/legal_document_screen.dart';
+import '../../support/support_content.dart';
 import '../application/subscription_providers.dart';
 import 'widgets/feature_list.dart';
 import 'widgets/pricing_card.dart';
@@ -76,6 +78,14 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
     _entrance.dispose();
     _purchaseSub?.cancel();
     super.dispose();
+  }
+
+  void _openLegal(BuildContext context, String title, String body) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => LegalDocumentScreen(title: title, body: body),
+      ),
+    );
   }
 
   Future<void> _loadEligibility() async {
@@ -515,6 +525,35 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
                 .textTheme
                 .bodySmall
                 ?.copyWith(color: AppColors.muted, fontSize: 11),
+          ),
+          const SizedBox(height: 8),
+          // Required on the paywall for auto-renewable subscriptions
+          // (App Store Guideline 3.1.2 / Play policy): functional links to the
+          // Terms of Use (EULA) and Privacy Policy.
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton(
+                onPressed: () => _openLegal(context, 'Terms of Service',
+                    SupportContent.termsOfService),
+                style: TextButton.styleFrom(
+                    minimumSize: const Size(0, 32),
+                    padding: const EdgeInsets.symmetric(horizontal: 8)),
+                child: const Text('Terms of Use',
+                    style: TextStyle(fontSize: 11, color: AppColors.muted)),
+              ),
+              const Text('·',
+                  style: TextStyle(fontSize: 11, color: AppColors.muted)),
+              TextButton(
+                onPressed: () => _openLegal(
+                    context, 'Privacy & Data', SupportContent.privacyPolicy),
+                style: TextButton.styleFrom(
+                    minimumSize: const Size(0, 32),
+                    padding: const EdgeInsets.symmetric(horizontal: 8)),
+                child: const Text('Privacy Policy',
+                    style: TextStyle(fontSize: 11, color: AppColors.muted)),
+              ),
+            ],
           ),
         ],
       ),

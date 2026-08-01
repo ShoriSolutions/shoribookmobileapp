@@ -4,6 +4,10 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<!-- Export-compliance: the app uses only standard/exempt encryption (HTTPS).
+	     Declaring this here avoids the manual prompt on every submission. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Shorivo needs access to your photos so you can set your profile photo and business logo and cover image.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
