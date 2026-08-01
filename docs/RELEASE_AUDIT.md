@@ -15,10 +15,15 @@ different sizes, authenticated-role live probing (no test JWT), running
 migrations, or store-sandbox purchase testing. Items depending on those are
 called out as **VERIFY** rather than confirmed.
 
-Fixes already applied are marked **✅ FIXED**. A second pass then centralized
-the share links (H2), added an offline error message (M5), locked orientation
-to portrait (M3), and wrote a least-privilege RLS migration for H3 + M1
-(`20260801000001_rls_least_privilege.sql`, run + test manually).
+Fixes already applied are marked **✅ FIXED**. Later passes centralized the
+share links (H2), added an offline error message (M5), locked orientation to
+portrait (M3), wrote a least-privilege RLS migration for H3 + M1
+(`20260801000001_rls_least_privilege.sql`, run + test manually), wired the
+**Android release signing** config (C5), and set iOS to **iPhone-only**
+(`TARGETED_DEVICE_FAMILY="1"`) to shrink App Review surface.
+
+**Step-by-step store submission guides:** [ANDROID_RELEASE.md](ANDROID_RELEASE.md)
+· [IOS_RELEASE.md](IOS_RELEASE.md).
 
 ---
 
