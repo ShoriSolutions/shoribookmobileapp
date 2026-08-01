@@ -64,6 +64,23 @@ the **review list failed to load**. Verified live against the DB.
 the existing SECURITY DEFINER `owns_appointment()` helper.
 **Action for you:** run that migration in the Supabase SQL editor.
 
+### C5 — Android release was signed with the DEBUG keystore ✅ WIRED (keystore is yours to generate)
+`android/app/build.gradle.kts` used `signingConfig = signingConfigs.getByName("debug")`
+for release. Google Play **rejects** debug-signed bundles, and the upload key is
+permanent per app — a hard blocker for the first submission.
+**Fix:** added a proper `release` signing config that reads
+`android/key.properties` (gitignored), falling back to debug only when that file
+is absent (so local `flutter run --release` still works). Added
+`android/key.properties.example` and gitignored `key.properties` / `*.jks` /
+`*.keystore`.
+**Action for you (I cannot do this — it needs your secret key):**
+1. `keytool -genkey -v -keystore ~/shorivo-upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`
+2. copy `android/key.properties.example` → `android/key.properties` and fill it in;
+3. `flutter build appbundle --release` and confirm it's signed with your key
+   (`keytool -printcert -jarfile build/app/outputs/bundle/release/app-release.aab`);
+4. back up the keystore + passwords somewhere safe — losing them means you can
+   never update the app (unless you use Play App Signing, which is recommended).
+
 ### C4 — Server-side purchase verification not proven live (VERIFY)
 `verify-purchase` exists and is correct, but if it isn't **deployed with store
 secrets** (`APPLE_SHARED_SECRET`, `GOOGLE_SERVICE_ACCOUNT_JSON`,
@@ -235,6 +252,8 @@ no longer available." (`23P01`). This is a genuinely strong design.
 
 ## Pre-submission checklist (owner actions)
 
+0. ☐ **Android:** generate an upload keystore + `android/key.properties`, then
+   build a signed AAB (C5). Enrol in Play App Signing.
 1. ☐ Run `20260801000000_fix_reviews_read_policy.sql` (C3).
 2. ☐ Run `20260801000001_rls_least_privilege.sql`, then run its verify query +
    test browsing/login (H3, M1).

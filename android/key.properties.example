@@ -1,0 +1,14 @@
+# Android release signing — TEMPLATE. Copy to android/key.properties and fill in.
+# NEVER commit the real key.properties or the .jks keystore (they are gitignored).
+#
+# 1. Generate an upload keystore (once), keep it somewhere safe + backed up:
+#      keytool -genkey -v -keystore ~/shorivo-upload-keystore.jks \
+#        -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+# 2. Copy this file to android/key.properties and set the values below.
+# 3. Build the release bundle:  flutter build appbundle --release
+#
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=upload
+# Absolute path to the .jks (or a path relative to the android/app dir):
+storeFile=/absolute/path/to/shorivo-upload-keystore.jks

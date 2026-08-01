@@ -48,3 +48,8 @@ app.*.map.json
 /env/dev.json
 /env/prod.json
 /env/*.local.json
+
+# Android release signing — never commit the keystore or its passwords
+/android/key.properties
+*.jks
+*.keystore
