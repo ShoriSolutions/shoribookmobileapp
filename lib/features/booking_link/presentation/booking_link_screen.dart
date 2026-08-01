@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/config/app_links.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../business_context/application/active_business_provider.dart';
@@ -17,7 +18,7 @@ class BookingLinkScreen extends ConsumerWidget {
     if (membership == null) return const SizedBox.shrink();
 
     final business = membership.business;
-    final url = 'https://betterbooking.app/book/${business.slug}';
+    final url = AppLinks.booking(business.slug);
     final shareText =
         'Book your next appointment with ${business.name} here: $url';
 

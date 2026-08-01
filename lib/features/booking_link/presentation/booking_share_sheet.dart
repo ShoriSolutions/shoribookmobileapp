@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/config/app_links.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../models/business.dart';
@@ -10,7 +11,7 @@ import '../../../models/business.dart';
 /// Bottom-sheet version of the booking link (QR + copy / share / WhatsApp),
 /// so it can be opened from the Home FAB without leaving the screen.
 Future<void> showBookingShareSheet(BuildContext context, Business business) {
-  final url = 'https://betterbooking.app/book/${business.slug}';
+  final url = AppLinks.booking(business.slug);
   final shareText =
       'Book your next appointment with ${business.name} here: $url';
 

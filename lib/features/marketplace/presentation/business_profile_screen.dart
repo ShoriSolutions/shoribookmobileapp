@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/config/app_links.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -78,7 +79,7 @@ Future<void> _shareBusiness(BuildContext context, Business business) async {
       : const Rect.fromLTWH(0, 0, 1, 1);
   await Share.share(
     'Check out ${business.name} on Shorivo: '
-    'https://betterbooking.app/business/${business.slug}',
+    '${AppLinks.business(business.slug)}',
     sharePositionOrigin: origin,
   );
 }

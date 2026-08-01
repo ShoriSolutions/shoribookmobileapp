@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/config/app_links.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snackbar.dart';
@@ -25,7 +26,7 @@ class ProfileMarketplaceScreen extends ConsumerWidget {
     final business = membership.business;
     final canManage = can(membership.role, Permission.manageSettings);
     final saving = ref.watch(profileMarketplaceControllerProvider).isLoading;
-    final url = 'https://betterbooking.app/book/${business.slug}';
+    final url = AppLinks.booking(business.slug);
 
     Future<void> apply({
       bool? isPublished,

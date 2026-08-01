@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/config/app_links.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_snackbar.dart';
 
@@ -18,8 +19,7 @@ class ShareBookingLinkSection extends StatelessWidget {
   final String businessName;
   final String slug;
 
-  String _link(String source) =>
-      'https://betterbooking.app/book/$slug?source=$source';
+  String _link(String source) => AppLinks.booking(slug, source: source);
 
   @override
   Widget build(BuildContext context) {

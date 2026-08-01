@@ -15,8 +15,10 @@ different sizes, authenticated-role live probing (no test JWT), running
 migrations, or store-sandbox purchase testing. Items depending on those are
 called out as **VERIFY** rather than confirmed.
 
-Fixes already applied in this pass are marked **✅ FIXED** and were committed
-(`eb0f1e7` + the subscription commit `6cc3973`).
+Fixes already applied are marked **✅ FIXED**. A second pass then centralized
+the share links (H2), added an offline error message (M5), locked orientation
+to portrait (M3), and wrote a least-privilege RLS migration for H3 + M1
+(`20260801000001_rls_least_privilege.sql`, run + test manually).
 
 ---
 
@@ -84,19 +86,15 @@ it's added to the Runner target in Xcode.
 target (or add it as a resource in `project.pbxproj`), and make the
 `NSPrivacyCollectedDataTypes` match your App Store Connect privacy answers.
 
-### H2 — Share / booking links hardcoded to `betterbooking.app` (VERIFY)
-`https://betterbooking.app/book/<slug>` and `/business/<slug>` are used in the
-share sheet, booking-link screen, marketplace profile, and profile-marketplace
-screen. If the live domain is now Shorivo's, **every share link customers send
+### H2 — Share / booking links hardcoded to `betterbooking.app` ✅ CENTRALIZED (set domain)
+`https://betterbooking.app/book/<slug>` and `/business/<slug>` were hardcoded in
+5 places. If the live domain is now Shorivo's, **every share link customers send
 is broken/mis-branded.**
-Files: `lib/features/booking_link/presentation/booking_link_screen.dart:20`,
-`booking_share_sheet.dart:13`,
-`lib/features/marketplace/presentation/business_profile_screen.dart:81`,
-`lib/features/profile_marketplace/presentation/profile_marketplace_screen.dart:28`,
-`.../widgets/share_booking_link_section.dart:22`.
-**Recommend:** move the base URL to one constant (e.g. `Env`/a config) and point
-it at the correct live domain; confirm the domain resolves and renders a booking
-page.
+**Fix:** all 5 usages now go through `AppLinks` (`lib/core/config/app_links.dart`),
+so the domain is set in ONE place (`AppLinks.webBaseUrl`).
+**Action for you:** set `AppLinks.webBaseUrl` to the correct live domain (it's
+still `https://betterbooking.app` — the value I couldn't confirm) and open one
+generated link to confirm it renders a real booking page.
 
 ### H3 — `profiles` is world-readable via `USING (true)` (VERIFY → likely PII enumeration)
 `20260721000014_marketplace_access_final.sql:28` sets a `profiles` SELECT policy
@@ -105,11 +103,12 @@ page.
 but the `authenticated` role almost certainly is — meaning **any logged-in user
 can read every profile's `full_name`, `email`, `phone`.**
 **Impact:** PII enumeration across all users.
-**Recommend:** replace the profiles-dependent businesses base policy with a
-SECURITY DEFINER helper, then restrict `profiles` SELECT to
-`id = auth.uid()` (+ any minimal cross-read the app genuinely needs). Verify
-with an authenticated session which columns are returned for a *different*
-user's id before and after.
+**Fix:** `20260801000001_rls_least_privilege.sql` restricts `profiles` SELECT to
+`id = auth.uid()`. Confirmed safe for the mobile app — both profiles reads
+(`profile_repository`, `trust_repository`) are own-row. Marketplace browsing
+does not depend on it once M1's businesses policy is self-contained.
+**Action for you:** run the migration; verify login + profile load and that
+marketplace browsing still works (rollback SQL is in the migration).
 
 ### H4 — No store server-notification webhook → lapsed paid subs keep access
 Nothing flips `subscription_status` back to `canceled`/`past_due` when a paid
@@ -130,9 +129,13 @@ businesses — including `is_published = false` / unlisted ones — with their s
 columns (which include `phone`, `email`, `address`). The app filters in queries,
 but the API doesn't. Someone hitting REST directly can enumerate unpublished
 businesses' contact details.
-**Recommend:** `USING (is_published = true OR owner_id = auth.uid() OR
-public.get_my_business_role(id) IS NOT NULL)`. Test the owner's own-business read
-and marketplace browsing after changing it.
+**Fix:** `20260801000001_rls_least_privilege.sql` changes the policy to
+`USING (is_published = true OR owner_id = auth.uid() OR
+public.get_my_business_role(id) IS NOT NULL)`.
+**Action for you:** run the migration; verify guest browsing/booking of a
+published business and the owner opening their own (possibly unpublished)
+business. Also check `pg_policies` for any other permissive businesses SELECT
+policy (the verify query is in the migration).
 
 ### M2 — Staff can read all appointments + prices via the raw table
 Documented in `20260710000000_mobile_app_support.sql:204-210`: the
@@ -142,11 +145,11 @@ staff member could query the table directly and see full revenue.
 **Recommend:** tighten the member-select policy (staff → only their own
 `staff_profile_id` rows) if staff shouldn't see business-wide revenue.
 
-### M3 — iPhone allows landscape but the UI is portrait-designed
-`ios/Runner/Info.plist` lists Landscape Left/Right for iPhone. If screens aren't
-built for landscape, reviewers may see broken layouts.
-**Recommend:** lock iPhone to Portrait (remove the landscape entries) unless
-landscape is explicitly tested. (Behaviour change — left for you to decide.)
+### M3 — Orientation locked to portrait ✅ FIXED
+`ios/Runner/Info.plist` listed Landscape for iPhone (broken layouts risk under
+App Review). **Fix:** iPhone locked to Portrait in `Info.plist` (iPad keeps all
+orientations), and `android:screenOrientation="portrait"` added to `MainActivity`
+so both platforms match.
 
 ### M4 — Subscription renewal date column reconciliation ✅ FIXED (app side)
 Both purchase paths write `subscription_period_end`, but the model read only
@@ -156,12 +159,11 @@ Also fixed: the Subscription screen showed the *popular* plan as "Current plan"
 instead of the actual subscribed plan; and the purchase handler now matches a
 package by monthly **or** annual store id.
 
-### M5 — No specific offline error message
-`AppException.from` maps a `SocketException`/no-internet to the generic
-"Something went wrong. Please try again." (double-booking `23P01` and duplicate
-`23505` are handled nicely, so this is minor.)
-**Recommend:** add an offline branch ("You appear to be offline — check your
-connection.") for `SocketException`/`ClientException`.
+### M5 — Offline error message ✅ FIXED
+`AppException.from` previously mapped no-internet to the generic "Something went
+wrong." **Fix:** it now detects `SocketException` and http/lookup network
+failures and returns "You appear to be offline. Check your connection and try
+again." (double-booking `23P01` and duplicate `23505` were already handled).
 
 ---
 
@@ -189,9 +191,9 @@ connection.") for `SocketException`/`ClientException`.
 |---|---------|----------|--------|
 | C3 | Reviews RLS errors for guests | Critical (functional) | ✅ migration written |
 | C4 | Purchase verification may be trust-the-client | Critical | VERIFY (deploy + secrets) |
-| H3 | `profiles` world-readable to authenticated (PII) | High | Recommend RLS tightening |
-| M1 | Unpublished businesses' contact info enumerable | Medium | Recommend RLS tightening |
-| M2 | Staff can read all appointments/prices | Medium | Recommend RLS tightening |
+| H3 | `profiles` world-readable to authenticated (PII) | High | ✅ migration written (run + test) |
+| M1 | Unpublished businesses' contact info enumerable | Medium | ✅ migration written (run + test) |
+| M2 | Staff can read all appointments/prices | Medium | Documented only (product decision) |
 | — | Secrets/keys | — | ✅ none exposed (env gitignored; service-role only in `Deno.env`) |
 | — | Admin/privileged RPCs | — | ✅ `is_admin()` / OWNER-ADMIN gated |
 | — | Review/booking/block RPCs | — | ✅ ownership-checked (anti-abuse: word-count, new-account flags, dedupe) |
@@ -234,11 +236,12 @@ no longer available." (`23P01`). This is a genuinely strong design.
 ## Pre-submission checklist (owner actions)
 
 1. ☐ Run `20260801000000_fix_reviews_read_policy.sql` (C3).
-2. ☐ Deploy `verify-purchase` + set `APPLE_SHARED_SECRET` /
+2. ☐ Run `20260801000001_rls_least_privilege.sql`, then run its verify query +
+   test browsing/login (H3, M1).
+3. ☐ Deploy `verify-purchase` + set `APPLE_SHARED_SECRET` /
    `GOOGLE_SERVICE_ACCOUNT_JSON` / `ANDROID_PACKAGE_NAME` (C4).
-3. ☐ Add `ios/Runner/PrivacyInfo.xcprivacy` to the Runner target in Xcode (H1).
-4. ☐ Point share links at the correct live domain and confirm it renders (H2).
-5. ☐ Decide + apply the `profiles` / `businesses` RLS tightening (H3, M1).
+4. ☐ Add `ios/Runner/PrivacyInfo.xcprivacy` to the Runner target in Xcode (H1).
+5. ☐ Set `AppLinks.webBaseUrl` to the live domain + confirm it renders (H2).
 6. ☐ Create the App Store / Play subscription products matching
    `subscription_packages.store_product_id_*`; test a sandbox purchase.
 7. ☐ Confirm the Supabase Auth redirect allow-list contains

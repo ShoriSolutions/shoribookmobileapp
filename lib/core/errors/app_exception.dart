@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// The only exception type that should ever cross a repository boundary.
@@ -10,13 +12,31 @@ class AppException implements Exception {
 
   const AppException(this.message, {this.cause});
 
+  static const _offlineMessage =
+      'You appear to be offline. Check your connection and try again.';
+
   factory AppException.from(Object error) {
     if (error is AppException) return error;
+    if (error is SocketException) {
+      return const AppException(_offlineMessage);
+    }
     if (error is AuthException) {
       return AppException(_friendlyAuthMessage(error), cause: error);
     }
     if (error is PostgrestException) {
       return AppException(_friendlyPostgrestMessage(error), cause: error);
+    }
+    // Network failures that surface as http ClientException / lookup errors
+    // (not typed as SocketException here) -- match on the message so the user
+    // gets an actionable "offline" hint instead of the generic fallback.
+    final s = error.toString().toLowerCase();
+    if (s.contains('socketexception') ||
+        s.contains('failed host lookup') ||
+        s.contains('clientexception') ||
+        s.contains('connection closed') ||
+        s.contains('connection refused') ||
+        s.contains('network is unreachable')) {
+      return const AppException(_offlineMessage);
     }
     return AppException('Something went wrong. Please try again.', cause: error);
   }
