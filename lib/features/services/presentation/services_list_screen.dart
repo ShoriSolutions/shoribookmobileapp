@@ -20,7 +20,7 @@ Future<void> _showUpgrade(BuildContext context, int limit) async {
       title: const Text('Service limit reached'),
       content: Text(
         'Your current plan includes up to $limit services. Upgrade to add '
-        'more — unlimited services are available on Solo Pro and Squad.',
+        'more — unlimited services are available on Solo Pro and higher.',
       ),
       actions: [
         TextButton(

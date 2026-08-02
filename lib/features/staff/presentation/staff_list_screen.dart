@@ -25,8 +25,8 @@ class StaffListScreen extends ConsumerWidget {
         title: const Text('Staff limit reached'),
         content: Text(
           limit <= 1
-              ? 'Your plan is for solo pros. Upgrade to Squad to add a team '
-                  '(up to 5 staff) with per-staff schedules.'
+              ? 'Your plan is for solo pros. Upgrade to Squad or higher to add '
+                  'a team (up to 5 staff) with per-staff schedules.'
               : 'Your plan includes up to $limit staff. Upgrade for a bigger '
                   'team.',
         ),

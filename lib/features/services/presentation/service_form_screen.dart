@@ -315,7 +315,7 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
                               color: AppColors.muted),
                           title: const Text('Require a deposit'),
                           subtitle: const Text(
-                              'Deposits are on Solo Pro & Squad'),
+                              'Deposits are on Solo Pro & up'),
                           trailing: TextButton(
                             onPressed: () => showSubscriptionModal(context),
                             child: const Text('Upgrade'),

@@ -37,12 +37,13 @@ class PlanCaps {
   );
 
   /// Caps for a plan by its catalog name. Keep in sync with the
-  /// subscription_packages rows (Side Hustle / Solo Pro / Squad).
+  /// subscription_packages rows (Solo Pro / Squad / Empire). 'Side Hustle' is
+  /// retired but kept here so any legacy subscriber still resolves correctly.
   factory PlanCaps.forPlanName(String? name) {
     switch (name) {
-      case 'Side Hustle':
+      case 'Side Hustle': // retired tier (legacy subscribers only)
         return const PlanCaps(maxServices: 5, maxStaff: 1);
-      case 'Solo Pro':
+      case 'Solo Pro': // entry tier
         return const PlanCaps(
           maxServices: null,
           maxStaff: 1,
@@ -51,6 +52,18 @@ class PlanCaps {
           marketplaceListing: true,
         );
       case 'Squad':
+        return const PlanCaps(
+          maxServices: null,
+          maxStaff: 5,
+          deposits: true,
+          reports: true,
+          marketplaceListing: true,
+        );
+      case 'Empire':
+        // In-app caps match Squad. Empire's extra value (multiple businesses,
+        // consolidated billing, cross-business reporting) is delivered on the
+        // web -- the mobile app is single-business -- so it grants no extra
+        // in-app capability beyond Squad today.
         return const PlanCaps(
           maxServices: null,
           maxStaff: 5,

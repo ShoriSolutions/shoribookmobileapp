@@ -152,7 +152,7 @@ class _DepositStatusCard extends ConsumerWidget {
               )
             : null;
       case DepositCapability.needsPlan:
-        reason = 'Upgrade to Solo Pro or Squad to enable deposits.';
+        reason = 'Upgrade to Solo Pro or higher to enable deposits.';
         action = canManage
             ? TextButton(
                 onPressed: () => showSubscriptionModal(context),

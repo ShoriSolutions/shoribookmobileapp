@@ -111,7 +111,7 @@ class MoreScreen extends ConsumerWidget {
                   icon: Icons.storefront_outlined,
                   title: 'Marketplace profile',
                   subtitle: !caps.marketplaceListing
-                      ? 'Solo Pro & Squad'
+                      ? 'Solo Pro & up'
                       : business != null && business.isMarketplaceListed
                           ? 'Live'
                           : 'Not listed',
