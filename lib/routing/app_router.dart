@@ -745,9 +745,12 @@ class GoRouterRefreshNotifier extends ChangeNotifier {
     });
   }
 
-  // The intro animation runs ~1.9s; hold a little past it so the finished
-  // composition lingers before the cross-fade to home.
-  static const _minSplash = Duration(milliseconds: 4200);
+  // The intro animation runs ~3.6s (see splash_screen.dart _introMs). Hold
+  // well past it — cold-start first-frame/shader jank can delay the first
+  // visible splash frame by a few hundred ms, so a generous margin guarantees
+  // the whole animation plays and the floating circles linger before the
+  // cross-fade to home.
+  static const _minSplash = Duration(milliseconds: 6000);
   Timer? _splashTimer;
   bool _splashDone = false;
 
