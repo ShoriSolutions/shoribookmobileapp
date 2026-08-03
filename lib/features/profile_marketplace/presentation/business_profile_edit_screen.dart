@@ -44,13 +44,19 @@ class _BusinessProfileEditScreenState
   final _facebook = TextEditingController();
   final _tiktok = TextEditingController();
   final _googleMaps = TextEditingController();
-  final _tags = TextEditingController();
+  final _tagInput = TextEditingController();
   String? _category;
   bool _featuredRequested = false;
   double? _lat;
   double? _lng;
   List<String> _gallery = const [];
+  List<String> _tagList = const [];
+  // Reserved/platform badges present on load, preserved untouched on save.
+  List<String> _reservedBadges = const [];
   bool _seeded = false;
+
+  static const int _maxTags = 12;
+  static const int _maxTagLength = 24;
 
   @override
   void initState() {
@@ -70,7 +76,9 @@ class _BusinessProfileEditScreenState
     _facebook.text = b.facebookUrl ?? '';
     _tiktok.text = b.tiktokUrl ?? '';
     _googleMaps.text = b.googleMapsUrl ?? '';
-    _tags.text = b.badges.join(', ');
+    _tagList = List.of(b.tags);
+    _reservedBadges =
+        b.badges.where((x) => Business.reservedBadges.contains(x)).toList();
     _category = b.category;
     _featuredRequested = b.featuredRequested;
     _lat = b.latitude;
@@ -83,7 +91,7 @@ class _BusinessProfileEditScreenState
   void dispose() {
     for (final c in [
       _name, _description, _phone, _email, _address, _whatsapp,
-      _instagram, _facebook, _tiktok, _googleMaps, _tags,
+      _instagram, _facebook, _tiktok, _googleMaps, _tagInput,
     ]) {
       c.dispose();
     }
@@ -95,6 +103,95 @@ class _BusinessProfileEditScreenState
   bool _isLocked(Business b) {
     final until = b.nameCategoryLockedUntil;
     return until != null && DateTime.now().isBefore(until);
+  }
+
+  void _addTag() {
+    var t = _tagInput.text.trim();
+    if (t.length > _maxTagLength) t = t.substring(0, _maxTagLength);
+    if (t.isEmpty) return;
+    if (_tagList.length >= _maxTags) {
+      showAppSnackBar(context,
+          message: 'You can add up to $_maxTags tags.', isError: true);
+      return;
+    }
+    // Case-insensitive de-dupe.
+    if (_tagList.any((e) => e.toLowerCase() == t.toLowerCase())) {
+      _tagInput.clear();
+      return;
+    }
+    setState(() {
+      _tagList = [..._tagList, t];
+      _tagInput.clear();
+    });
+  }
+
+  void _removeTag(String tag) {
+    setState(() => _tagList = _tagList.where((e) => e != tag).toList());
+  }
+
+  Widget _tagEditor(bool canManage) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Tags',
+            style: TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.ink)),
+        const SizedBox(height: 2),
+        const Text(
+          'Short keywords customers can see on your profile, e.g. fade, '
+          'beard trim, kids cuts.',
+          style: TextStyle(fontSize: 12.5, color: AppColors.muted),
+        ),
+        const SizedBox(height: 10),
+        if (_tagList.isNotEmpty)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final tag in _tagList)
+                Chip(
+                  label: Text(tag),
+                  backgroundColor: AppColors.sageLight,
+                  side: const BorderSide(color: AppColors.sageTintBorder),
+                  labelStyle: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.sageDark),
+                  onDeleted: canManage ? () => _removeTag(tag) : null,
+                  deleteIconColor: AppColors.sageDark,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                ),
+            ],
+          ),
+        if (_tagList.isNotEmpty) const SizedBox(height: 10),
+        if (canManage)
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _tagInput,
+                  textCapitalization: TextCapitalization.none,
+                  maxLength: _maxTagLength,
+                  onSubmitted: (_) => _addTag(),
+                  decoration: const InputDecoration(
+                    hintText: 'Add a tag',
+                    counterText: '',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: _tagList.length >= _maxTags ? null : _addTag,
+                child: const Text('Add'),
+              ),
+            ],
+          ),
+      ],
+    );
   }
 
   Future<void> _addGalleryPhoto() async {
@@ -222,11 +319,9 @@ class _BusinessProfileEditScreenState
     if (!_formKey.currentState!.validate()) return;
     final biz = ref.read(activeMembershipProvider).valueOrNull?.business;
     if (biz == null) return;
-    final badges = _tags.text
-        .split(',')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
+    // Preserve any platform-managed badges (e.g. 'featured'); the vendor only
+    // controls the custom tags.
+    final badges = [..._reservedBadges, ..._tagList];
     final status = await ref
         .read(businessProfileControllerProvider.notifier)
         .save(
@@ -560,8 +655,7 @@ class _BusinessProfileEditScreenState
 
                     // ── Marketplace ─────────────────────────────────────
                     _section(context, 'Marketplace'),
-                    _field(_tags, 'Keywords / tags', canManage,
-                        hint: 'Comma-separated, e.g. fade, beard, kids'),
+                    _tagEditor(canManage),
                     const SizedBox(height: 4),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,

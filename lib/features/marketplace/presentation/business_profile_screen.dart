@@ -166,6 +166,21 @@ class _Loaded extends ConsumerWidget {
                             height: 1.45,
                             color: AppColors.muted)),
                   ],
+                  if (business.tags.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final tag in business.tags)
+                          _Pill(
+                            label: tag,
+                            bg: AppColors.sageLight,
+                            fg: AppColors.sageDark,
+                          ),
+                      ],
+                    ),
+                  ],
                   if (isPreview) ...[
                     const SizedBox(height: 16),
                     _previewBanner(),

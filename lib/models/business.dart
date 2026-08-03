@@ -115,6 +115,17 @@ class Business {
     required this.updatedAt,
   });
 
+  /// Platform-managed badges stored in [badges] that a vendor cannot set or
+  /// remove themselves (assigned by the team / system). Everything else in
+  /// [badges] is a vendor's own custom marketplace tag.
+  static const reservedBadges = {'featured', 'verified', 'top_rated', 'new'};
+
+  /// The vendor's own custom marketplace tags — [badges] minus the reserved,
+  /// platform-managed ones. This is what's shown on the marketplace profile
+  /// and edited in the profile screen's tag editor.
+  List<String> get tags =>
+      badges.where((b) => !reservedBadges.contains(b)).toList();
+
   /// Whether the business can use the paid app right now: an active paid
   /// subscription, or a trial that hasn't expired yet. 'none' (never
   /// trialed) and an expired trial both count as no access.
