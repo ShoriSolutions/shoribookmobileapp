@@ -290,30 +290,34 @@ class _BubblesPainter extends CustomPainter {
 
   static const _colors = [
     Color(0xFF7A9E8C), // sage
+    Color(0xFF5C8070), // sage dark
     Color(0xFFD97A4F), // terracotta
+    Color(0xFFB3673A), // terracotta deep
     Color(0xFFA3D0E6), // brand blue
+    Color(0xFFC4BDB4), // warm parchment/taupe
   ];
 
-  // (x, startY, sizePx, colorIdx, opacity, periodSec, phase) — scattered.
+  // (x, startY, sizePx, colorIdx, opacity, periodSec, phase) — scattered,
+  // larger bubbles across the full brand palette.
   static const _bubbles = <_Bubble>[
-    _Bubble(0.10, 0.20, 58, 0, 0.45, 17, 0.4),
-    _Bubble(0.86, 0.05, 40, 1, 0.40, 14, 1.1),
-    _Bubble(0.50, 0.55, 30, 2, 0.38, 12, 2.6),
-    _Bubble(0.22, 0.78, 46, 1, 0.42, 15, 0.7),
-    _Bubble(0.72, 0.35, 26, 0, 0.36, 11, 3.6),
-    _Bubble(0.05, 0.50, 34, 2, 0.40, 13, 2.0),
-    _Bubble(0.93, 0.62, 52, 0, 0.44, 18, 0.2),
-    _Bubble(0.38, 0.12, 22, 1, 0.34, 10, 1.4),
-    _Bubble(0.63, 0.88, 44, 2, 0.42, 16, 2.3),
-    _Bubble(0.15, 0.95, 30, 0, 0.38, 12.5, 4.0),
-    _Bubble(0.80, 0.82, 34, 0, 0.40, 14.5, 0.9),
-    _Bubble(0.44, 0.30, 40, 2, 0.36, 13.5, 1.7),
-    _Bubble(0.30, 0.45, 24, 1, 0.34, 11.5, 3.1),
-    _Bubble(0.68, 0.10, 48, 0, 0.42, 16.5, 2.9),
-    _Bubble(0.90, 0.40, 20, 1, 0.32, 10.5, 0.6),
-    _Bubble(0.55, 0.72, 28, 0, 0.38, 12, 3.9),
-    _Bubble(0.08, 0.72, 22, 2, 0.34, 11, 1.9),
-    _Bubble(0.48, 0.02, 36, 0, 0.40, 15.5, 2.2),
+    _Bubble(0.12, 0.20, 104, 0, 0.42, 17, 0.4),
+    _Bubble(0.86, 0.05, 74, 4, 0.40, 14, 1.1),
+    _Bubble(0.50, 0.55, 58, 2, 0.36, 12, 2.6),
+    _Bubble(0.22, 0.78, 88, 3, 0.40, 15, 0.7),
+    _Bubble(0.74, 0.35, 50, 1, 0.34, 11, 3.6),
+    _Bubble(0.05, 0.50, 66, 4, 0.38, 13, 2.0),
+    _Bubble(0.92, 0.62, 110, 0, 0.42, 18, 0.2),
+    _Bubble(0.38, 0.12, 46, 2, 0.36, 10, 1.4),
+    _Bubble(0.63, 0.88, 84, 3, 0.40, 16, 2.3),
+    _Bubble(0.15, 0.95, 60, 5, 0.38, 12.5, 4.0),
+    _Bubble(0.80, 0.82, 64, 2, 0.38, 14.5, 0.9),
+    _Bubble(0.44, 0.30, 78, 4, 0.34, 13.5, 1.7),
+    _Bubble(0.30, 0.45, 48, 1, 0.36, 11.5, 3.1),
+    _Bubble(0.68, 0.10, 94, 0, 0.40, 16.5, 2.9),
+    _Bubble(0.90, 0.40, 42, 5, 0.32, 10.5, 0.6),
+    _Bubble(0.55, 0.72, 56, 2, 0.36, 12, 3.9),
+    _Bubble(0.08, 0.72, 46, 4, 0.34, 11, 1.9),
+    _Bubble(0.48, 0.02, 70, 3, 0.38, 15.5, 2.2),
   ];
 
   double _fade(double yf) {
