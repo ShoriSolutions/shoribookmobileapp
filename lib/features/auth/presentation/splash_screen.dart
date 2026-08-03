@@ -103,13 +103,13 @@ class _SplashScreenState extends State<SplashScreen>
               // logo/wordmark below are painted on top and stay crisp.
               Positioned.fill(
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
                   child: const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0x12FFFFFF), Color(0x05FFFFFF)],
+                        colors: [Color(0x0AFFFFFF), Color(0x03FFFFFF)],
                       ),
                     ),
                   ),
