@@ -2,12 +2,11 @@ import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
-/// Branded loading splash — a barber-shop themed animation shown while the
-/// router resolves the auth/session state. It has NO navigation logic of its
-/// own; the router redirects away when ready. Recreated from the "shorivo
-/// Splash" design: a Midnight ocean-blue radial backdrop, drifting barber
-/// tools, a pulsing bloom, a scissors that snips then rises to reveal the logo,
-/// and the wordmark.
+/// Branded loading splash shown while the router resolves the auth/session
+/// state. It has NO navigation logic of its own; the router redirects away
+/// when ready. Themed to match the Shorivo app + website palette (warm cream
+/// background, sage + terracotta accents) with softly rising bubbles behind
+/// the logo tile and wordmark.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -17,18 +16,21 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  // One-shot intro timeline (ms values below map to the design's CSS delays).
+  // One-shot intro timeline (ms).
   static const int _introMs = 2100;
   late final AnimationController _intro;
-  // Long, seamless loop that drives the ambient motion (bloom / breath / drift).
-  // 60s never wraps during a real splash, so no visible discontinuity.
+  // Long, seamless loop for the ambient motion (bubbles / bloom / breath).
   late final AnimationController _loop;
 
-  // Palette (Midnight ocean theme — matches the Shorivo brand blue).
-  static const _bg = [Color(0xFF1A3A4A), Color(0xFF0E2029), Color(0xFF060F15)];
-  static const _accent = Color(0xFF6FB6D8);
-  static const _text = Color(0xFFE8F4FA);
-  static const _kicker = _accent;
+  // Brand palette (matches app_colors.dart + shorivo.com).
+  static const _bg = [
+    Color(0xFFFCFBF9), // near-white warm center
+    Color(0xFFF3F1EA), // cream
+    Color(0xFFE9F0EC), // sage-tinted edge
+  ];
+  static const _sage = Color(0xFF7A9E8C);
+  static const _ink = Color(0xFF1E1B16);
+  static const _muted = Color(0xFF78746D);
 
   @override
   void initState() {
@@ -63,67 +65,54 @@ class _SplashScreenState extends State<SplashScreen>
 
           // ── one-shot values ────────────────────────────────────────────
           final spark = _clamp01((tm - 400) / 700);
-          final reveal = _clamp01((tm - 400) / 800);
+          final reveal = _clamp01((tm - 300) / 900);
           final logoOpacity = _clamp01(reveal / 0.6);
           final logoScale = reveal < 0.6
-              ? _lerp(0.5, 1.08, reveal / 0.6)
-              : _lerp(1.08, 1.0, (reveal - 0.6) / 0.4);
+              ? _lerp(0.6, 1.06, reveal / 0.6)
+              : _lerp(1.06, 1.0, (reveal - 0.6) / 0.4);
           final word = Curves.easeOut.transform(_clamp01((tm - 1000) / 700));
           final kick = Curves.easeOut.transform(_clamp01((tm - 1200) / 700));
 
           // ── ambient values ─────────────────────────────────────────────
           final bloomWave = (1 - math.cos(2 * math.pi * t / 3.2)) / 2;
-          final bloomOpacity = 0.5 + 0.42 * bloomWave;
-          final bloomScale = 1 + 0.14 * bloomWave;
+          final bloomOpacity = 0.4 + 0.35 * bloomWave;
+          final bloomScale = 1 + 0.12 * bloomWave;
           final breathT = t - 1.6;
           final breath = breathT <= 0
               ? 1.0
-              : 1 + 0.025 * (1 - math.cos(2 * math.pi * breathT / 3.0));
+              : 1 + 0.02 * (1 - math.cos(2 * math.pi * breathT / 3.0));
 
           return Stack(
             fit: StackFit.expand,
             children: [
-              // Backdrop
+              // Warm cream backdrop
               const DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
-                    center: Alignment(0, -0.24),
-                    radius: 1.15,
+                    center: Alignment(0, -0.22),
+                    radius: 1.2,
                     colors: _bg,
-                    stops: [0, 0.47, 1],
+                    stops: [0, 0.5, 1],
                   ),
                 ),
               ),
 
-              // Drifting barber tools
-              Positioned.fill(child: _tools(t)),
+              // Rising bubbles
+              Positioned.fill(child: CustomPaint(painter: _BubblesPainter(t))),
 
-              // Frosted glass -- a light blur that softens the backdrop while
-              // keeping the drifting tools visible behind it. The center
-              // logo/wordmark below are painted on top and stay crisp.
+              // Whisper of frosted glass to tie it together (kept very light
+              // so the bubbles stay crisp).
               Positioned.fill(
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                  filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
                   child: const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
                         colors: [Color(0x0AFFFFFF), Color(0x03FFFFFF)],
                       ),
                     ),
-                  ),
-                ),
-              ),
-
-              // Vignette
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment(0, -0.16),
-                    radius: 1.0,
-                    colors: [Colors.transparent, Color(0x52000000)],
-                    stops: [0.42, 1.0],
                   ),
                 ),
               ),
@@ -140,7 +129,7 @@ class _SplashScreenState extends State<SplashScreen>
                         alignment: Alignment.center,
                         clipBehavior: Clip.none,
                         children: [
-                          // Bloom
+                          // Sage bloom behind the tile
                           Opacity(
                             opacity: bloomOpacity,
                             child: Transform.scale(
@@ -151,45 +140,60 @@ class _SplashScreenState extends State<SplashScreen>
                                 decoration: const BoxDecoration(
                                   shape: BoxShape.circle,
                                   gradient: RadialGradient(
-                                    colors: [Color(0x666FB6D8), Colors.transparent],
+                                    colors: [Color(0x4D7A9E8C), Colors.transparent],
                                     stops: [0.0, 0.72],
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                          // Spark burst
+                          // Spark burst on reveal (sage)
                           if (spark > 0 && spark < 1)
                             Opacity(
                               opacity: (spark < 0.28
                                       ? spark / 0.28
                                       : 1 - (spark - 0.28) / 0.72) *
-                                  0.85,
+                                  0.7,
                               child: Transform.scale(
-                                scale: _lerp(0.35, 1.9, spark),
+                                scale: _lerp(0.4, 1.9, spark),
                                 child: Container(
-                                  width: 135,
-                                  height: 135,
+                                  width: 140,
+                                  height: 140,
                                   decoration: const BoxDecoration(
                                     shape: BoxShape.circle,
                                     gradient: RadialGradient(
-                                      colors: [Color(0x8C6FB6D8), Colors.transparent],
+                                      colors: [Color(0x807A9E8C), Colors.transparent],
                                       stops: [0.0, 0.6],
                                     ),
                                   ),
                                 ),
                               ),
                             ),
-                          // Logo (reveal-pop then breath)
+                          // Logo on a white tile (so the blue mark reads on
+                          // the cream backdrop) — reveal-pop then gentle breath.
                           Opacity(
                             opacity: logoOpacity,
                             child: Transform.scale(
                               scale: logoScale * breath,
-                              child: Image.asset(
-                                'assets/branding/shorivo-brand.png',
-                                width: 118,
-                                height: 118,
-                                filterQuality: FilterQuality.medium,
+                              child: Container(
+                                padding: const EdgeInsets.all(22),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(30),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _sage.withValues(alpha: 0.22),
+                                      blurRadius: 34,
+                                      offset: const Offset(0, 12),
+                                    ),
+                                  ],
+                                ),
+                                child: Image.asset(
+                                  'assets/branding/shorivo-brand.png',
+                                  width: 92,
+                                  height: 92,
+                                  filterQuality: FilterQuality.medium,
+                                ),
                               ),
                             ),
                           ),
@@ -209,7 +213,7 @@ class _SplashScreenState extends State<SplashScreen>
                             fontWeight: FontWeight.w600,
                             fontSize: 48,
                             height: 1,
-                            color: _text,
+                            color: _ink,
                           ),
                         ),
                       ),
@@ -224,9 +228,9 @@ class _SplashScreenState extends State<SplashScreen>
                           'BOOK YOUR CHAIR',
                           style: TextStyle(
                             fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             letterSpacing: 3.4,
-                            color: _kicker,
+                            color: _sage,
                           ),
                         ),
                       ),
@@ -248,7 +252,7 @@ class _SplashScreenState extends State<SplashScreen>
                     style: TextStyle(
                       fontSize: 10.5,
                       letterSpacing: 2.5,
-                      color: Color(0x70E8F4FA),
+                      color: _muted,
                     ),
                   ),
                 ),
@@ -259,125 +263,107 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
   }
-
-  Widget _tools(double t) {
-    // (leftFrac, topFrac, size, opacity, type, periodSec, phase)
-    // Scattered across the whole canvas; the center band (~0.35-0.65 x,
-    // 0.30-0.60 y) is left clear for the logo + wordmark.
-    const specs = <_ToolSpec>[
-      _ToolSpec(0.06, 0.08, 50, 0.50, _Tool.scissors, 12, 0.4),
-      _ToolSpec(0.90, 0.05, 42, 0.42, _Tool.comb, 14, 1.1),
-      _ToolSpec(0.40, 0.04, 30, 0.34, _Tool.clippers, 11, 2.6),
-      _ToolSpec(0.64, 0.11, 34, 0.36, _Tool.razor, 13, 0.2),
-      _ToolSpec(0.03, 0.28, 52, 0.46, _Tool.razor, 13, 2.0),
-      _ToolSpec(0.93, 0.26, 40, 0.44, _Tool.clippers, 15, 0.7),
-      _ToolSpec(0.73, 0.34, 30, 0.32, _Tool.scissors, 11.5, 3.6),
-      _ToolSpec(0.15, 0.50, 46, 0.42, _Tool.comb, 14.5, 2.9),
-      _ToolSpec(0.91, 0.52, 44, 0.46, _Tool.scissors, 13.5, 1.7),
-      _ToolSpec(0.04, 0.70, 54, 0.44, _Tool.razor, 12.5, 3.1),
-      _ToolSpec(0.85, 0.72, 46, 0.42, _Tool.clippers, 15, 0.9),
-      _ToolSpec(0.10, 0.90, 34, 0.36, _Tool.scissors, 12, 4.0),
-      _ToolSpec(0.36, 0.93, 32, 0.34, _Tool.comb, 12.5, 1.4),
-      _ToolSpec(0.66, 0.90, 36, 0.38, _Tool.scissors, 14, 2.3),
-    ];
-    return LayoutBuilder(
-      builder: (context, c) {
-        return Stack(
-          children: [
-            for (final s in specs)
-              _driftingTool(s, c.maxWidth, c.maxHeight, t),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _driftingTool(_ToolSpec s, double w, double h, double t) {
-    final phase = 2 * math.pi * (t / s.period) + s.phase;
-    final dx = 18 * math.sin(phase);
-    final dy = 20 * math.cos(phase * 0.9);
-    final rot = 0.12 * math.sin(phase);
-    return Positioned(
-      left: s.left * w - s.size / 2 + dx,
-      top: s.top * h - s.size / 2 + dy,
-      child: Transform.rotate(
-        angle: rot,
-        child: Opacity(
-          opacity: s.opacity * 0.78,
-          child: CustomPaint(
-            size: Size(s.size, s.size),
-            painter: _ToolPainter(s.type, _text),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 double _lerp(double a, double b, double t) => a + (b - a) * t;
 
-enum _Tool { scissors, comb, razor, clippers }
-
-class _ToolSpec {
-  final double left, top, size, opacity;
-  final _Tool type;
-  final double period, phase;
-  const _ToolSpec(this.left, this.top, this.size, this.opacity, this.type,
-      this.period, this.phase);
+/// A single rising bubble. [x]/[startY] are 0..1 fractions; [size] is in px.
+class _Bubble {
+  final double x, startY, size, opacity, period, phase;
+  final int color; // index into _BubblesPainter._colors
+  const _Bubble(
+    this.x,
+    this.startY,
+    this.size,
+    this.color,
+    this.opacity,
+    this.period,
+    this.phase,
+  );
 }
 
-/// Draws a barber tool in a 24x24 space scaled to [size], line-art style.
-class _ToolPainter extends CustomPainter {
-  final _Tool tool;
-  final Color color;
-  const _ToolPainter(this.tool, this.color);
+/// Draws softly rising, swaying bubbles across the whole canvas in the brand
+/// palette (sage / terracotta / brand blue).
+class _BubblesPainter extends CustomPainter {
+  final double t;
+  const _BubblesPainter(this.t);
+
+  static const _colors = [
+    Color(0xFF7A9E8C), // sage
+    Color(0xFFD97A4F), // terracotta
+    Color(0xFFA3D0E6), // brand blue
+  ];
+
+  // (x, startY, sizePx, colorIdx, opacity, periodSec, phase) — scattered.
+  static const _bubbles = <_Bubble>[
+    _Bubble(0.10, 0.20, 58, 0, 0.45, 17, 0.4),
+    _Bubble(0.86, 0.05, 40, 1, 0.40, 14, 1.1),
+    _Bubble(0.50, 0.55, 30, 2, 0.38, 12, 2.6),
+    _Bubble(0.22, 0.78, 46, 1, 0.42, 15, 0.7),
+    _Bubble(0.72, 0.35, 26, 0, 0.36, 11, 3.6),
+    _Bubble(0.05, 0.50, 34, 2, 0.40, 13, 2.0),
+    _Bubble(0.93, 0.62, 52, 0, 0.44, 18, 0.2),
+    _Bubble(0.38, 0.12, 22, 1, 0.34, 10, 1.4),
+    _Bubble(0.63, 0.88, 44, 2, 0.42, 16, 2.3),
+    _Bubble(0.15, 0.95, 30, 0, 0.38, 12.5, 4.0),
+    _Bubble(0.80, 0.82, 34, 0, 0.40, 14.5, 0.9),
+    _Bubble(0.44, 0.30, 40, 2, 0.36, 13.5, 1.7),
+    _Bubble(0.30, 0.45, 24, 1, 0.34, 11.5, 3.1),
+    _Bubble(0.68, 0.10, 48, 0, 0.42, 16.5, 2.9),
+    _Bubble(0.90, 0.40, 20, 1, 0.32, 10.5, 0.6),
+    _Bubble(0.55, 0.72, 28, 0, 0.38, 12, 3.9),
+    _Bubble(0.08, 0.72, 22, 2, 0.34, 11, 1.9),
+    _Bubble(0.48, 0.02, 36, 0, 0.40, 15.5, 2.2),
+  ];
+
+  double _fade(double yf) {
+    const edge = 0.14;
+    final top = (yf / edge).clamp(0.0, 1.0);
+    final bot = ((1 - yf) / edge).clamp(0.0, 1.0);
+    return math.min(top, bot);
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    final s = size.width / 24;
-    canvas.scale(s);
-    final p = Paint()
-      ..style = PaintingStyle.stroke
-      ..color = color
-      ..strokeWidth = 1.7
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+    for (final b in _bubbles) {
+      // Rise: yf decreases over time (bottom -> top), wrapping seamlessly.
+      var yf = (b.startY - t / b.period) % 1.0;
+      if (yf < 0) yf += 1.0;
+      final fade = _fade(yf);
+      if (fade <= 0) continue;
 
-    switch (tool) {
-      case _Tool.scissors:
-        canvas.drawCircle(const Offset(6, 6), 3, p);
-        canvas.drawCircle(const Offset(6, 18), 3, p);
-        canvas.drawLine(const Offset(20, 4), const Offset(8.12, 15.88), p);
-        canvas.drawLine(const Offset(14.47, 14.48), const Offset(20, 20), p);
-        canvas.drawLine(const Offset(8.12, 8.12), const Offset(12, 12), p);
-      case _Tool.comb:
-        canvas.drawLine(const Offset(3, 7), const Offset(21, 7), p);
-        for (final x in const [5.0, 11.4, 17.8]) {
-          canvas.drawLine(Offset(x, 7), Offset(x, 13), p);
-        }
-        for (final x in const [8.2, 14.6, 21.0]) {
-          canvas.drawLine(Offset(x, 7), Offset(x, 17), p);
-        }
-      case _Tool.razor:
-        canvas.drawLine(const Offset(4, 20), const Offset(14.2, 9.8), p);
-        final blade = Path()
-          ..moveTo(14.2, 9.8)
-          ..arcToPoint(const Offset(19.9, 15.5),
-              radius: const Radius.circular(4), clockwise: true);
-        canvas.drawPath(blade, p);
-        canvas.drawLine(const Offset(4, 20), const Offset(2.6, 18.6), p);
-      case _Tool.clippers:
-        final r = RRect.fromRectAndRadius(
-            const Rect.fromLTWH(9, 3.5, 6, 15), const Radius.circular(3));
-        canvas.drawRRect(r, p);
-        canvas.drawLine(const Offset(9.4, 7.5), const Offset(14.6, 4.5), p);
-        canvas.drawLine(const Offset(9.4, 11), const Offset(14.6, 8), p);
-        canvas.drawLine(const Offset(9.4, 14.5), const Offset(14.6, 11.5), p);
-        canvas.drawLine(const Offset(10, 18.5), const Offset(10, 21), p);
-        canvas.drawLine(const Offset(14, 18.5), const Offset(14, 21), p);
+      final sway = 0.025 * math.sin(2 * math.pi * (t / b.period) + b.phase);
+      final cx = size.width * (b.x + sway);
+      final cy = size.height * (yf * 1.2 - 0.1);
+      final r = b.size / 2;
+      final base = _colors[b.color];
+      final o = b.opacity * fade;
+      final center = Offset(cx, cy);
+
+      // Soft fill
+      canvas.drawCircle(
+        center,
+        r,
+        Paint()..color = base.withValues(alpha: 0.13 * fade),
+      );
+      // Ring
+      canvas.drawCircle(
+        center,
+        r,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.6
+          ..color = base.withValues(alpha: 0.55 * o),
+      );
+      // Highlight
+      canvas.drawCircle(
+        Offset(cx - r * 0.32, cy - r * 0.32),
+        r * 0.15,
+        Paint()..color = Colors.white.withValues(alpha: 0.6 * fade),
+      );
     }
   }
 
   @override
-  bool shouldRepaint(_ToolPainter old) => old.tool != tool || old.color != color;
+  bool shouldRepaint(_BubblesPainter old) => old.t != t;
 }
