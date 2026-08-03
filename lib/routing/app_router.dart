@@ -730,16 +730,19 @@ class GoRouterRefreshNotifier extends ChangeNotifier {
     ref.listen(passwordRecoveryProvider, (_, __) => notifyListeners());
     ref.listen(onboardingSeenProvider, (_, __) => notifyListeners());
     ref.listen(termsAcceptedProvider, (_, __) => notifyListeners());
-    // Hold the branded splash for a minimum moment on cold start so its
-    // fade-in can play fully even when auth resolves instantly. Fires one
-    // redirect re-evaluation when the window elapses.
+    // Hold the branded splash for a minimum moment on cold start so its full
+    // animation (scissors snip -> logo reveal -> wordmark) plays out and settles
+    // for a beat, even when auth resolves instantly. Fires one redirect
+    // re-evaluation when the window elapses.
     _splashTimer = Timer(_minSplash, () {
       _splashDone = true;
       notifyListeners();
     });
   }
 
-  static const _minSplash = Duration(milliseconds: 2200);
+  // The intro animation runs ~1.9s; hold a little past it so the finished
+  // composition lingers before the cross-fade to home.
+  static const _minSplash = Duration(milliseconds: 3400);
   Timer? _splashTimer;
   bool _splashDone = false;
 
