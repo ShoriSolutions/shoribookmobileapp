@@ -3,30 +3,151 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/conversation.dart';
 import '../../../routing/route_paths.dart';
 import '../application/messaging_providers.dart';
 
+/// How the conversation list is split into categories.
+enum _ChatFilter { all, bookings, questions }
+
+extension on _ChatFilter {
+  String get label => switch (this) {
+        _ChatFilter.all => 'All',
+        _ChatFilter.bookings => 'Bookings',
+        _ChatFilter.questions => 'Questions',
+      };
+
+  bool matches(Conversation c) => switch (this) {
+        _ChatFilter.all => true,
+        _ChatFilter.bookings => c.isBooking,
+        _ChatFilter.questions => !c.isBooking,
+      };
+}
+
 /// Messages — the conversation list. Vendors see threads for their business
 /// (by customer name); customers see their threads (by business name).
-class ConversationsListScreen extends ConsumerWidget {
+/// Supports category filters and a multi-select delete (removes a thread from
+/// your own inbox).
+class ConversationsListScreen extends ConsumerStatefulWidget {
   const ConversationsListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ConversationsListScreen> createState() =>
+      _ConversationsListScreenState();
+}
+
+class _ConversationsListScreenState
+    extends ConsumerState<ConversationsListScreen> {
+  _ChatFilter _filter = _ChatFilter.all;
+  bool _selecting = false;
+  final Set<String> _selected = {};
+  bool _deleting = false;
+
+  void _toggleSelect(String id) {
+    setState(() {
+      if (!_selected.add(id)) _selected.remove(id);
+      if (_selected.isEmpty) _selecting = false;
+    });
+  }
+
+  void _enterSelect(String id) {
+    setState(() {
+      _selecting = true;
+      _selected
+        ..clear()
+        ..add(id);
+    });
+  }
+
+  void _cancelSelect() {
+    setState(() {
+      _selecting = false;
+      _selected.clear();
+    });
+  }
+
+  Future<void> _deleteSelected(int count) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete $count ${count == 1 ? 'chat' : 'chats'}?'),
+        content: const Text(
+          'This removes the selected conversations from your inbox. The other '
+          'person keeps their copy.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _deleting = true);
+    final repo = ref.read(messagingRepositoryProvider);
+    try {
+      await Future.wait(
+        _selected.map((id) => repo.setFlag(id, archive: true)),
+      );
+      if (!mounted) return;
+      showAppSnackBar(context,
+          message: '$count ${count == 1 ? 'chat' : 'chats'} deleted');
+      _cancelSelect();
+    } catch (e) {
+      if (mounted) {
+        showAppSnackBar(context,
+            message: AppException.from(e).message, isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _deleting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final asVendor = ref.watch(isVendorMessagingProvider);
     final convosAsync = ref.watch(activeConversationsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Messages')),
+      appBar: AppBar(
+        leading: _selecting
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _deleting ? null : _cancelSelect,
+              )
+            : null,
+        title: Text(_selecting ? '${_selected.length} selected' : 'Messages'),
+        actions: [
+          if (!_selecting)
+            convosAsync.maybeWhen(
+              data: (list) => list.isEmpty
+                  ? const SizedBox.shrink()
+                  : TextButton(
+                      onPressed: () => setState(() => _selecting = true),
+                      child: const Text('Select'),
+                    ),
+              orElse: () => const SizedBox.shrink(),
+            ),
+        ],
+      ),
       body: SafeArea(
         bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _filterBar(),
             Expanded(
               child: convosAsync.when(
                 loading: () =>
@@ -38,18 +159,24 @@ class ConversationsListScreen extends ConsumerWidget {
                     onRetry: () => ref.invalidate(conversationsProvider),
                   ),
                 ]),
-                data: (convos) {
+                data: (all) {
+                  final convos =
+                      all.where((c) => _filter.matches(c)).toList();
                   if (convos.isEmpty) {
                     return ListView(children: [
                       const SizedBox(height: 60),
                       EmptyState(
                         icon: '💬',
-                        title: 'No messages yet',
-                        message: asVendor
-                            ? 'Messages from your customers about their '
-                                'bookings will appear here.'
-                            : 'Questions and booking chats with businesses '
-                                'will appear here.',
+                        title: all.isEmpty
+                            ? 'No messages yet'
+                            : 'No ${_filter.label.toLowerCase()} chats',
+                        message: all.isEmpty
+                            ? (asVendor
+                                ? 'Messages from your customers about their '
+                                    'bookings will appear here.'
+                                : 'Questions and booking chats with businesses '
+                                    'will appear here.')
+                            : 'Try a different category.',
                       ),
                     ]);
                   }
@@ -61,23 +188,130 @@ class ConversationsListScreen extends ConsumerWidget {
                     itemBuilder: (_, i) => _ConversationTile(
                       conversation: convos[i],
                       asVendor: asVendor,
+                      selecting: _selecting,
+                      selected: _selected.contains(convos[i].id),
+                      onTap: () {
+                        if (_selecting) {
+                          _toggleSelect(convos[i].id);
+                        } else {
+                          context.push(RoutePaths.conversation(convos[i].id));
+                        }
+                      },
+                      onLongPress: () =>
+                          _selecting ? null : _enterSelect(convos[i].id),
                     ),
                   );
                 },
               ),
             ),
+            if (_selecting) _deleteBar(),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _filterBar() {
+    return SizedBox(
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        children: [
+          for (final f in _ChatFilter.values) ...[
+            _FilterChip(
+              label: f.label,
+              selected: _filter == f,
+              onTap: () => setState(() => _filter = f),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _deleteBar() {
+    final n = _selected.length;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton.icon(
+            onPressed: (n == 0 || _deleting) ? null : () => _deleteSelected(n),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            icon: _deleting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.delete_outline),
+            label: Text(n == 0 ? 'Delete' : 'Delete ($n)'),
+          ),
         ),
       ),
     );
   }
 }
 
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.sageLight : AppColors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+              color: selected ? AppColors.sage : AppColors.parchment),
+        ),
+        child: Text(label,
+            style: TextStyle(
+                fontSize: 14,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? AppColors.sageDark : AppColors.muted)),
+      ),
+    );
+  }
+}
+
 class _ConversationTile extends StatelessWidget {
-  const _ConversationTile({required this.conversation, required this.asVendor});
+  const _ConversationTile({
+    required this.conversation,
+    required this.asVendor,
+    required this.selecting,
+    required this.selected,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   final Conversation conversation;
   final bool asVendor;
+  final bool selecting;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -88,12 +322,23 @@ class _ConversationTile extends StatelessWidget {
         (c.isBooking ? 'Booking conversation' : 'New enquiry');
 
     return InkWell(
-      onTap: () => context.push(RoutePaths.conversation(c.id)),
-      child: Padding(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: Container(
+        color: selected ? AppColors.sageLight : null,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            if (selecting) ...[
+              Icon(
+                selected
+                    ? Icons.check_circle
+                    : Icons.radio_button_unchecked,
+                color: selected ? AppColors.sage : AppColors.faint,
+              ),
+              const SizedBox(width: 14),
+            ],
             _avatar(title),
             const SizedBox(width: 14),
             Expanded(
@@ -145,7 +390,7 @@ class _ConversationTile extends StatelessWidget {
                                     ? FontWeight.w600
                                     : FontWeight.w400)),
                       ),
-                      if (unread) ...[
+                      if (unread && !selecting) ...[
                         const SizedBox(width: 8),
                         Container(
                           width: 10,
