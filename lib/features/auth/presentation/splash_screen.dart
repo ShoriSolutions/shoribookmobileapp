@@ -282,19 +282,19 @@ class _Bubble {
   );
 }
 
-/// Draws softly rising, swaying bubbles across the whole canvas in the brand
-/// palette (sage / terracotta / brand blue).
+/// Draws softly rising, swaying solid circles across the whole canvas in the
+/// darker brand palette (deep sage / terracotta / blue / taupe).
 class _BubblesPainter extends CustomPainter {
   final double t;
   const _BubblesPainter(this.t);
 
   static const _colors = [
-    Color(0xFF7A9E8C), // sage
     Color(0xFF5C8070), // sage dark
-    Color(0xFFD97A4F), // terracotta
+    Color(0xFF3F5F52), // deep sage
     Color(0xFFB3673A), // terracotta deep
-    Color(0xFFA3D0E6), // brand blue
-    Color(0xFFC4BDB4), // warm parchment/taupe
+    Color(0xFF8F4E28), // deeper terracotta
+    Color(0xFF5F92B0), // deeper brand blue
+    Color(0xFF8A8377), // taupe
   ];
 
   // (x, startY, sizePx, colorIdx, opacity, periodSec, phase) — scattered,
@@ -342,28 +342,12 @@ class _BubblesPainter extends CustomPainter {
       final r = b.size / 2;
       final base = _colors[b.color];
       final o = b.opacity * fade;
-      final center = Offset(cx, cy);
 
-      // Soft fill
+      // Solid filled circle.
       canvas.drawCircle(
-        center,
+        Offset(cx, cy),
         r,
-        Paint()..color = base.withValues(alpha: 0.13 * fade),
-      );
-      // Ring
-      canvas.drawCircle(
-        center,
-        r,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.6
-          ..color = base.withValues(alpha: 0.55 * o),
-      );
-      // Highlight
-      canvas.drawCircle(
-        Offset(cx - r * 0.32, cy - r * 0.32),
-        r * 0.15,
-        Paint()..color = Colors.white.withValues(alpha: 0.6 * fade),
+        Paint()..color = base.withValues(alpha: o),
       );
     }
   }
