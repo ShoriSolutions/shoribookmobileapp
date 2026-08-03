@@ -173,6 +173,15 @@ class _HelpFaqScreenState extends ConsumerState<HelpFaqScreen> {
             onTap: () =>
                 _openDoc(context, 'Privacy & Data', SupportContent.privacyPolicy),
           ),
+          const Divider(height: 1, color: AppColors.divider),
+          ListTile(
+            leading: const Icon(Icons.receipt_long_outlined,
+                color: AppColors.sage),
+            title: const Text('Refund Policy'),
+            trailing: const Icon(Icons.chevron_right, color: AppColors.faint),
+            onTap: () =>
+                _openDoc(context, 'Refund Policy', SupportContent.refundPolicy),
+          ),
         ],
       ),
     );

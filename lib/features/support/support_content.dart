@@ -254,4 +254,34 @@ You can edit most details anytime in the app. You can permanently delete your ac
 Contact
 For any privacy question, email the support address shown in the Support screen.
 ''';
+
+  // Mirrors the Refund Policy published at shorivo.com/refund-policy.
+  static const refundPolicy = '''
+Last updated 29 July 2026.
+
+This policy covers two separate things: the subscription fees vendors pay Shorivo, and the deposits customers pay to a business. Because Shorivo does not process customer payments, these are handled differently.
+
+
+■ SHORIVO SUBSCRIPTION FEES (vendors)
+Every plan starts with a 14-day free trial. Valid card details are required at signup, but nothing is charged until the trial ends — cancel before then and you are never billed.
+• You can cancel a paid subscription at any time; your access continues until the end of the period you have already paid for.
+• We do not provide partial-period refunds, credit for unused time, or refunds for features you did not use.
+• Genuine billing errors — duplicate charges, charges after cancellation, or other billing mistakes — are refunded. Contact support with the details.
+
+
+■ CUSTOMER DEPOSITS & PAYMENTS TO A BUSINESS
+Payments between a customer and a business happen directly (cash, transfer, or card) outside Shorivo. Shorivo only tracks deposit status — it never processes or holds these funds.
+• Whether a deposit is refundable follows that business's own cancellation policy, which is shown to you before you confirm a booking.
+• To request a refund, contact the business directly using their stated policy. Shorivo cannot issue refunds on a business's behalf.
+• If a business breaks its own stated policy, or you believe you were charged unfairly, contact Shorivo and we will investigate and may take action on the account.
+
+
+■ HOW TO REQUEST A REFUND
+• Subscription issues: email contact@shorisolutions.com with your account email and the charge details.
+• Business payment disputes: contact the business first, then escalate anything unresolved to the same address.
+
+
+■ CHANGES TO THIS POLICY
+We may update this policy from time to time; the date above reflects the latest version. See the Terms of Service and Privacy Policy for more information.
+''';
 }

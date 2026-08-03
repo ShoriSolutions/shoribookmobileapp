@@ -541,8 +541,9 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
           // Required on the paywall for auto-renewable subscriptions
           // (App Store Guideline 3.1.2 / Play policy): functional links to the
           // Terms of Use (EULA) and Privacy Policy.
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               TextButton(
                 onPressed: () => _openLegal(context, 'Terms of Service',
@@ -562,6 +563,17 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
                     minimumSize: const Size(0, 32),
                     padding: const EdgeInsets.symmetric(horizontal: 8)),
                 child: const Text('Privacy Policy',
+                    style: TextStyle(fontSize: 11, color: AppColors.muted)),
+              ),
+              const Text('·',
+                  style: TextStyle(fontSize: 11, color: AppColors.muted)),
+              TextButton(
+                onPressed: () => _openLegal(
+                    context, 'Refund Policy', SupportContent.refundPolicy),
+                style: TextButton.styleFrom(
+                    minimumSize: const Size(0, 32),
+                    padding: const EdgeInsets.symmetric(horizontal: 8)),
+                child: const Text('Refund Policy',
                     style: TextStyle(fontSize: 11, color: AppColors.muted)),
               ),
             ],
