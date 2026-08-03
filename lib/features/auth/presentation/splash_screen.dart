@@ -16,8 +16,8 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  // One-shot intro timeline (ms).
-  static const int _introMs = 2100;
+  // One-shot intro timeline (ms). Slowed so the full sequence plays out.
+  static const int _introMs = 3800;
   late final AnimationController _intro;
   // Long, seamless loop for the ambient motion (bubbles / bloom / breath).
   late final AnimationController _loop;
@@ -63,15 +63,15 @@ class _SplashScreenState extends State<SplashScreen>
           final tm = _intro.value * _introMs; // intro time, ms
           final t = _loop.value * 60.0; // ambient time, seconds
 
-          // ── one-shot values ────────────────────────────────────────────
-          final spark = _clamp01((tm - 400) / 700);
-          final reveal = _clamp01((tm - 300) / 900);
+          // ── one-shot values (slowed timeline) ──────────────────────────
+          final spark = _clamp01((tm - 600) / 1100);
+          final reveal = _clamp01((tm - 500) / 1500);
           final logoOpacity = _clamp01(reveal / 0.6);
           final logoScale = reveal < 0.6
               ? _lerp(0.6, 1.06, reveal / 0.6)
               : _lerp(1.06, 1.0, (reveal - 0.6) / 0.4);
-          final word = Curves.easeOut.transform(_clamp01((tm - 1000) / 700));
-          final kick = Curves.easeOut.transform(_clamp01((tm - 1200) / 700));
+          final word = Curves.easeOut.transform(_clamp01((tm - 1800) / 1100));
+          final kick = Curves.easeOut.transform(_clamp01((tm - 2200) / 1000));
 
           // ── ambient values ─────────────────────────────────────────────
           final bloomWave = (1 - math.cos(2 * math.pi * t / 3.2)) / 2;
@@ -97,8 +97,8 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
 
-              // Rising bubbles
-              Positioned.fill(child: CustomPaint(painter: _BubblesPainter(t))),
+              // Floating circles
+              Positioned.fill(child: CustomPaint(painter: _CirclesPainter(t))),
 
               // Whisper of frosted glass to tie it together (kept very light
               // so the bubbles stay crisp).
@@ -245,7 +245,7 @@ class _SplashScreenState extends State<SplashScreen>
                 right: 0,
                 bottom: 38,
                 child: Opacity(
-                  opacity: Curves.easeOut.transform(_clamp01((tm - 1400) / 700)),
+                  opacity: Curves.easeOut.transform(_clamp01((tm - 2600) / 1000)),
                   child: const Text(
                     'BOOKING FOR PROFESSIONALS',
                     textAlign: TextAlign.center,
@@ -267,13 +267,14 @@ class _SplashScreenState extends State<SplashScreen>
 
 double _lerp(double a, double b, double t) => a + (b - a) * t;
 
-/// A single rising bubble. [x]/[startY] are 0..1 fractions; [size] is in px.
+/// A single floating circle. [x]/[y] are 0..1 fractions of its resting
+/// position; [size] is the diameter in px.
 class _Bubble {
-  final double x, startY, size, opacity, period, phase;
-  final int color; // index into _BubblesPainter._colors
+  final double x, y, size, opacity, period, phase;
+  final int color; // index into _CirclesPainter._colors
   const _Bubble(
     this.x,
-    this.startY,
+    this.y,
     this.size,
     this.color,
     this.opacity,
@@ -282,11 +283,12 @@ class _Bubble {
   );
 }
 
-/// Draws softly rising, swaying solid circles across the whole canvas in the
-/// darker brand palette (deep sage / terracotta / blue / taupe).
-class _BubblesPainter extends CustomPainter {
+/// Draws large solid circles in the darker brand palette (deep sage /
+/// terracotta / blue / taupe) that float gently in place — a slow sinusoidal
+/// drift around a fixed position, no rising.
+class _CirclesPainter extends CustomPainter {
   final double t;
-  const _BubblesPainter(this.t);
+  const _CirclesPainter(this.t);
 
   static const _colors = [
     Color(0xFF5C8070), // sage dark
@@ -297,61 +299,43 @@ class _BubblesPainter extends CustomPainter {
     Color(0xFF8A8377), // taupe
   ];
 
-  // (x, startY, sizePx, colorIdx, opacity, periodSec, phase) — scattered,
-  // larger bubbles across the full brand palette.
-  static const _bubbles = <_Bubble>[
-    _Bubble(0.12, 0.20, 104, 0, 0.42, 17, 0.4),
-    _Bubble(0.86, 0.05, 74, 4, 0.40, 14, 1.1),
-    _Bubble(0.50, 0.55, 58, 2, 0.36, 12, 2.6),
-    _Bubble(0.22, 0.78, 88, 3, 0.40, 15, 0.7),
-    _Bubble(0.74, 0.35, 50, 1, 0.34, 11, 3.6),
-    _Bubble(0.05, 0.50, 66, 4, 0.38, 13, 2.0),
-    _Bubble(0.92, 0.62, 110, 0, 0.42, 18, 0.2),
-    _Bubble(0.38, 0.12, 46, 2, 0.36, 10, 1.4),
-    _Bubble(0.63, 0.88, 84, 3, 0.40, 16, 2.3),
-    _Bubble(0.15, 0.95, 60, 5, 0.38, 12.5, 4.0),
-    _Bubble(0.80, 0.82, 64, 2, 0.38, 14.5, 0.9),
-    _Bubble(0.44, 0.30, 78, 4, 0.34, 13.5, 1.7),
-    _Bubble(0.30, 0.45, 48, 1, 0.36, 11.5, 3.1),
-    _Bubble(0.68, 0.10, 94, 0, 0.40, 16.5, 2.9),
-    _Bubble(0.90, 0.40, 42, 5, 0.32, 10.5, 0.6),
-    _Bubble(0.55, 0.72, 56, 2, 0.36, 12, 3.9),
-    _Bubble(0.08, 0.72, 46, 4, 0.34, 11, 1.9),
-    _Bubble(0.48, 0.02, 70, 3, 0.38, 15.5, 2.2),
+  // (x, y, diameterPx, colorIdx, opacity, periodSec, phase) — large circles
+  // resting at fixed positions; some peek in from the edges.
+  static const _circles = <_Bubble>[
+    _Bubble(0.14, 0.16, 240, 0, 0.30, 20, 0.4),
+    _Bubble(0.90, 0.08, 190, 4, 0.28, 17, 1.1),
+    _Bubble(0.50, 0.60, 160, 2, 0.24, 15, 2.6),
+    _Bubble(0.08, 0.74, 210, 3, 0.28, 18, 0.7),
+    _Bubble(0.84, 0.54, 280, 1, 0.26, 22, 3.6),
+    _Bubble(0.96, 0.86, 180, 0, 0.28, 16, 2.0),
+    _Bubble(0.28, 0.94, 200, 4, 0.26, 19, 0.2),
+    _Bubble(0.70, 0.26, 150, 2, 0.24, 14, 1.4),
+    _Bubble(0.04, 0.42, 170, 5, 0.26, 15.5, 2.3),
+    _Bubble(0.44, 0.06, 150, 3, 0.26, 13.5, 4.0),
+    _Bubble(0.74, 0.92, 160, 0, 0.26, 17.5, 0.9),
+    _Bubble(0.20, 0.48, 130, 2, 0.22, 12.5, 3.1),
+    _Bubble(0.62, 0.76, 220, 4, 0.26, 20.5, 1.7),
   ];
-
-  double _fade(double yf) {
-    const edge = 0.14;
-    final top = (yf / edge).clamp(0.0, 1.0);
-    final bot = ((1 - yf) / edge).clamp(0.0, 1.0);
-    return math.min(top, bot);
-  }
 
   @override
   void paint(Canvas canvas, Size size) {
-    for (final b in _bubbles) {
-      // Rise: yf decreases over time (bottom -> top), wrapping seamlessly.
-      var yf = (b.startY - t / b.period) % 1.0;
-      if (yf < 0) yf += 1.0;
-      final fade = _fade(yf);
-      if (fade <= 0) continue;
-
-      final sway = 0.025 * math.sin(2 * math.pi * (t / b.period) + b.phase);
-      final cx = size.width * (b.x + sway);
-      final cy = size.height * (yf * 1.2 - 0.1);
-      final r = b.size / 2;
-      final base = _colors[b.color];
-      final o = b.opacity * fade;
-
-      // Solid filled circle.
+    for (final b in _circles) {
+      // Gentle in-place float: a slow sinusoidal drift around the rest point.
+      final cx = size.width * b.x +
+          14 * math.sin(2 * math.pi * (t / b.period) + b.phase);
+      final cy = size.height * b.y +
+          12 * math.cos(2 * math.pi * (t / b.period) * 0.9 + b.phase);
+      // Subtle opacity breathing so they feel alive.
+      final pulse =
+          0.88 + 0.12 * math.sin(2 * math.pi * (t / b.period) + b.phase * 1.3);
       canvas.drawCircle(
         Offset(cx, cy),
-        r,
-        Paint()..color = base.withValues(alpha: o),
+        b.size / 2,
+        Paint()..color = _colors[b.color].withValues(alpha: b.opacity * pulse),
       );
     }
   }
 
   @override
-  bool shouldRepaint(_BubblesPainter old) => old.t != t;
+  bool shouldRepaint(_CirclesPainter old) => old.t != t;
 }

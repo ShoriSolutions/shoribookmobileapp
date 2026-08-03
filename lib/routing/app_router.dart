@@ -747,7 +747,7 @@ class GoRouterRefreshNotifier extends ChangeNotifier {
 
   // The intro animation runs ~1.9s; hold a little past it so the finished
   // composition lingers before the cross-fade to home.
-  static const _minSplash = Duration(milliseconds: 3400);
+  static const _minSplash = Duration(milliseconds: 4200);
   Timer? _splashTimer;
   bool _splashDone = false;
 
