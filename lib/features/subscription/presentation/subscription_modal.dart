@@ -506,8 +506,32 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
                     ),
             ),
           ),
+          // Android purchases complete on the Shorivo website — let people
+          // know before the redirect so it isn't a surprise.
+          if (Platform.isAndroid && !noBusiness) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.open_in_new,
+                    size: 13, color: AppColors.muted),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    "You'll be taken to shorivo.com to finish securely.",
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: AppColors.muted, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 4),
-          if (!noBusiness)
+          // Restore is only meaningful for store (iOS) purchases.
+          if (!noBusiness && !Platform.isAndroid)
             TextButton(
               onPressed: _busy
                   ? null
