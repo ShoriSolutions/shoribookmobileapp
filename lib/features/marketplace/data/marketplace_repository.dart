@@ -15,6 +15,7 @@ class MarketplaceRepository {
   Future<List<Business>> search({
     String? query,
     String? category,
+    String? tag,
     int limit = 20,
     int offset = 0,
   }) async {
@@ -28,9 +29,18 @@ class MarketplaceRepository {
       if (category != null && category.isNotEmpty) {
         q = q.eq('category', category);
       }
+      // Exact tag filter (from a tapped tag chip): the badges array must
+      // contain this tag.
+      if (tag != null && tag.trim().isNotEmpty) {
+        q = q.contains('badges', [tag.trim()]);
+      }
       if (query != null && query.trim().isNotEmpty) {
-        final term = query.trim();
-        q = q.or('name.ilike.%$term%,category.ilike.%$term%,address.ilike.%$term%');
+        // Match name/category/address (partial) plus an exact tag match, so
+        // typing a tag surfaces businesses that use it. Commas would break the
+        // PostgREST or() grammar, so drop them from the term.
+        final term = query.trim().replaceAll(',', ' ');
+        q = q.or('name.ilike.%$term%,category.ilike.%$term%,'
+            'address.ilike.%$term%,badges.cs.{"$term"}');
       }
 
       final data = await q

@@ -14,6 +14,10 @@ final marketplaceRepositoryProvider = Provider<MarketplaceRepository>((ref) {
 final searchQueryProvider = StateProvider<String>((ref) => '');
 final selectedCategoryProvider = StateProvider<String?>((ref) => null);
 
+/// A single marketplace tag the results are filtered by (null when off).
+/// Set by tapping a tag chip on a Discover card or business profile.
+final selectedTagProvider = StateProvider<String?>((ref) => null);
+
 /// The customer's current location when "Near me" is on (null when off).
 /// Results are sorted by distance to this point.
 final customerLocationProvider =
@@ -25,6 +29,7 @@ final searchResultsProvider = FutureProvider.autoDispose<List<Business>>((
 ) async {
   final query = ref.watch(searchQueryProvider);
   final category = ref.watch(selectedCategoryProvider);
+  final tag = ref.watch(selectedTagProvider);
 
   // A new query supersedes an in-flight one (Riverpod discards the stale
   // AsyncValue), so a plain delay is sufficient debouncing — no manual
@@ -35,7 +40,7 @@ final searchResultsProvider = FutureProvider.autoDispose<List<Business>>((
 
   return ref
       .watch(marketplaceRepositoryProvider)
-      .search(query: query, category: category);
+      .search(query: query, category: category, tag: tag);
 });
 
 /// Map of business id -> whether it's open right now, for the current

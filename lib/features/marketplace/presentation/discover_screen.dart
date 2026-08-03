@@ -72,6 +72,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final resultsAsync = ref.watch(searchResultsProvider);
     final openNow = ref.watch(marketplaceOpenNowProvider).valueOrNull ?? const {};
     final selectedCategory = ref.watch(selectedCategoryProvider);
+    final selectedTag = ref.watch(selectedTagProvider);
     final location = ref.watch(customerLocationProvider);
 
     return Scaffold(
@@ -84,6 +85,8 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               SliverToBoxAdapter(child: _header(context, location != null)),
               SliverToBoxAdapter(child: _searchField()),
               SliverToBoxAdapter(child: _categoryRow(selectedCategory, location)),
+              if (selectedTag != null)
+                SliverToBoxAdapter(child: _activeTagBanner(selectedTag)),
               ...resultsAsync.when(
                 loading: () => [
                   const SliverFillRemaining(
@@ -219,6 +222,44 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     );
   }
 
+  Widget _activeTagBanner(String tag) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+      child: Row(
+        children: [
+          const Text('Filtered by tag',
+              style: TextStyle(fontSize: 12.5, color: AppColors.muted)),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: () =>
+                ref.read(selectedTagProvider.notifier).state = null,
+            borderRadius: BorderRadius.circular(999),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+              decoration: BoxDecoration(
+                color: AppColors.sageLight,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: AppColors.sageTintBorder),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(tag,
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.sageDark)),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.close, size: 15, color: AppColors.sageDark),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _categoryRow(String? selectedCategory,
       ({double lat, double lng})? location) {
     return Padding(
@@ -306,7 +347,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
         SliverToBoxAdapter(child: _sectionHeader('Featured')),
         SliverToBoxAdapter(
           child: SizedBox(
-            height: 232,
+            height: 268,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
@@ -405,6 +446,32 @@ class _Pill extends StatelessWidget {
           BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
       child: Text(label,
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg)),
+    );
+  }
+}
+
+/// Tappable tag chips shown on Discover cards. Tapping one filters the whole
+/// marketplace by that tag (via [selectedTagProvider]).
+class _TagChips extends ConsumerWidget {
+  const _TagChips({required this.tags, this.max = 3});
+  final List<String> tags;
+  final int max;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final shown = tags.take(max).toList();
+    if (shown.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final t in shown)
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => ref.read(selectedTagProvider.notifier).state = t,
+            child: _Pill(label: t, bg: AppColors.sageLight, fg: AppColors.sageDark),
+          ),
+      ],
     );
   }
 }
@@ -549,6 +616,10 @@ class _FeaturedCard extends StatelessWidget {
                         ),
                     ],
                   ),
+                  if (business.tags.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _TagChips(tags: business.tags, max: 2),
+                  ],
                 ],
               ),
             ),
@@ -628,6 +699,10 @@ class _NearYouRow extends StatelessWidget {
                         ),
                     ],
                   ),
+                  if (business.tags.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _TagChips(tags: business.tags, max: 3),
+                  ],
                 ],
               ),
             ),
