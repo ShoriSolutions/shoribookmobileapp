@@ -78,6 +78,15 @@ class RegisterChooseScreen extends StatelessWidget {
                             child: const Text('Already have an account? Log in'),
                           ),
                         ),
+                        Center(
+                          child: TextButton(
+                            onPressed: () => context.go(RoutePaths.discover),
+                            child: const Text(
+                              'Just browsing? Explore as a guest',
+                              style: TextStyle(color: AppColors.muted),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
