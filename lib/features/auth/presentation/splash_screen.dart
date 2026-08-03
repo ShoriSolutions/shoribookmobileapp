@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 /// Branded loading splash — a barber-shop themed animation shown while the
 /// router resolves the auth/session state. It has NO navigation logic of its
 /// own; the router redirects away when ready. Recreated from the "shorivo
-/// Splash" design: espresso radial backdrop, drifting barber tools, a pulsing
-/// bloom, a scissors that snips then rises to reveal the logo, and the wordmark.
+/// Splash" design: a Midnight ocean-blue radial backdrop, drifting barber
+/// tools, a pulsing bloom, a scissors that snips then rises to reveal the logo,
+/// and the wordmark.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -22,11 +23,11 @@ class _SplashScreenState extends State<SplashScreen>
   // 60s never wraps during a real splash, so no visible discontinuity.
   late final AnimationController _loop;
 
-  // Palette (Espresso theme).
-  static const _bg = [Color(0xFF3B2C22), Color(0xFF241A14), Color(0xFF150F0B)];
-  static const _accent = Color(0xFFD67F48);
-  static const _cream = Color(0xFFF4E8D4);
-  static const _kicker = Color(0xFFDE9160);
+  // Palette (Midnight ocean theme — matches the Shorivo brand blue).
+  static const _bg = [Color(0xFF1A3A4A), Color(0xFF0E2029), Color(0xFF060F15)];
+  static const _accent = Color(0xFF6FB6D8);
+  static const _text = Color(0xFFE8F4FA);
+  static const _kicker = _accent;
 
   @override
   void initState() {
@@ -134,7 +135,7 @@ class _SplashScreenState extends State<SplashScreen>
                                 decoration: const BoxDecoration(
                                   shape: BoxShape.circle,
                                   gradient: RadialGradient(
-                                    colors: [Color(0x66D67F48), Colors.transparent],
+                                    colors: [Color(0x666FB6D8), Colors.transparent],
                                     stops: [0.0, 0.72],
                                   ),
                                 ),
@@ -156,7 +157,7 @@ class _SplashScreenState extends State<SplashScreen>
                                   decoration: const BoxDecoration(
                                     shape: BoxShape.circle,
                                     gradient: RadialGradient(
-                                      colors: [Color(0x8CD67F48), Colors.transparent],
+                                      colors: [Color(0x8C6FB6D8), Colors.transparent],
                                       stops: [0.0, 0.6],
                                     ),
                                   ),
@@ -169,7 +170,7 @@ class _SplashScreenState extends State<SplashScreen>
                             child: Transform.scale(
                               scale: logoScale * breath,
                               child: Image.asset(
-                                'assets/branding/shorivo-cream.png',
+                                'assets/branding/shorivo-brand.png',
                                 width: 118,
                                 height: 118,
                                 filterQuality: FilterQuality.medium,
@@ -210,7 +211,7 @@ class _SplashScreenState extends State<SplashScreen>
                             fontFamily: 'Caprasimo',
                             fontSize: 46,
                             height: 1,
-                            color: _cream,
+                            color: _text,
                           ),
                         ),
                       ),
@@ -249,7 +250,7 @@ class _SplashScreenState extends State<SplashScreen>
                     style: TextStyle(
                       fontSize: 10.5,
                       letterSpacing: 2.5,
-                      color: Color(0x75F4E8D4),
+                      color: Color(0x70E8F4FA),
                     ),
                   ),
                 ),
@@ -307,10 +308,10 @@ class _SplashScreenState extends State<SplashScreen>
       child: Transform.rotate(
         angle: rot,
         child: Opacity(
-          opacity: s.opacity,
+          opacity: s.opacity * 0.78,
           child: CustomPaint(
             size: Size(s.size, s.size),
-            painter: _ToolPainter(s.type, _cream),
+            painter: _ToolPainter(s.type, _text),
           ),
         ),
       ),
