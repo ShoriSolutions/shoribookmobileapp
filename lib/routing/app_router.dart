@@ -221,19 +221,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (authStatus == AuthStatus.unauthenticated) {
-        // First-run intro: shown once before the marketplace. Allowed to
-        // reach login/register from it (so returning users can sign in).
+        // First launch: take the user straight to the registration chooser,
+        // once. We immediately mark onboarding "seen" so it never bounces them
+        // back -- afterwards they can browse the marketplace or log in freely.
         final seenOnboarding = ref.read(onboardingSeenProvider);
-        if (!seenOnboarding &&
-            loc != RoutePaths.onboarding &&
-            !_preAuthRoutes.contains(loc) &&
-            loc != RoutePaths.support &&
-            loc != RoutePaths.helpFaq &&
-            !loc.startsWith(RoutePaths.messages)) {
-          return RoutePaths.onboarding;
+        if (!seenOnboarding) {
+          Future.microtask(() {
+            ref.read(onboardingSeenProvider.notifier).state = true;
+            ref.read(onboardingPrefsProvider).setSeen();
+          });
+          if (!_preAuthRoutes.contains(loc) &&
+              loc != RoutePaths.support &&
+              loc != RoutePaths.helpFaq &&
+              !loc.startsWith(RoutePaths.messages)) {
+            return RoutePaths.register;
+          }
         }
         if (loc == RoutePaths.onboarding) {
-          return seenOnboarding ? RoutePaths.discover : null;
+          return RoutePaths.discover;
         }
         if (_preAuthRoutes.contains(loc)) return null;
         if (_isCustomerModePath(loc)) return null;

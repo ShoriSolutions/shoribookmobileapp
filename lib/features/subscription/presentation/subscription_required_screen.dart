@@ -26,7 +26,6 @@ class SubscriptionRequiredScreen extends ConsumerStatefulWidget {
 class _SubscriptionRequiredScreenState
     extends ConsumerState<SubscriptionRequiredScreen> {
   bool _busy = false;
-  bool _autoShown = false;
 
   Future<void> _startTrial(String businessId) async {
     setState(() => _busy = true);
@@ -70,16 +69,6 @@ class _SubscriptionRequiredScreenState
     final business = membership.business;
     final canBill = can(membership.role, Permission.manageBilling);
     final neverTrialed = business.subscriptionStatus == 'none';
-
-    // Fresh pro (just registered, never trialed): bring the subscription plans
-    // up automatically so they see pricing + can start the trial right away,
-    // instead of it sitting behind a "See all plans" tap.
-    if (canBill && neverTrialed && !_autoShown) {
-      _autoShown = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) showSubscriptionModal(context);
-      });
-    }
 
     return Scaffold(
       backgroundColor: AppColors.cream,

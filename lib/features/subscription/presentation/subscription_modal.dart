@@ -155,8 +155,15 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
   Future<void> _onPrimary(List<SubscriptionPackage> packages) async {
     if (_busy) return;
     final id = _businessId;
+    // Preview mode (opened before an account exists, e.g. from the business
+    // register screen): nothing to subscribe to yet -- just close so they can
+    // finish creating their account, then start the trial from the gate.
+    if (id == null) {
+      Navigator.of(context).pop();
+      return;
+    }
     final pkg = _selected(packages);
-    if (id == null || pkg == null) return;
+    if (pkg == null) return;
 
     // Trial path — eligible customers start the 14-day trial (no payment).
     if (_eligibility?.isEligible ?? true) {
@@ -361,8 +368,11 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
 
   Widget _content(BuildContext context, List<SubscriptionPackage> packages) {
     final selected = _selected(packages)!;
+    final noBusiness = _businessId == null;
     final eligible = _eligibility?.isEligible ?? true;
-    final primaryLabel = eligible ? 'Start Free Trial' : 'Subscribe';
+    final primaryLabel = noBusiness
+        ? 'Get started'
+        : (eligible ? 'Start Free Trial' : 'Subscribe');
     final currency = _resolveCurrency();
     final discount = ref.watch(annualDiscountPercentProvider).valueOrNull ?? 20;
 
@@ -489,14 +499,15 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
             ),
           ),
           const SizedBox(height: 4),
-          TextButton(
-            onPressed: _busy
-                ? null
-                : () => ref
-                    .read(subscriptionRepositoryProvider)
-                    .restorePurchases(),
-            child: const Text('Restore purchases'),
-          ),
+          if (!noBusiness)
+            TextButton(
+              onPressed: _busy
+                  ? null
+                  : () => ref
+                      .read(subscriptionRepositoryProvider)
+                      .restorePurchases(),
+              child: const Text('Restore purchases'),
+            ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Maybe later',

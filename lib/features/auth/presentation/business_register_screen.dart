@@ -9,6 +9,7 @@ import '../../../models/address.dart';
 import '../../../core/widgets/password_requirements.dart';
 import '../../../models/subscription_package.dart';
 import '../../subscription/application/subscription_providers.dart';
+import '../../subscription/presentation/subscription_modal.dart';
 import '../../../models/business.dart';
 import '../../../routing/route_paths.dart';
 import '../application/business_register_controller.dart';
@@ -34,6 +35,17 @@ class _BusinessRegisterScreenState
   bool _obscurePassword = true;
   String? _checkEmailMessage;
   Address _address = const Address();
+
+  @override
+  void initState() {
+    super.initState();
+    // The moment they land here to register a business, bring up the plans so
+    // they see pricing + the 14-day trial. Preview mode (no account yet): the
+    // modal's primary button just dismisses so they continue with the form.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) showSubscriptionModal(context);
+    });
+  }
 
   @override
   void dispose() {
