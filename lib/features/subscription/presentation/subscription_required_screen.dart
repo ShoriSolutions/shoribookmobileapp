@@ -1,64 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/app_snackbar.dart';
-import '../../../models/trial_eligibility.dart';
 import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
-import '../application/subscription_providers.dart';
 import 'subscription_modal.dart';
 
 /// Hard gate shown to a business owner/staff whose trial has ended (or who
 /// never started one) and has no active subscription. The router keeps them
-/// here until they start a trial or subscribe.
-class SubscriptionRequiredScreen extends ConsumerStatefulWidget {
+/// here until they subscribe. Starting the trial / subscribing is handled by
+/// the subscription sheet, which is platform-aware (Apple IAP on iOS; a
+/// redirect to the Shorivo website on Android).
+class SubscriptionRequiredScreen extends ConsumerWidget {
   const SubscriptionRequiredScreen({super.key});
 
-  @override
-  ConsumerState<SubscriptionRequiredScreen> createState() =>
-      _SubscriptionRequiredScreenState();
-}
-
-class _SubscriptionRequiredScreenState
-    extends ConsumerState<SubscriptionRequiredScreen> {
-  bool _busy = false;
-
-  Future<void> _startTrial(String businessId) async {
-    setState(() => _busy = true);
-    try {
-      final res =
-          await ref.read(subscriptionRepositoryProvider).startTrial(businessId);
-      if (!mounted) return;
-      if (res.status == TrialStatus.trialing) {
-        // Access granted — refresh access, then show the trial-started
-        // confirmation (V03) before the dashboard.
-        ref.invalidate(activeMembershipProvider);
-        if (mounted) context.go(RoutePaths.trialStarted);
-      } else {
-        showAppSnackBar(context, message: res.message);
-      }
-    } catch (e) {
-      if (mounted) {
-        showAppSnackBar(context,
-            message: AppException.from(e).message, isError: true);
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _signOut() async {
+  Future<void> _signOut(WidgetRef ref) async {
     try {
       await ref.read(authRepositoryProvider).signOut();
     } catch (_) {}
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final membership = ref.watch(activeMembershipProvider).valueOrNull;
     if (membership == null) {
       return const Scaffold(
@@ -108,8 +73,9 @@ class _SubscriptionRequiredScreenState
                       ? "This business's Shorivo subscription has ended. "
                           'Please ask the owner to renew to continue.'
                       : neverTrialed
-                          ? 'Get 14 days of full access to everything — no card '
-                              'needed to start.'
+                          ? 'Get 14 days of full access to everything. Your '
+                              'payment method is set up now so your plan '
+                              'continues seamlessly after the trial.'
                           : 'Subscribe to keep managing your bookings, clients '
                               'and schedule.',
                   textAlign: TextAlign.center,
@@ -119,45 +85,30 @@ class _SubscriptionRequiredScreenState
                       ?.copyWith(color: AppColors.muted),
                 ),
                 const SizedBox(height: 28),
-
                 if (canBill) ...[
                   SizedBox(
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: _busy
-                          ? null
-                          : neverTrialed
-                              ? () => _startTrial(business.id)
-                              : () => showSubscriptionModal(context),
-                      child: _busy
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
-                            )
-                          : Text(neverTrialed
-                              ? 'Start 14-day free trial'
-                              : 'Choose a plan'),
+                      onPressed: () => showSubscriptionModal(context),
+                      child: Text(neverTrialed
+                          ? 'Start 14-day free trial'
+                          : 'Choose a plan'),
                     ),
                   ),
                   if (neverTrialed)
                     TextButton(
-                      onPressed: _busy
-                          ? null
-                          : () => showSubscriptionModal(context),
+                      onPressed: () => showSubscriptionModal(context),
                       child: const Text('See all plans'),
                     ),
                 ],
-
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: () => context.go(RoutePaths.login),
                   child: const Text('Switch account'),
                 ),
                 TextButton(
-                  onPressed: _signOut,
+                  onPressed: () => _signOut(ref),
                   child: const Text('Sign out',
                       style: TextStyle(color: AppColors.muted)),
                 ),

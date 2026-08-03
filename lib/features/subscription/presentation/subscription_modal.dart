@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../core/config/app_links.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_rates.dart';
@@ -165,34 +168,39 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
     final pkg = _selected(packages);
     if (pkg == null) return;
 
-    // Trial path — eligible customers start the 14-day trial (no payment).
-    if (_eligibility?.isEligible ?? true) {
-      setState(() => _busy = true);
-      try {
-        final res =
-            await ref.read(subscriptionRepositoryProvider).startTrial(id);
-        if (!mounted) return;
-        if (res.status == TrialStatus.trialing) {
-          ref.invalidate(activeMembershipProvider);
-          setState(() => _successMessage = res.message);
-        } else {
-          // pending / ineligible — surface and update the CTA.
-          setState(() => _eligibility = res);
-          showAppSnackBar(context, message: res.message);
-        }
-      } catch (e) {
-        if (mounted) {
-          showAppSnackBar(context,
-              message: AppException.from(e).message, isError: true);
-        }
-      } finally {
-        if (mounted) setState(() => _busy = false);
-      }
+    // Android: ALL purchases (including starting the trial) happen on the
+    // Shorivo website — redirect out to web checkout.
+    if (Platform.isAndroid) {
+      await _openWebCheckout(pkg);
       return;
     }
 
-    // Purchase path — start the store in-app purchase for the plan.
+    // iOS: both starting the trial and subscribing go through Apple IAP. The
+    // App Store subscription's introductory free-trial offer collects the
+    // user's card and starts the 14 days — there is no cardless in-app trial.
     await _purchase(pkg);
+  }
+
+  /// Android web-checkout redirect: opens the Shorivo billing page for the
+  /// selected plan, then closes the sheet.
+  Future<void> _openWebCheckout(SubscriptionPackage pkg) async {
+    final uri = Uri.parse(AppLinks.billing(plan: pkg.name));
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!mounted) return;
+      if (!ok) {
+        showAppSnackBar(context,
+            message: 'Could not open the checkout page. Please try again.',
+            isError: true);
+        return;
+      }
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        showAppSnackBar(context,
+            message: AppException.from(e).message, isError: true);
+      }
+    }
   }
 
   Future<void> _purchase(SubscriptionPackage pkg) async {

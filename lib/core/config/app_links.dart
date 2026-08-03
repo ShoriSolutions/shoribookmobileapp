@@ -18,4 +18,18 @@ class AppLinks {
 
   /// Public business profile page for a slug.
   static String business(String slug) => '$webBaseUrl/business/$slug';
+
+  /// The Shorivo website (marketing + account). Android routes all plan
+  /// purchases here rather than through Google Play.
+  static const String siteBaseUrl = 'https://shorivo.com';
+
+  /// Web billing/checkout page a vendor is sent to when purchasing a plan on
+  /// Android (purchases happen on the website, not through Google Play).
+  /// [plan] is an optional plan-name hint the web page can preselect.
+  static String billing({String? plan}) {
+    final base = '$siteBaseUrl/dashboard/billing';
+    return (plan == null || plan.isEmpty)
+        ? base
+        : '$base?plan=${Uri.encodeQueryComponent(plan)}';
+  }
 }
