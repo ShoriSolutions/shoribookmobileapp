@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 /// Branded loading splash — a barber-shop themed animation shown while the
@@ -99,6 +100,24 @@ class _SplashScreenState extends State<SplashScreen>
 
               // Drifting barber tools
               Positioned.fill(child: _tools(t)),
+
+              // Frosted glass -- blurs the backdrop + drifting tools into a
+              // soft, premium frosted sheen. The center logo/wordmark below
+              // are painted on top and stay crisp.
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                  child: const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0x1FFFFFFF), Color(0x0AFFFFFF)],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
 
               // Vignette
               const DecoratedBox(
@@ -208,8 +227,9 @@ class _SplashScreenState extends State<SplashScreen>
                         child: const Text(
                           'shorivo',
                           style: TextStyle(
-                            fontFamily: 'Caprasimo',
-                            fontSize: 46,
+                            fontFamily: 'Fraunces',
+                            fontWeight: FontWeight.w600,
+                            fontSize: 48,
                             height: 1,
                             color: _text,
                           ),

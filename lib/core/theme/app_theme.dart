@@ -6,6 +6,11 @@ import 'app_colors.dart';
 class AppTheme {
   const AppTheme._();
 
+  /// Brand fonts from shorivo.com: Plus Jakarta Sans for body/UI text,
+  /// Fraunces (serif) for display + headline styles.
+  static const String _body = 'Plus Jakarta Sans';
+  static const String _display = 'Fraunces';
+
   static ThemeData get light {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: AppColors.sage,
@@ -20,23 +25,45 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: AppColors.cream,
-      fontFamily: 'Roboto',
+      fontFamily: _body,
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.cream,
         foregroundColor: AppColors.ink,
         elevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
+          fontFamily: _display,
           color: AppColors.ink,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
       ),
       textTheme: const TextTheme(
+        displayLarge: TextStyle(
+            fontFamily: _display,
+            color: AppColors.ink,
+            fontWeight: FontWeight.w600),
+        displayMedium: TextStyle(
+            fontFamily: _display,
+            color: AppColors.ink,
+            fontWeight: FontWeight.w600),
+        displaySmall: TextStyle(
+            fontFamily: _display,
+            color: AppColors.ink,
+            fontWeight: FontWeight.w600),
+        headlineLarge: TextStyle(
+            fontFamily: _display,
+            color: AppColors.ink,
+            fontWeight: FontWeight.w600),
         headlineMedium: TextStyle(
+          fontFamily: _display,
           color: AppColors.ink,
           fontWeight: FontWeight.w600,
         ),
+        headlineSmall: TextStyle(
+            fontFamily: _display,
+            color: AppColors.ink,
+            fontWeight: FontWeight.w700),
         titleLarge: TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600),
         titleMedium: TextStyle(color: AppColors.ink, fontWeight: FontWeight.w600),
         bodyLarge: TextStyle(color: AppColors.ink),

@@ -94,6 +94,14 @@ flutter:
     - family: Caprasimo
       fonts:
         - asset: fonts/Caprasimo-Regular.ttf
+    # Brand fonts from shorivo.com. Both are variable fonts (weight axis),
+    # so Flutter maps FontWeight to the wght axis -- no per-weight files needed.
+    - family: Plus Jakarta Sans
+      fonts:
+        - asset: fonts/PlusJakartaSans.ttf
+    - family: Fraunces
+      fonts:
+        - asset: fonts/Fraunces.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:
