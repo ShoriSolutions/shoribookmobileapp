@@ -62,9 +62,6 @@ class _SplashScreenState extends State<SplashScreen>
           final t = _loop.value * 60.0; // ambient time, seconds
 
           // ── one-shot values ────────────────────────────────────────────
-          final snip = _clamp01((tm - 100) / 1000);
-          final exit = _clamp01((tm - 100) / 1700);
-          final exitP = _clamp01((exit - 0.52) / 0.48);
           final spark = _clamp01((tm - 400) / 700);
           final reveal = _clamp01((tm - 400) / 800);
           final logoOpacity = _clamp01(reveal / 0.6);
@@ -101,18 +98,18 @@ class _SplashScreenState extends State<SplashScreen>
               // Drifting barber tools
               Positioned.fill(child: _tools(t)),
 
-              // Frosted glass -- blurs the backdrop + drifting tools into a
-              // soft, premium frosted sheen. The center logo/wordmark below
-              // are painted on top and stay crisp.
+              // Frosted glass -- a light blur that softens the backdrop while
+              // keeping the drifting tools visible behind it. The center
+              // logo/wordmark below are painted on top and stay crisp.
               Positioned.fill(
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                   child: const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0x1FFFFFFF), Color(0x0AFFFFFF)],
+                        colors: [Color(0x12FFFFFF), Color(0x05FFFFFF)],
                       ),
                     ),
                   ),
@@ -196,25 +193,6 @@ class _SplashScreenState extends State<SplashScreen>
                               ),
                             ),
                           ),
-                          // Scissors (snips, then rises + fades to reveal)
-                          if (exitP < 1)
-                            Opacity(
-                              opacity: 1 - exitP,
-                              child: Transform.translate(
-                                offset: Offset(0, -46 * exitP),
-                                child: Transform.scale(
-                                  scale: 1 + 0.18 * exitP,
-                                  child: CustomPaint(
-                                    size: const Size(196, 196),
-                                    painter: _ScissorsPainter(
-                                      topAngle: _snipTop(snip),
-                                      botAngle: -_snipTop(snip),
-                                      color: _accent,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
                         ],
                       ),
                     ),
@@ -282,28 +260,25 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  // snip-top keyframes: 0->20 (0..30%), 20->17 (..42%), 17->-8 (..72%), hold -8.
-  double _snipTop(double s) {
-    if (s <= 0) return 0;
-    if (s < 0.30) return _lerp(0, 20, s / 0.30);
-    if (s < 0.42) return _lerp(20, 17, (s - 0.30) / 0.12);
-    if (s < 0.72) return _lerp(17, -8, (s - 0.42) / 0.30);
-    return -8;
-  }
-
   Widget _tools(double t) {
     // (leftFrac, topFrac, size, opacity, type, periodSec, phase)
+    // Scattered across the whole canvas; the center band (~0.35-0.65 x,
+    // 0.30-0.60 y) is left clear for the logo + wordmark.
     const specs = <_ToolSpec>[
-      _ToolSpec(0.09, 0.12, 50, 0.50, _Tool.scissors, 12, 0.4),
-      _ToolSpec(0.79, 0.10, 44, 0.42, _Tool.comb, 14, 1.1),
-      _ToolSpec(0.05, 0.42, 52, 0.46, _Tool.razor, 13, 2.0),
-      _ToolSpec(0.83, 0.44, 42, 0.46, _Tool.clippers, 15, 0.7),
-      _ToolSpec(0.12, 0.74, 54, 0.44, _Tool.razor, 12.5, 3.1),
-      _ToolSpec(0.77, 0.72, 46, 0.42, _Tool.scissors, 13.5, 1.7),
-      _ToolSpec(0.45, 0.06, 30, 0.34, _Tool.clippers, 11, 2.6),
-      _ToolSpec(0.28, 0.88, 32, 0.34, _Tool.comb, 12, 4.0),
-      _ToolSpec(0.62, 0.89, 34, 0.38, _Tool.scissors, 14, 0.9),
-      _ToolSpec(0.71, 0.26, 30, 0.32, _Tool.razor, 11.5, 3.6),
+      _ToolSpec(0.06, 0.08, 50, 0.50, _Tool.scissors, 12, 0.4),
+      _ToolSpec(0.90, 0.05, 42, 0.42, _Tool.comb, 14, 1.1),
+      _ToolSpec(0.40, 0.04, 30, 0.34, _Tool.clippers, 11, 2.6),
+      _ToolSpec(0.64, 0.11, 34, 0.36, _Tool.razor, 13, 0.2),
+      _ToolSpec(0.03, 0.28, 52, 0.46, _Tool.razor, 13, 2.0),
+      _ToolSpec(0.93, 0.26, 40, 0.44, _Tool.clippers, 15, 0.7),
+      _ToolSpec(0.73, 0.34, 30, 0.32, _Tool.scissors, 11.5, 3.6),
+      _ToolSpec(0.15, 0.50, 46, 0.42, _Tool.comb, 14.5, 2.9),
+      _ToolSpec(0.91, 0.52, 44, 0.46, _Tool.scissors, 13.5, 1.7),
+      _ToolSpec(0.04, 0.70, 54, 0.44, _Tool.razor, 12.5, 3.1),
+      _ToolSpec(0.85, 0.72, 46, 0.42, _Tool.clippers, 15, 0.9),
+      _ToolSpec(0.10, 0.90, 34, 0.36, _Tool.scissors, 12, 4.0),
+      _ToolSpec(0.36, 0.93, 32, 0.34, _Tool.comb, 12.5, 1.4),
+      _ToolSpec(0.66, 0.90, 36, 0.38, _Tool.scissors, 14, 2.3),
     ];
     return LayoutBuilder(
       builder: (context, c) {
@@ -405,54 +380,4 @@ class _ToolPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ToolPainter old) => old.tool != tool || old.color != color;
-}
-
-/// The hero scissors: two blades crossing at a pivot, each rotated by its snip
-/// angle (degrees). Drawn in a 200x200 space scaled to the paint size.
-class _ScissorsPainter extends CustomPainter {
-  final double topAngle, botAngle;
-  final Color color;
-  const _ScissorsPainter({
-    required this.topAngle,
-    required this.botAngle,
-    required this.color,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final s = size.width / 200;
-    canvas.scale(s);
-    final stroke = Paint()
-      ..style = PaintingStyle.stroke
-      ..color = color
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round;
-    final fill = Paint()
-      ..style = PaintingStyle.fill
-      ..color = color;
-    const pivot = Offset(100, 92);
-
-    void blade(double angleDeg, Offset a, Offset b, Offset ec) {
-      canvas.save();
-      canvas.translate(pivot.dx, pivot.dy);
-      canvas.rotate(angleDeg * math.pi / 180);
-      canvas.translate(-pivot.dx, -pivot.dy);
-      canvas.drawLine(a, b, stroke);
-      canvas.drawOval(
-        Rect.fromCenter(center: ec, width: 30, height: 36),
-        stroke,
-      );
-      canvas.restore();
-    }
-
-    blade(topAngle, const Offset(74, 26), const Offset(128, 152),
-        const Offset(130, 156));
-    blade(botAngle, const Offset(126, 26), const Offset(72, 152),
-        const Offset(70, 156));
-    canvas.drawCircle(pivot, 7, fill);
-  }
-
-  @override
-  bool shouldRepaint(_ScissorsPainter old) =>
-      old.topAngle != topAngle || old.botAngle != botAngle;
 }
