@@ -73,53 +73,6 @@ class _PaymentSettingsScreenState extends ConsumerState<PaymentSettingsScreen> {
     _seeded = true;
   }
 
-  Future<void> _changeCountry(String current) async {
-    final picked = await showDialog<String>(
-      context: context,
-      builder: (ctx) => SimpleDialog(
-        title: const Text('Business country'),
-        children: [
-          for (final e in _countryNames.entries)
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(ctx, e.key),
-              child: Row(
-                children: [
-                  Icon(
-                    e.key == current
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_off,
-                    size: 20,
-                    color: e.key == current
-                        ? AppColors.sageDark
-                        : AppColors.muted,
-                  ),
-                  const SizedBox(width: 10),
-                  Text('${e.value} (${e.key})'),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-    if (picked == null || picked == current) return;
-    final biz = ref.read(activeMembershipProvider).valueOrNull?.business;
-    if (biz == null) return;
-    try {
-      await ref
-          .read(paymentProviderServiceProvider)
-          .setBusinessCountry(biz.id, picked);
-      ref.invalidate(activeMembershipProvider);
-      ref.invalidate(businessPaymentProvidersProvider);
-      ref.invalidate(depositReadyProvider);
-      if (mounted) showAppSnackBar(context, message: 'Business country updated');
-    } catch (e) {
-      if (mounted) {
-        showAppSnackBar(context,
-            message: AppException.from(e).message, isError: true);
-      }
-    }
-  }
-
   Future<void> _save() async {
     final membership = ref.read(activeMembershipProvider).valueOrNull;
     if (membership == null) return;
@@ -208,7 +161,9 @@ class _PaymentSettingsScreenState extends ConsumerState<PaymentSettingsScreen> {
               Text('Available payment methods',
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
-              for (final c in classified) ...[
+              // Only FirstPay is offered for now; other providers are hidden
+              // until they launch.
+              for (final c in classified.where((e) => e.info.id == 'firstpay')) ...[
                 _ProviderRow(provider: c.info, availability: c.availability),
                 const SizedBox(height: 8),
               ],
@@ -270,10 +225,7 @@ class _PaymentSettingsScreenState extends ConsumerState<PaymentSettingsScreen> {
               ],
             ),
           ),
-          TextButton(
-            onPressed: () => _changeCountry(country),
-            child: const Text('Change'),
-          ),
+          // Country is fixed to where the account signed up; not editable here.
         ],
       ),
     );
