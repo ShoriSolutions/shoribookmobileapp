@@ -107,6 +107,24 @@ class MessagingRepository {
     }
   }
 
+  /// Customer avatars for the vendor's own conversations, keyed by user id.
+  /// Backed by a SECURITY DEFINER function that returns ONLY id + avatar_url
+  /// (never name/email/phone). Cosmetic — never throws.
+  Future<Map<String, String>> fetchCustomerAvatars() async {
+    try {
+      final res = await _client.rpc('conversation_customer_avatars');
+      final map = <String, String>{};
+      for (final row in (res as List).cast<Map<String, dynamic>>()) {
+        final id = row['user_id'] as String?;
+        final url = row['avatar_url'] as String?;
+        if (id != null && url != null && url.isNotEmpty) map[id] = url;
+      }
+      return map;
+    } catch (_) {
+      return const {};
+    }
+  }
+
   /// Whether the business is currently open, and whether it wants messaging
   /// gated to opening hours at all (a vendor toggle — applies to both
   /// enquiry and booking conversations). [open] is null when unknown (no

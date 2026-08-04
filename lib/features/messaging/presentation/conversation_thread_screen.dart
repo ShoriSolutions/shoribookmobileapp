@@ -179,6 +179,15 @@ class _ConversationThreadScreenState
     final messagesAsync = ref.watch(messagesProvider(widget.conversationId));
     final title = conv?.titleFor(asVendor: _asVendor) ??
         (_asVendor ? 'Customer' : 'Business');
+    // Peer photo: the customer's avatar (vendor view, avatar-only, no PII) or
+    // the business logo (customer view).
+    final avatars = _asVendor
+        ? (ref.watch(customerAvatarsProvider).valueOrNull ??
+            const <String, String>{})
+        : const <String, String>{};
+    final headerPhoto = _asVendor
+        ? (conv?.customerUserId != null ? avatars[conv!.customerUserId] : null)
+        : conv?.businessLogoUrl;
 
     // Re-mark read as new inbound messages stream in.
     ref.listen(messagesProvider(widget.conversationId), (_, next) {
@@ -192,20 +201,46 @@ class _ConversationThreadScreenState
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.ink)),
-            if (_peerTyping)
-              const Text('typing…',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.sageDark)),
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: AppColors.sageLight,
+              foregroundColor: AppColors.sageDark,
+              backgroundImage: (headerPhoto != null && headerPhoto.isNotEmpty)
+                  ? CachedNetworkImageProvider(headerPhoto)
+                  : null,
+              child: (headerPhoto == null || headerPhoto.isEmpty)
+                  ? Text(
+                      title.trim().isNotEmpty
+                          ? title.trim()[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w700))
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.ink)),
+                  if (_peerTyping)
+                    const Text('typing…',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.sageDark)),
+                ],
+              ),
+            ),
           ],
         ),
         actions: [

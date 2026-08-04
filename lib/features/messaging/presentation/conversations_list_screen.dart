@@ -119,6 +119,9 @@ class _ConversationsListScreenState
   Widget build(BuildContext context) {
     final asVendor = ref.watch(isVendorMessagingProvider);
     final convosAsync = ref.watch(activeConversationsProvider);
+    // Vendor-only: customer photos keyed by user id (avatar-only, no PII).
+    final avatars =
+        ref.watch(customerAvatarsProvider).valueOrNull ?? const <String, String>{};
 
     return Scaffold(
       appBar: AppBar(
@@ -188,6 +191,11 @@ class _ConversationsListScreenState
                     itemBuilder: (_, i) => _ConversationTile(
                       conversation: convos[i],
                       asVendor: asVendor,
+                      avatarUrl: asVendor
+                          ? (convos[i].customerUserId != null
+                              ? avatars[convos[i].customerUserId]
+                              : null)
+                          : convos[i].businessLogoUrl,
                       selecting: _selecting,
                       selected: _selected.contains(convos[i].id),
                       onTap: () {
@@ -300,6 +308,7 @@ class _ConversationTile extends StatelessWidget {
   const _ConversationTile({
     required this.conversation,
     required this.asVendor,
+    required this.avatarUrl,
     required this.selecting,
     required this.selected,
     required this.onTap,
@@ -308,6 +317,7 @@ class _ConversationTile extends StatelessWidget {
 
   final Conversation conversation;
   final bool asVendor;
+  final String? avatarUrl;
   final bool selecting;
   final bool selected;
   final VoidCallback onTap;
@@ -412,12 +422,12 @@ class _ConversationTile extends StatelessWidget {
   }
 
   Widget _avatar(String title) {
-    final logo = conversation.businessLogoUrl;
-    if (!asVendor && logo != null && logo.isNotEmpty) {
+    final photo = avatarUrl;
+    if (photo != null && photo.isNotEmpty) {
       return CircleAvatar(
         radius: 26,
         backgroundColor: AppColors.sageLight,
-        backgroundImage: CachedNetworkImageProvider(logo),
+        backgroundImage: CachedNetworkImageProvider(photo),
       );
     }
     final initial = title.trim().isNotEmpty ? title.trim()[0].toUpperCase() : '?';

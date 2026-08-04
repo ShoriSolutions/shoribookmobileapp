@@ -62,6 +62,17 @@ final activeConversationsProvider =
   });
 });
 
+/// Customer avatars for the vendor's conversation list, keyed by user id.
+/// Empty for the customer side. Backed by a SECURITY DEFINER function that
+/// returns only id + avatar_url — no name/email/phone. Cosmetic: never errors.
+final customerAvatarsProvider =
+    FutureProvider.autoDispose<Map<String, String>>((ref) async {
+  if (!ref.watch(isVendorMessagingProvider)) return const {};
+  // Recompute when the conversation list changes so new customers get photos.
+  ref.watch(conversationsProvider);
+  return ref.watch(messagingRepositoryProvider).fetchCustomerAvatars();
+});
+
 /// Total conversations with unread inbound messages — for the nav badge.
 /// Derived from the realtime list so it updates instantly.
 final unreadConversationsProvider = Provider.autoDispose<int>((ref) {

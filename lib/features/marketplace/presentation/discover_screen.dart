@@ -11,6 +11,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/business.dart';
 import '../../../routing/route_paths.dart';
+import '../../app_mode/application/app_mode_provider.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../guest_prompt/presentation/guest_account_prompt.dart';
 import '../../messaging/application/messaging_providers.dart';
@@ -172,6 +173,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                 icon: Icons.person_outline,
                 background: AppColors.sageLight,
                 foreground: AppColors.sageDark,
+                avatarUrl: ref.watch(myProfileProvider).valueOrNull?.avatarUrl,
                 onTap: () => context.go(RoutePaths.account),
               ),
             ],
@@ -731,6 +733,7 @@ class _CircleIconButton extends StatelessWidget {
     required this.foreground,
     required this.onTap,
     this.badge = 0,
+    this.avatarUrl,
   });
 
   final IconData icon;
@@ -738,9 +741,11 @@ class _CircleIconButton extends StatelessWidget {
   final Color foreground;
   final VoidCallback onTap;
   final int badge;
+  final String? avatarUrl;
 
   @override
   Widget build(BuildContext context) {
+    final hasAvatar = avatarUrl != null && avatarUrl!.isNotEmpty;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
@@ -750,12 +755,22 @@ class _CircleIconButton extends StatelessWidget {
           Container(
             width: 44,
             height: 44,
+            clipBehavior: hasAvatar ? Clip.antiAlias : Clip.none,
             decoration: BoxDecoration(
               color: background,
               shape: BoxShape.circle,
               border: Border.all(color: AppColors.sageTintBorder),
             ),
-            child: Icon(icon, size: 22, color: foreground),
+            child: hasAvatar
+                ? CachedNetworkImage(
+                    imageUrl: avatarUrl!,
+                    fit: BoxFit.cover,
+                    width: 44,
+                    height: 44,
+                    errorWidget: (_, __, ___) =>
+                        Icon(icon, size: 22, color: foreground),
+                  )
+                : Icon(icon, size: 22, color: foreground),
           ),
           if (badge > 0)
             Positioned(
