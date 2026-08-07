@@ -829,7 +829,11 @@ bool _sameGroup(Message? a, Message? b) {
 
 /// Builds the chronological row list: a date separator before the first
 /// message of each day, then each message tagged with group boundaries.
-List<_Row> _buildChatRows(List<Message> messages) {
+List<_Row> _buildChatRows(List<Message> input) {
+  // Guarantee chronological order (oldest -> newest) regardless of the source
+  // order, so the reversed list shows the newest message at the bottom.
+  final messages = [...input]
+    ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   final rows = <_Row>[];
   DateTime? lastDay;
   for (var i = 0; i < messages.length; i++) {

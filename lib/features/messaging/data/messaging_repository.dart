@@ -34,7 +34,7 @@ class MessagingRepository {
         .from('messages')
         .stream(primaryKey: ['id'])
         .eq('conversation_id', conversationId)
-        .order('created_at')
+        .order('created_at', ascending: true) // oldest -> newest
         .map((rows) => rows.map(Message.fromJson).toList());
   }
 
