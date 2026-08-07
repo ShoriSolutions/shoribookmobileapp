@@ -142,7 +142,7 @@ class _Loaded extends ConsumerWidget {
                   const SizedBox(height: 10),
                   _chips(business, open),
                   const SizedBox(height: 16),
-                  _contactActions(business),
+                  _contactActions(context, business),
                   if (!isPreview &&
                       business.messagingEnabled &&
                       business.preBookingMessagingEnabled) ...[
@@ -322,7 +322,7 @@ class _Loaded extends ConsumerWidget {
     }
   }
 
-  Widget _contactActions(Business business) {
+  Widget _contactActions(BuildContext context, Business business) {
     final hasWhatsApp = business.whatsappNumber != null;
     final hasPhone = business.phone != null;
     if (!hasWhatsApp && !hasPhone) return const SizedBox.shrink();
@@ -335,10 +335,11 @@ class _Loaded extends ConsumerWidget {
               label: 'WhatsApp',
               bg: AppColors.whatsapp,
               fg: Colors.white,
-              onTap: () => launchUrl(
+              onTap: () => _openExternal(
+                context,
                 Uri.parse(
                     'https://wa.me/${business.whatsappNumber!.replaceAll(RegExp(r'[^0-9+]'), '')}'),
-                mode: LaunchMode.externalApplication,
+                failMessage: 'Could not open WhatsApp.',
               ),
             ),
           ),
@@ -350,11 +351,34 @@ class _Loaded extends ConsumerWidget {
               label: 'Call',
               bg: AppColors.sageLight,
               fg: AppColors.sageDark,
-              onTap: () => launchUrl(Uri.parse('tel:${business.phone}')),
+              onTap: () => _dial(context, business.phone!),
             ),
           ),
       ],
     );
+  }
+
+  /// Opens the phone dialer for [phone] (sanitised to digits/+ so spaces or
+  /// brackets don't break the tel: URI). Works on iOS and Android.
+  Future<void> _dial(BuildContext context, String phone) async {
+    final sanitized = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (sanitized.isEmpty) return;
+    await _openExternal(context, Uri.parse('tel:$sanitized'),
+        failMessage: 'Could not open the phone app.');
+  }
+
+  Future<void> _openExternal(BuildContext context, Uri uri,
+      {required String failMessage}) async {
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok && context.mounted) {
+        showAppSnackBar(context, message: failMessage, isError: true);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        showAppSnackBar(context, message: failMessage, isError: true);
+      }
+    }
   }
 
   Widget _previewBanner() {
