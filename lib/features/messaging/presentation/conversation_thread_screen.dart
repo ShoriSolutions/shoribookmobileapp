@@ -276,16 +276,28 @@ class _ConversationThreadScreenState
                     ),
                   );
                 }
+                // Flatten into date separators + grouped bubbles (WhatsApp
+                // style), chronological; the reversed list renders them
+                // bottom-anchored with the newest at the bottom.
+                final rows = _buildChatRows(messages);
                 return ListView.builder(
                   controller: _scroll,
                   reverse: true,
                   padding: const EdgeInsets.symmetric(
                       horizontal: 14, vertical: 12),
-                  itemCount: messages.length,
+                  itemCount: rows.length,
                   itemBuilder: (_, i) {
-                    // reverse: index 0 is the newest.
-                    final msg = messages[messages.length - 1 - i];
-                    return _MessageBubble(message: msg, mine: msg.senderRole == _mySide);
+                    final row = rows[rows.length - 1 - i];
+                    if (row.date != null) {
+                      return _DateSeparator(day: row.date!);
+                    }
+                    final msg = row.msg!;
+                    return _MessageBubble(
+                      message: msg,
+                      mine: msg.senderRole == _mySide,
+                      showTail: row.showTail,
+                      firstOfGroup: row.firstOfGroup,
+                    );
                   },
                 );
               },
@@ -436,9 +448,19 @@ class _BookingSummary extends ConsumerWidget {
 
 // ── Message bubble ─────────────────────────────────────────────────────────
 class _MessageBubble extends ConsumerWidget {
-  const _MessageBubble({required this.message, required this.mine});
+  const _MessageBubble({
+    required this.message,
+    required this.mine,
+    this.showTail = true,
+    this.firstOfGroup = true,
+  });
   final Message message;
   final bool mine;
+  // WhatsApp-style grouping: [showTail] draws the pointed corner only on the
+  // last bubble of a run; [firstOfGroup] adds a little more space above the
+  // first bubble of a run (consecutive bubbles sit tight together).
+  final bool showTail;
+  final bool firstOfGroup;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -463,15 +485,16 @@ class _MessageBubble extends ConsumerWidget {
       child: Container(
         constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.76),
-        margin: const EdgeInsets.symmetric(vertical: 3),
+        margin: EdgeInsets.only(top: firstOfGroup ? 8 : 2, bottom: 2),
         padding: const EdgeInsets.fromLTRB(14, 9, 14, 7),
         decoration: BoxDecoration(
           color: mine ? AppColors.sage : AppColors.white,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(mine ? 16 : 4),
-            bottomRight: Radius.circular(mine ? 4 : 16),
+            // Pointed "tail" corner only on the last bubble of a run.
+            bottomLeft: Radius.circular((!mine && showTail) ? 4 : 16),
+            bottomRight: Radius.circular((mine && showTail) ? 4 : 16),
           ),
           border: mine ? null : Border.all(color: AppColors.parchment),
         ),
@@ -772,5 +795,96 @@ class _ConversationMenu extends ConsumerWidget {
             message: AppException.from(e).message, isError: true);
       }
     }
+  }
+}
+
+/// One rendered row in the thread: either a date separator or a message with
+/// its WhatsApp-style grouping flags.
+class _Row {
+  const _Row._(this.date, this.msg, this.showTail, this.firstOfGroup);
+  factory _Row.date(DateTime day) => _Row._(day, null, false, false);
+  factory _Row.msg(Message m,
+          {required bool showTail, required bool firstOfGroup}) =>
+      _Row._(null, m, showTail, firstOfGroup);
+
+  final DateTime? date;
+  final Message? msg;
+  final bool showTail;
+  final bool firstOfGroup;
+}
+
+DateTime _dayOf(DateTime dt) {
+  final l = dt.toLocal();
+  return DateTime(l.year, l.month, l.day);
+}
+
+/// Two messages belong to the same visual group when they're from the same
+/// sender on the same day (and neither is a system message).
+bool _sameGroup(Message? a, Message? b) {
+  if (a == null || b == null) return false;
+  if (a.isSystem || b.isSystem) return false;
+  if (a.senderRole != b.senderRole) return false;
+  return _dayOf(a.createdAt) == _dayOf(b.createdAt);
+}
+
+/// Builds the chronological row list: a date separator before the first
+/// message of each day, then each message tagged with group boundaries.
+List<_Row> _buildChatRows(List<Message> messages) {
+  final rows = <_Row>[];
+  DateTime? lastDay;
+  for (var i = 0; i < messages.length; i++) {
+    final m = messages[i];
+    final day = _dayOf(m.createdAt);
+    if (lastDay == null || day != lastDay) {
+      rows.add(_Row.date(day));
+      lastDay = day;
+    }
+    final prev = i > 0 ? messages[i - 1] : null;
+    final next = i < messages.length - 1 ? messages[i + 1] : null;
+    rows.add(_Row.msg(
+      m,
+      firstOfGroup: !_sameGroup(prev, m),
+      showTail: !_sameGroup(m, next),
+    ));
+  }
+  return rows;
+}
+
+/// Centered "Today / Yesterday / date" chip between days, like WhatsApp.
+class _DateSeparator extends StatelessWidget {
+  const _DateSeparator({required this.day});
+  final DateTime day;
+
+  String _label() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final diff = today.difference(day).inDays;
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Yesterday';
+    if (diff > 1 && diff < 7) return DateFormat('EEEE').format(day);
+    return DateFormat('d MMM yyyy').format(day);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(
+            color: AppColors.fieldMuted,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            _label(),
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.muted),
+          ),
+        ),
+      ),
+    );
   }
 }
