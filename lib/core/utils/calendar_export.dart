@@ -1,7 +1,93 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../theme/app_colors.dart';
+
+String _calFmt(DateTime d) =>
+    DateFormat("yyyyMMdd'T'HHmmss'Z'").format(d.toUtc());
+
+/// A Google Calendar "add event" template URL, pre-filled with the booking.
+/// Opening it lets the user save the event (and set reminders) in Google
+/// Calendar — the same flow as the website. Times are UTC so Google shows them
+/// at the correct local moment.
+Uri buildGoogleCalendarUri({
+  required String title,
+  required DateTime startUtc,
+  required DateTime endUtc,
+  String? location,
+  String? description,
+}) {
+  return Uri.https('calendar.google.com', '/calendar/render', {
+    'action': 'TEMPLATE',
+    'text': title,
+    'dates': '${_calFmt(startUtc)}/${_calFmt(endUtc)}',
+    if (description != null && description.trim().isNotEmpty)
+      'details': description,
+    if (location != null && location.trim().isNotEmpty) 'location': location,
+  });
+}
+
+/// Bottom-sheet chooser: add the appointment to Google Calendar (reminders),
+/// or export a .ics for Apple Calendar / Outlook / any other app.
+Future<void> showAddToCalendarSheet(
+  BuildContext context, {
+  required String title,
+  required DateTime startUtc,
+  required DateTime endUtc,
+  String? location,
+  String? description,
+  String? timeZone,
+}) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 8),
+          ListTile(
+            leading: const Icon(Icons.event_available, color: AppColors.sage),
+            title: const Text('Google Calendar'),
+            subtitle: const Text('Save the event and get reminders'),
+            onTap: () async {
+              Navigator.pop(ctx);
+              final uri = buildGoogleCalendarUri(
+                title: title,
+                startUtc: startUtc,
+                endUtc: endUtc,
+                location: location,
+                description: description,
+              );
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            },
+          ),
+          ListTile(
+            leading:
+                const Icon(Icons.calendar_today_outlined, color: AppColors.sage),
+            title: const Text('Other calendar'),
+            subtitle: const Text('Apple Calendar, Outlook or a .ics file'),
+            onTap: () {
+              Navigator.pop(ctx);
+              addAppointmentToCalendar(
+                title: title,
+                startUtc: startUtc,
+                endUtc: endUtc,
+                location: location,
+                description: description,
+                timeZone: timeZone,
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+}
 
 /// Builds a standard .ics calendar event for an appointment and opens the
 /// share sheet so the user can add it to whichever calendar they use.

@@ -165,8 +165,9 @@ class BookingDetailScreen extends ConsumerWidget {
     }
   }
 
-  void _addToCalendar(Appointment a) {
-    addAppointmentToCalendar(
+  void _addToCalendar(BuildContext context, Appointment a) {
+    showAddToCalendarSheet(
+      context,
       title: '${a.serviceName ?? 'Appointment'} at ${a.businessName ?? ''}',
       startUtc: a.startTime,
       endUtc: a.endTime,
@@ -525,7 +526,7 @@ class BookingDetailScreen extends ConsumerWidget {
                   bg: AppColors.white,
                   fg: AppColors.ink,
                   border: AppColors.parchment,
-                  onTap: () => _addToCalendar(appt),
+                  onTap: () => _addToCalendar(context, appt),
                 ),
                 const SizedBox(height: 12),
                 const Text(

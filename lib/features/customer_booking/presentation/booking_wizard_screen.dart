@@ -1639,7 +1639,8 @@ class _ConfirmedScreen extends ConsumerWidget {
                           );
                           final end = start.add(
                               Duration(minutes: service.durationMinutes));
-                          addAppointmentToCalendar(
+                          showAddToCalendarSheet(
+                            context,
                             title: '${service.name} at ${business.name}',
                             startUtc: start,
                             endUtc: end,
