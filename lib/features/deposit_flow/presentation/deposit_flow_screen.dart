@@ -555,93 +555,44 @@ class _DepositFlowScreenState extends ConsumerState<DepositFlowScreen> {
   }
 }
 
-/// An illustrative "transfer sent" confirmation, shown so customers know what a
-/// good proof-of-payment screenshot looks like. Deliberately generic (not any
-/// real bank's branding) and clearly labelled as an example.
+/// An illustrative "transfer sent" confirmation (assets/branding/example.png),
+/// shown so customers know what a good proof-of-payment screenshot looks like.
+/// Clearly labelled as an example.
 class _ProofExampleCard extends StatelessWidget {
   const _ProofExampleCard();
 
-  static const _green = Color(0xFF2E7D57);
-
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.parchment),
-      ),
-      child: Column(
-        children: [
-          Align(
-            alignment: Alignment.center,
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.terracottaTint,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: const Text('EXAMPLE ONLY',
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                      color: AppColors.terracottaDeep)),
-            ),
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.terracottaTint,
+            borderRadius: BorderRadius.circular(999),
           ),
-          const SizedBox(height: 20),
-          Container(
-            width: 76,
-            height: 76,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: _green, width: 3),
-            ),
-            child: const Icon(Icons.check, size: 40, color: _green),
-          ),
-          const SizedBox(height: 16),
-          const Text('Transfer sent',
+          child: const Text('EXAMPLE ONLY',
               style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.ink)),
-          const SizedBox(height: 4),
-          const Text('Your transfer has been sent.',
-              style: TextStyle(fontSize: 15, color: AppColors.muted)),
-          const SizedBox(height: 20),
-          const Divider(height: 1, color: AppColors.divider),
-          const SizedBox(height: 20),
-          const Text('30.00 BBD',
-              style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.ink)),
-          const SizedBox(height: 2),
-          const Text('sent to',
-              style: TextStyle(fontSize: 14, color: AppColors.muted)),
-          const SizedBox(height: 4),
-          const Text('JOHN SMITH (+12465550123)',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.ink)),
-          const SizedBox(height: 20),
-          const Divider(height: 1, color: AppColors.divider),
-          const SizedBox(height: 20),
-          const Text('Transaction reference number',
-              style: TextStyle(fontSize: 14, color: AppColors.muted)),
-          const SizedBox(height: 4),
-          const Text('123456789012345',
-              style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 11,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.5,
-                  color: AppColors.ink)),
-        ],
-      ),
+                  color: AppColors.terracottaDeep)),
+        ),
+        const SizedBox(height: 16),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.parchment),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Image.asset(
+              'assets/branding/example.png',
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
