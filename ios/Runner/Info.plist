@@ -9,7 +9,9 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Shorivo needs access to your photos so you can set your profile photo and business logo and cover image.</string>
+	<string>Shorivo needs access to your photos so you can set your profile photo and business logo and cover image, and upload proof of a deposit.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Shorivo needs camera access so you can take a photo for your profile, business images, message attachments, or proof of a deposit.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Shorivo uses your location, only when you tap "Use my current location", to fill in your address and to find and get directions to nearby businesses.</string>
 	<key>CFBundleDevelopmentRegion</key>

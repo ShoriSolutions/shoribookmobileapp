@@ -62,19 +62,35 @@ class _DepositFlowScreenState extends ConsumerState<DepositFlowScreen> {
       (appointmentId: widget.appointmentId, guestPhone: widget.guestPhone);
 
   Future<void> _pick(ImageSource source) async {
-    final x = await ImagePicker()
-        .pickImage(source: source, maxWidth: 2000, imageQuality: 85);
-    if (x == null) return;
-    final bytes = await x.readAsBytes();
-    final lower = x.name.toLowerCase();
-    setState(() {
-      _proofBytes = bytes;
-      _proofContentType = lower.endsWith('.png')
-          ? 'image/png'
-          : lower.endsWith('.webp')
-              ? 'image/webp'
-              : 'image/jpeg';
-    });
+    try {
+      final x = await ImagePicker()
+          .pickImage(source: source, maxWidth: 2000, imageQuality: 85);
+      if (x == null) return;
+      final bytes = await x.readAsBytes();
+      final lower = x.name.toLowerCase();
+      if (!mounted) return;
+      setState(() {
+        _proofBytes = bytes;
+        _proofContentType = lower.endsWith('.png')
+            ? 'image/png'
+            : lower.endsWith('.webp')
+                ? 'image/webp'
+                : 'image/jpeg';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      // e.g. no camera on a simulator, or the permission was denied.
+      final msg = AppException.from(e).message;
+      showAppSnackBar(
+        context,
+        message: source == ImageSource.camera &&
+                msg.toLowerCase().contains('camera')
+            ? "No camera available on this device. Choose a photo from your "
+                'library instead.'
+            : 'Could not open that. Please try again or pick from your library.',
+        isError: true,
+      );
+    }
   }
 
   Future<void> _submit() async {
