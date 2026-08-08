@@ -42,14 +42,28 @@ class MyBookingsScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(20, 12, 20, 4),
-                child: Text('My bookings',
-                    style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
-                        color: AppColors.ink)),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 8, 4),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text('My bookings',
+                          style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.5,
+                              color: AppColors.ink)),
+                    ),
+                    IconButton(
+                      tooltip: 'Refresh',
+                      icon: const Icon(Icons.refresh, color: AppColors.ink),
+                      onPressed: () {
+                        ref.invalidate(myBookingsProvider);
+                        ref.invalidate(myWaitlistProvider);
+                      },
+                    ),
+                  ],
+                ),
               ),
               const TabBar(
                 isScrollable: true,
@@ -85,12 +99,14 @@ class MyBookingsScreen extends ConsumerWidget {
                 child: Consumer(
                   builder: (context, ref, _) {
                     final bookingsAsync = ref.watch(myBookingsProvider);
-                    return RefreshIndicator(
-                      onRefresh: () => ref.refresh(myBookingsProvider.future),
-                      child: bookingsAsync.when(
-                        loading: () =>
-                            const Center(child: CircularProgressIndicator()),
-                        error: (err, st) => ListView(
+                    return bookingsAsync.when(
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (err, st) => RefreshIndicator(
+                        onRefresh: () =>
+                            ref.refresh(myBookingsProvider.future),
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           children: [
                             const SizedBox(height: 80),
                             ErrorRetryView(
@@ -100,35 +116,35 @@ class MyBookingsScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        data: (bookings) {
-                          final now = DateTime.now().toUtc();
-                          final upcoming = bookings
-                              .where((b) =>
-                                  b.isActive && b.startTime.isAfter(now))
-                              .toList();
-                          final past = bookings
-                              .where((b) =>
-                                  !b.isActive || !b.startTime.isAfter(now))
-                              .toList();
-                          return TabBarView(
-                            children: [
-                              _BookingsList(
-                                bookings: upcoming,
-                                emptyTitle: 'No upcoming bookings',
-                                emptyMessage:
-                                    'Book an appointment to see it here.',
-                              ),
-                              _BookingsList(
-                                bookings: past,
-                                emptyTitle: 'No past bookings yet',
-                                emptyMessage:
-                                    'Completed and cancelled bookings show up here.',
-                              ),
-                              const _WaitlistList(),
-                            ],
-                          );
-                        },
                       ),
+                      data: (bookings) {
+                        final now = DateTime.now().toUtc();
+                        final upcoming = bookings
+                            .where((b) =>
+                                b.isActive && b.startTime.isAfter(now))
+                            .toList();
+                        final past = bookings
+                            .where((b) =>
+                                !b.isActive || !b.startTime.isAfter(now))
+                            .toList();
+                        return TabBarView(
+                          children: [
+                            _BookingsList(
+                              bookings: upcoming,
+                              emptyTitle: 'No upcoming bookings',
+                              emptyMessage:
+                                  'Book an appointment to see it here.',
+                            ),
+                            _BookingsList(
+                              bookings: past,
+                              emptyTitle: 'No past bookings yet',
+                              emptyMessage:
+                                  'Completed and cancelled bookings show up here.',
+                            ),
+                            const _WaitlistList(),
+                          ],
+                        );
+                      },
                     );
                   },
                 ),
@@ -141,7 +157,7 @@ class MyBookingsScreen extends ConsumerWidget {
   }
 }
 
-class _BookingsList extends StatelessWidget {
+class _BookingsList extends ConsumerWidget {
   final List<Appointment> bookings;
   final String emptyTitle;
   final String emptyMessage;
@@ -153,23 +169,29 @@ class _BookingsList extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    if (bookings.isEmpty) {
-      return ListView(
-        children: [
-          const SizedBox(height: 60),
-          EmptyState(icon: '📅', title: emptyTitle, message: emptyMessage),
-        ],
-      );
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-      itemCount: bookings.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, i) => BookingCard(
-        appointment: bookings[i],
-        onTap: () => context.push(RoutePaths.bookingDetail(bookings[i].id)),
-      ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return RefreshIndicator(
+      onRefresh: () => ref.refresh(myBookingsProvider.future),
+      child: bookings.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                const SizedBox(height: 60),
+                EmptyState(
+                    icon: '📅', title: emptyTitle, message: emptyMessage),
+              ],
+            )
+          : ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              itemCount: bookings.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, i) => BookingCard(
+                appointment: bookings[i],
+                onTap: () =>
+                    context.push(RoutePaths.bookingDetail(bookings[i].id)),
+              ),
+            ),
     );
   }
 }
@@ -207,6 +229,7 @@ class _WaitlistList extends ConsumerWidget {
       child: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
             const SizedBox(height: 80),
             ErrorRetryView(
@@ -220,6 +243,7 @@ class _WaitlistList extends ConsumerWidget {
               all.where((e) => e.status == WaitlistStatus.active).toList();
           if (entries.isEmpty) {
             return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               children: const [
                 SizedBox(height: 60),
                 EmptyState(
@@ -233,6 +257,7 @@ class _WaitlistList extends ConsumerWidget {
             );
           }
           return ListView.separated(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
             itemCount: entries.length,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
