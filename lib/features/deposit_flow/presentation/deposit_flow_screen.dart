@@ -324,6 +324,22 @@ class _DepositFlowScreenState extends ConsumerState<DepositFlowScreen> {
           'Upload a screenshot or photo of your deposit so the business can '
           'verify it.',
       content: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: () => _showProofExample(context),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              foregroundColor: AppColors.sageDark,
+              minimumSize: const Size(0, 36),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            icon: const Icon(Icons.image_search, size: 18),
+            label: const Text('See an example',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ),
+        const SizedBox(height: 8),
         if (_proofBytes == null)
           Row(
             children: [
@@ -483,6 +499,150 @@ class _DepositFlowScreenState extends ConsumerState<DepositFlowScreen> {
       if (d.email != null) 'Email: ${d.email}',
     ];
     Share.share(lines.join('\n'));
+  }
+
+  void _showProofExample(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.cream,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.8,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (ctx, controller) => Column(
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.divider,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text('Example proof of payment',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.ink)),
+            const SizedBox(height: 4),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'Upload a clear screenshot like this from your own banking or '
+                'transfer app, showing the amount and a reference number.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13.5, color: AppColors.muted),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                controller: controller,
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                children: const [_ProofExampleCard()],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// An illustrative "transfer sent" confirmation, shown so customers know what a
+/// good proof-of-payment screenshot looks like. Deliberately generic (not any
+/// real bank's branding) and clearly labelled as an example.
+class _ProofExampleCard extends StatelessWidget {
+  const _ProofExampleCard();
+
+  static const _green = Color(0xFF2E7D57);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.parchment),
+      ),
+      child: Column(
+        children: [
+          Align(
+            alignment: Alignment.center,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.terracottaTint,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const Text('EXAMPLE ONLY',
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                      color: AppColors.terracottaDeep)),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: 76,
+            height: 76,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: _green, width: 3),
+            ),
+            child: const Icon(Icons.check, size: 40, color: _green),
+          ),
+          const SizedBox(height: 16),
+          const Text('Transfer sent',
+              style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.ink)),
+          const SizedBox(height: 4),
+          const Text('Your transfer has been sent.',
+              style: TextStyle(fontSize: 15, color: AppColors.muted)),
+          const SizedBox(height: 20),
+          const Divider(height: 1, color: AppColors.divider),
+          const SizedBox(height: 20),
+          const Text('30.00 BBD',
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink)),
+          const SizedBox(height: 2),
+          const Text('sent to',
+              style: TextStyle(fontSize: 14, color: AppColors.muted)),
+          const SizedBox(height: 4),
+          const Text('JOHN SMITH (+12465550123)',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.ink)),
+          const SizedBox(height: 20),
+          const Divider(height: 1, color: AppColors.divider),
+          const SizedBox(height: 20),
+          const Text('Transaction reference number',
+              style: TextStyle(fontSize: 14, color: AppColors.muted)),
+          const SizedBox(height: 4),
+          const Text('123456789012345',
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                  color: AppColors.ink)),
+        ],
+      ),
+    );
   }
 }
 
