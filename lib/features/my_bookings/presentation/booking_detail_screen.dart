@@ -366,20 +366,32 @@ class BookingDetailScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.terracottaTint,
+                      color: appt.isDepositSubmitted
+                          ? AppColors.sageLight
+                          : AppColors.terracottaTint,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Row(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.receipt_long_outlined,
-                            size: 18, color: AppColors.terracottaDeep),
-                        SizedBox(width: 8),
+                        Icon(
+                          appt.isDepositSubmitted
+                              ? Icons.hourglass_top_outlined
+                              : Icons.receipt_long_outlined,
+                          size: 18,
+                          color: appt.isDepositSubmitted
+                              ? AppColors.sageDark
+                              : AppColors.terracottaDeep,
+                        ),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'A deposit is required to confirm this booking. '
-                            'Submit your proof of payment to secure it.',
-                            style: TextStyle(
+                            appt.isDepositSubmitted
+                                ? 'Deposit proof submitted. Your booking will be '
+                                    'confirmed once the business verifies it.'
+                                : 'A deposit is required to confirm this booking. '
+                                    'Submit your proof of payment to secure it.',
+                            style: const TextStyle(
                                 fontSize: 13, height: 1.4, color: AppColors.ink),
                           ),
                         ),
@@ -387,20 +399,22 @@ class BookingDetailScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _ActionBtn(
-                    label: 'Pay deposit',
-                    icon: Icons.receipt_long_outlined,
-                    bg: AppColors.terracotta,
-                    fg: Colors.white,
-                    onTap: () => context.push(
-                      RoutePaths.depositFlow(appt.id),
-                      extra: DepositFlowArgs(
-                        businessId: appt.businessId,
-                        guestPhone: signedIn ? null : guestPhone,
+                  if (appt.needsDepositProof) ...[
+                    _ActionBtn(
+                      label: 'Pay deposit',
+                      icon: Icons.receipt_long_outlined,
+                      bg: AppColors.terracotta,
+                      fg: Colors.white,
+                      onTap: () => context.push(
+                        RoutePaths.depositFlow(appt.id),
+                        extra: DepositFlowArgs(
+                          businessId: appt.businessId,
+                          guestPhone: signedIn ? null : guestPhone,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 12),
+                  ],
                 ],
                 if (appt.isPendingConfirmation && canManage) ...[
                   Container(
@@ -566,8 +580,11 @@ class BookingDetailScreen extends ConsumerWidget {
         return ('Awaiting confirmation', AppColors.terracottaTint,
             AppColors.terracottaDeep, Icons.hourglass_top);
       case AppointmentStatus.pendingDeposit:
-        return ('Deposit required', AppColors.terracottaTint,
-            AppColors.terracottaDeep, Icons.receipt_long_outlined);
+        return a.isDepositSubmitted
+            ? ('Deposit submitted', AppColors.sageLight, AppColors.sageDark,
+                Icons.hourglass_top_outlined)
+            : ('Deposit required', AppColors.terracottaTint,
+                AppColors.terracottaDeep, Icons.receipt_long_outlined);
       case AppointmentStatus.pending:
         return ('Pending', AppColors.terracottaTint, AppColors.terracottaDeep,
             Icons.hourglass_empty);

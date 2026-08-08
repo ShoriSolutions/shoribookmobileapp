@@ -34,6 +34,7 @@ class CancellationReason {
 class DepositStatus {
   static const notRequired = 'NOT_REQUIRED';
   static const pending = 'PENDING';
+  static const submitted = 'SUBMITTED'; // proof uploaded, awaiting vendor review
   static const paid = 'PAID';
   static const failed = 'FAILED';
   static const refunded = 'REFUNDED';
@@ -198,6 +199,16 @@ class Appointment {
 
   /// Awaiting a deposit to be submitted/verified before it can be confirmed.
   bool get isPendingDeposit => status == AppointmentStatus.pendingDeposit;
+
+  /// The customer has uploaded proof and is waiting on the vendor to verify it.
+  bool get isDepositSubmitted =>
+      status == AppointmentStatus.pendingDeposit &&
+      depositStatus == DepositStatus.submitted;
+
+  /// Still needs the customer to submit (or resubmit) deposit proof.
+  bool get needsDepositProof =>
+      status == AppointmentStatus.pendingDeposit &&
+      depositStatus != DepositStatus.submitted;
 
   /// Cancelled specifically because the deposit deadline elapsed.
   bool get wasDepositExpired =>

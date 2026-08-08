@@ -132,11 +132,13 @@ class BookingCard extends StatelessWidget {
       return ('Completed', AppColors.closedBg, AppColors.closedText);
     }
     if (a.isPendingDeposit) {
-      return (
-        'Deposit required',
-        AppColors.terracottaTint,
-        AppColors.terracottaDeep
-      );
+      return a.isDepositSubmitted
+          ? ('Deposit submitted', AppColors.sageLight, AppColors.sageDark)
+          : (
+              'Deposit required',
+              AppColors.terracottaTint,
+              AppColors.terracottaDeep
+            );
     }
     if (a.isPendingConfirmation) {
       return ('Confirm now', AppColors.terracottaTint, AppColors.terracottaDeep);
