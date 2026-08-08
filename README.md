@@ -17,8 +17,13 @@ mobile app; admin actions are exposed as RPCs for the web dashboard).
 ## Recent changes (last 24 hours)
 
 _Rolling log of what shipped in the last day, newest first. Timestamps are
-local (AST, UTC‑04:00). Snapshot generated 2026‑08‑08 11:45._
+local (AST, UTC‑04:00). Snapshot generated 2026‑08‑08 17:00._
 
+- **2026‑08‑08 17:00** — Roadmap: per‑tier feature caps now enforced
+  server‑side too (deposits, reports, marketplace) via `business_plan_allows()`
+  + triggers/RPC guards; friendly upgrade messages for plan‑limit errors.
+- **2026‑08‑08 15:30** — Deposit: inline "Proof of payment" section on each
+  booking (image + zoom, status, vendor Approve/Reject) via signed URLs.
 - **2026‑08‑08 11:44** — Deposit: confirm the booking when a vendor marks a
   `pending_deposit` deposit paid (fixes a booking stuck on "Awaiting deposit"
   even though the deposit read Paid).
@@ -263,9 +268,12 @@ These need provider credentials / store setup before they work end‑to‑end:
 
 ## Roadmap
 
-- **Per‑tier feature caps** — the trial‑end access gate is in place; the
-  finer per‑tier limits (services/staff/deposits/reports/marketplace) are the
-  next step to enforce client‑ and server‑side.
+- ✅ **Per‑tier feature caps** _(done 2026‑08‑08)_ — services/staff/deposits/
+  reports/marketplace are now enforced **both** client‑side (`PlanCaps`) and
+  server‑side: service + staff count caps via triggers, and deposits, reports
+  and marketplace listing via `business_plan_allows()` + triggers on
+  `services`/`businesses` and guards inside the report RPCs. The free trial
+  still grants full access.
 - **Store receipt validation + renewal charging** — IAP products (monthly +
   annual) are wired; move receipt validation to an Edge Function and handle
   renewal/retry (see `docs/FEATURE_NOTES.md`).

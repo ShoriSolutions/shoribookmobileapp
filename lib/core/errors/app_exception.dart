@@ -62,6 +62,30 @@ class AppException implements Exception {
       return 'This feature isn\'t set up on the server yet. '
           'The latest database migration may still need to be applied.';
     }
+    // Per-tier plan gates (raised by the plan-limit triggers / RPCs). Match on
+    // the raised text so the customer sees an actionable upgrade prompt.
+    final msg = e.message.toLowerCase();
+    if (msg.contains('deposit_feature_unavailable')) {
+      return 'Deposits aren\'t included in your current plan. '
+          'Upgrade to require deposits.';
+    }
+    if (msg.contains('marketplace_feature_unavailable')) {
+      return 'Marketplace listing isn\'t included in your current plan. '
+          'Upgrade to list on the marketplace.';
+    }
+    if (msg.contains('reports_feature_unavailable')) {
+      return 'Reports aren\'t included in your current plan. '
+          'Upgrade to access reports.';
+    }
+    if (msg.contains('staff_limit_reached')) {
+      return 'You\'ve reached your plan\'s staff limit. '
+          'Upgrade to add more staff.';
+    }
+    if (msg.contains('service_limit_reached') ||
+        msg.contains('service_plan_limit')) {
+      return 'You\'ve reached your plan\'s service limit. '
+          'Upgrade to add more services.';
+    }
     return e.message;
   }
 
