@@ -59,21 +59,29 @@ class _CustomerProfileEditScreenState
   }
 
   Future<void> _pick() async {
-    final file = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 800,
-      maxHeight: 800,
-      imageQuality: 85,
-    );
-    if (file == null) return;
-    final bytes = await file.readAsBytes();
-    final parts = file.name.split('.');
-    if (!mounted) return;
-    setState(() {
-      _pickedBytes = bytes;
-      _pickedExt = parts.length > 1 ? parts.last : 'jpg';
-      _removePhoto = false;
-    });
+    try {
+      final file = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      final parts = file.name.split('.');
+      if (!mounted) return;
+      setState(() {
+        _pickedBytes = bytes;
+        _pickedExt = parts.length > 1 ? parts.last : 'jpg';
+        _removePhoto = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        showAppSnackBar(context,
+            message: 'Could not open your photos. Please try again.',
+            isError: true);
+      }
+    }
   }
 
   Future<void> _save() async {

@@ -119,11 +119,21 @@ class _ConversationThreadScreenState
 
   Future<void> _pickAndSendImage() async {
     if (_sending) return;
-    final picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1600,
-      imageQuality: 80,
-    );
+    final XFile? picked;
+    try {
+      picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1600,
+        imageQuality: 80,
+      );
+    } catch (e) {
+      if (mounted) {
+        showAppSnackBar(context,
+            message: 'Could not open your photos. Please try again.',
+            isError: true);
+      }
+      return;
+    }
     if (picked == null) return;
     setState(() => _sending = true);
     try {
