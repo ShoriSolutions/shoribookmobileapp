@@ -47,14 +47,20 @@ class AppointmentDetailController
   }) async {
     try {
       final current = state.value;
-      final wasPending = current?.status == AppointmentStatus.pending;
+      // Confirm the booking when the deposit is marked paid on a booking that
+      // was only waiting on that deposit -- both a plain 'pending' and an online
+      // 'pending_deposit' booking. Without pending_deposit here the chip stays
+      // stuck on "Awaiting deposit" even though the deposit reads Paid.
+      final shouldConfirm =
+          current?.status == AppointmentStatus.pending ||
+              current?.status == AppointmentStatus.pendingDeposit;
       await ref
           .read(appointmentsRepositoryProvider)
           .markDepositPaid(
             arg,
             paymentMethod: paymentMethod,
             paymentReference: paymentReference,
-            autoConfirmIfPending: wasPending,
+            autoConfirmIfPending: shouldConfirm,
           );
       await _reload();
       return true;
