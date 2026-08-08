@@ -23,3 +23,13 @@ final pendingDepositsProvider =
 final pendingDepositsCountProvider = Provider.autoDispose<int>((ref) {
   return ref.watch(pendingDepositsProvider).valueOrNull?.length ?? 0;
 });
+
+/// The latest proof-of-payment submission for a single appointment (null if
+/// none). Used to show the "Proof of payment" section on a booking, for both
+/// the vendor and the customer (RLS decides what each may read).
+final appointmentDepositSubmissionProvider = FutureProvider.autoDispose
+    .family<DepositSubmission?, String>((ref, appointmentId) async {
+  return ref
+      .watch(depositVerificationRepositoryProvider)
+      .fetchLatestForAppointment(appointmentId);
+});

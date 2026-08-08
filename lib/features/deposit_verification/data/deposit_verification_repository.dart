@@ -27,6 +27,29 @@ class DepositVerificationRepository {
     }
   }
 
+  /// The most recent proof-of-payment submission for a single appointment, or
+  /// null if none. RLS scopes this to the owning business (OWNER/ADMIN), the
+  /// submitting customer, or a Shorivo admin -- so it is safe to call from both
+  /// the vendor and customer booking screens.
+  Future<DepositSubmission?> fetchLatestForAppointment(
+      String appointmentId) async {
+    try {
+      final data = await _client
+          .from('deposit_submissions')
+          .select('id, appointment_id, amount, currency, proof_path, '
+              'reference_number, customer_notes, status, reject_reason, '
+              'reject_notes, created_at')
+          .eq('appointment_id', appointmentId)
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      if (data == null) return null;
+      return DepositSubmission.fromJson(data);
+    } catch (e) {
+      throw AppException.from(e);
+    }
+  }
+
   /// A short-lived signed URL for a private proof image path.
   Future<String> signedProofUrl(String path) {
     return _client.storage.from('deposit-proofs').createSignedUrl(path, 3600);

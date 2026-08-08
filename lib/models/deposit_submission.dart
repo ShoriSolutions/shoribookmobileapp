@@ -9,6 +9,8 @@ class DepositSubmission {
   final String? referenceNumber;
   final String? customerNotes;
   final String status; // submitted | approved | rejected | expired | superseded
+  final String? rejectReason;
+  final String? rejectNotes;
   final DateTime createdAt;
 
   // Joined from the appointment.
@@ -25,6 +27,8 @@ class DepositSubmission {
     this.referenceNumber,
     this.customerNotes,
     required this.status,
+    this.rejectReason,
+    this.rejectNotes,
     required this.createdAt,
     this.customerName,
     this.serviceName,
@@ -43,6 +47,8 @@ class DepositSubmission {
       referenceNumber: json['reference_number'] as String?,
       customerNotes: json['customer_notes'] as String?,
       status: json['status'] as String? ?? 'submitted',
+      rejectReason: json['reject_reason'] as String?,
+      rejectNotes: json['reject_notes'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       customerName: appt?['customer_name'] as String?,
       serviceName: service?['name'] as String?,

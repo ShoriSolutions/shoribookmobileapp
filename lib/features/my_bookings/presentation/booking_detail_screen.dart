@@ -18,6 +18,7 @@ import '../../../models/appointment.dart';
 import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../deposit_flow/presentation/deposit_flow_screen.dart';
+import '../../deposit_verification/presentation/widgets/proof_of_payment_section.dart';
 import '../../marketplace/presentation/widgets/category_visuals.dart';
 import '../../reviews/application/reviews_providers.dart';
 import '../../reviews/presentation/review_submit_screen.dart';
@@ -415,6 +416,13 @@ class BookingDetailScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                   ],
+                ],
+                if (appt.depositRequired && canManage) ...[
+                  ProofOfPaymentSection(
+                    appointmentId: appt.id,
+                    paymentMethod: appt.paymentMethod,
+                  ),
+                  const SizedBox(height: 16),
                 ],
                 if (appt.isPendingConfirmation && canManage) ...[
                   Container(

@@ -11,6 +11,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/deposit_payment_details.dart';
+import '../../deposit_verification/application/deposit_verification_providers.dart';
 import '../../my_bookings/application/my_bookings_providers.dart';
 import '../../../routing/route_paths.dart';
 import '../application/deposit_flow_providers.dart';
@@ -113,6 +114,8 @@ class _DepositFlowScreenState extends ConsumerState<DepositFlowScreen> {
         // immediately (list + detail).
         ref.invalidate(myBookingsProvider);
         ref.invalidate(bookingDetailProvider(widget.appointmentId));
+        ref.invalidate(
+            appointmentDepositSubmissionProvider(widget.appointmentId));
         setState(() => _step = 3);
       } else if (status == 'not_pending') {
         showAppSnackBar(context,

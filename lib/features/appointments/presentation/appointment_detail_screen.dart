@@ -14,6 +14,7 @@ import '../../../core/widgets/status_badge.dart';
 import '../../../models/appointment.dart';
 import '../../business_context/application/active_business_provider.dart';
 import '../../business_context/application/permissions.dart';
+import '../../deposit_verification/presentation/widgets/proof_of_payment_section.dart';
 import '../application/appointment_detail_controller.dart';
 
 class AppointmentDetailScreen extends ConsumerWidget {
@@ -87,6 +88,14 @@ class AppointmentDetailScreen extends ConsumerWidget {
                   appointment: appt,
                   canMarkDeposit: canMarkDeposit,
                   onMarkPaid: () => _showMarkDepositPaid(context, ref, appt),
+                ),
+                const SizedBox(height: 12),
+                ProofOfPaymentSection(
+                  appointmentId: appt.id,
+                  paymentMethod: appt.paymentMethod,
+                  showActions: canMarkDeposit,
+                  onChanged: () => ref.invalidate(
+                      appointmentDetailControllerProvider(appointmentId)),
                 ),
               ],
               if ((appt.notes ?? '').isNotEmpty) ...[

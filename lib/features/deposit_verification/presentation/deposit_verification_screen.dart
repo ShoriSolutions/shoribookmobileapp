@@ -8,6 +8,7 @@ import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/error_retry_view.dart';
 import '../../../models/deposit_submission.dart';
 import '../application/deposit_verification_providers.dart';
+import 'deposit_reject_sheet.dart';
 
 /// Vendor Deposit Verification — review proof-of-payment submissions and
 /// approve (confirm the booking) or reject (with a reason).
@@ -89,7 +90,7 @@ class _DepositCardState extends ConsumerState<_DepositCard> {
   }
 
   Future<void> _reject() async {
-    final result = await _showRejectSheet(context);
+    final result = await showDepositRejectSheet(context);
     if (result == null) return;
     setState(() => _busy = true);
     try {
@@ -284,104 +285,4 @@ class _Thumb extends StatelessWidget {
         child: const Icon(Icons.receipt_long_outlined,
             color: AppColors.muted, size: 24),
       );
-}
-
-typedef _RejectResult = ({String reason, String? notes});
-
-Future<_RejectResult?> _showRejectSheet(BuildContext context) {
-  return showModalBottomSheet<_RejectResult>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => const _RejectSheet(),
-  );
-}
-
-/// Owns its controller so it's disposed with the sheet (not mid-animation).
-class _RejectSheet extends StatefulWidget {
-  const _RejectSheet();
-
-  @override
-  State<_RejectSheet> createState() => _RejectSheetState();
-}
-
-class _RejectSheetState extends State<_RejectSheet> {
-  String? _reason;
-  final _notes = TextEditingController();
-
-  @override
-  void dispose() {
-    _notes.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Reject deposit',
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.ink)),
-            const SizedBox(height: 4),
-            const Text('Choose a reason — the customer is notified and can '
-                'resubmit.',
-                style: TextStyle(fontSize: 13.5, color: AppColors.muted)),
-            const SizedBox(height: 12),
-            for (final r in DepositRejectReason.all)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                leading: Icon(
-                  _reason == r
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_off,
-                  color: _reason == r ? AppColors.sageDark : AppColors.muted,
-                ),
-                title: Text(r),
-                onTap: () => setState(() => _reason = r),
-              ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _notes,
-              maxLines: 2,
-              decoration: const InputDecoration(
-                labelText: 'Notes (optional)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: FilledButton(
-                style:
-                    FilledButton.styleFrom(backgroundColor: AppColors.danger),
-                onPressed: _reason == null
-                    ? null
-                    : () => Navigator.pop(context, (
-                          reason: _reason!,
-                          notes: _notes.text.trim().isEmpty
-                              ? null
-                              : _notes.text.trim(),
-                        )),
-                child: const Text('Reject deposit'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
