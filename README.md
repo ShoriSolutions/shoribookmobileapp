@@ -14,6 +14,40 @@ Which experience a signed‑in account sees is derived from `profiles.role`
 (`entrepreneur` → business, `user` → customer, `admin` → unsupported in the
 mobile app; admin actions are exposed as RPCs for the web dashboard).
 
+## Recent changes (last 24 hours)
+
+_Rolling log of what shipped in the last day, newest first. Timestamps are
+local (AST, UTC‑04:00). Snapshot generated 2026‑08‑08 11:45._
+
+- **2026‑08‑08 11:44** — Deposit: confirm the booking when a vendor marks a
+  `pending_deposit` deposit paid (fixes a booking stuck on "Awaiting deposit"
+  even though the deposit read Paid).
+- **2026‑08‑08 06:41** — Deposit proof: use `assets/branding/example.png` as
+  the proof‑of‑payment example.
+- **2026‑08‑08 06:36** — Deposit proof: add a "See an example" illustration in
+  the upload‑proof step.
+- **2026‑08‑08 06:18** — My Bookings: reliable reload — per‑tab pull‑to‑refresh
+  (works on empty tabs) plus a header refresh button.
+- **2026‑08‑07 23:01** — Deposit: widen the `valid_deposit_status` CHECK
+  constraint to allow `SUBMITTED`.
+- **2026‑08‑07 21:00** — Deposit: reflect the submitted state in the customer's
+  bookings.
+- **2026‑08‑07 20:53** — Harden the remaining image pickers against crashes.
+- **2026‑08‑07 20:51** — Deposit flow: stop the photo‑picker crash (camera
+  usage string + error handling).
+- **2026‑08‑07 19:11** — Fix booking `23505`: unify the booking‑conversation
+  trigger.
+- **2026‑08‑07 19:00** — Chat: force chronological order so the newest message
+  sits at the bottom.
+- **2026‑08‑07 18:57** — Bookings: add‑to‑calendar chooser with a Google
+  Calendar option.
+- **2026‑08‑07 18:50** — Chat: WhatsApp‑style flow (date separators + grouped
+  bubbles).
+- **2026‑08‑07 18:34** — Marketplace: make Call (and WhatsApp) reliably open on
+  iOS + Android.
+- **2026‑08‑07 17:58** — Messaging: one chat per customer (unify
+  conversations).
+
 ## Features
 
 **Customer / marketplace (no login required)**
