@@ -17,8 +17,13 @@ mobile app; admin actions are exposed as RPCs for the web dashboard).
 ## Recent changes (last 24 hours)
 
 _Rolling log of what shipped in the last day, newest first. Timestamps are
-local (AST, UTC‑04:00). Snapshot generated 2026‑08‑08 17:00._
+local (AST, UTC‑04:00). Snapshot generated 2026‑08‑09._
 
+- **2026‑08‑09** — Docs: added [`docs/SUBSCRIPTION_SETUP.md`](docs/SUBSCRIPTION_SETUP.md)
+  go‑live checklist; README roadmap updated — receipt validation is done
+  (blocked only on store credentials).
+- **2026‑08‑09** — Phone fields: dial‑code prefill with brackets, app‑wide
+  (business, client, staff, booking, waitlist, customer profile).
 - **2026‑08‑08 17:00** — Roadmap: per‑tier feature caps now enforced
   server‑side too (deposits, reports, marketplace) via `business_plan_allows()`
   + triggers/RPC guards; friendly upgrade messages for plan‑limit errors.
@@ -274,9 +279,17 @@ These need provider credentials / store setup before they work end‑to‑end:
   and marketplace listing via `business_plan_allows()` + triggers on
   `services`/`businesses` and guards inside the report RPCs. The free trial
   still grants full access.
-- **Store receipt validation + renewal charging** — IAP products (monthly +
-  annual) are wired; move receipt validation to an Edge Function and handle
-  renewal/retry (see `docs/FEATURE_NOTES.md`).
+- ✅ **Store receipt validation** _(done — awaiting store credentials)_ —
+  the `verify-purchase` Edge Function is implemented and deployed; it validates
+  the App Store / Play receipt server‑side and grants access with the store's
+  trusted expiry (the client never self‑grants). It only needs three secrets
+  set in the Supabase dashboard to switch on — see
+  [`docs/SUBSCRIPTION_SETUP.md`](docs/SUBSCRIPTION_SETUP.md). Recurring renewal
+  charges + retries are handled by Apple/Google for auto‑renewable IAP.
+- **Renewal status sync (optional)** — App Store Server Notifications + Google
+  Real‑Time Developer Notifications webhooks so renewals/cancellations update
+  `current_period_end` instantly, plus a `past_due` grace window before the
+  access gate restricts. Not required for billing to work.
 - **Sign in with Google / Apple / phone‑OTP** at guest checkout (buttons are
   present, provider wiring pending).
 - **Multi‑session switch accounts** (guest + customer + vendor without
