@@ -52,7 +52,9 @@ class _CustomerProfileEditScreenState
 
   void _seed(Profile p) {
     _name.text = p.fullName;
-    _phone.text = p.phone ?? '';
+    _phone.text = (p.phone?.isNotEmpty ?? false)
+        ? p.phone!
+        : phonePrefill(deviceCountryCode());
     _avatarUrl = p.avatarUrl;
     _address = p.address;
     _seeded = true;
@@ -108,7 +110,7 @@ class _CustomerProfileEditScreenState
       }
       await repo.updateMyProfile(
         fullName: name,
-        phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
+        phone: phoneForSave(_phone.text, deviceCountryCode()),
         avatarUrl: avatarUrl,
       );
       await repo.saveMyAddress(_address);

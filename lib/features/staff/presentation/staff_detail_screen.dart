@@ -184,7 +184,12 @@ class StaffDetailScreen extends ConsumerWidget {
     final nameController = TextEditingController(text: staff.name);
     final customRoleController = TextEditingController();
     final bioController = TextEditingController(text: staff.bio ?? '');
-    final phoneController = TextEditingController(text: staff.phone ?? '');
+    final staffCc =
+        ref.read(activeMembershipProvider).valueOrNull?.business.countryCode;
+    final phoneController = TextEditingController(
+        text: (staff.phone?.isNotEmpty ?? false)
+            ? staff.phone!
+            : phonePrefill(staffCc));
     final roles = {...staff.roles};
     bool isActive = staff.isActive;
     bool isBookable = staff.isBookable;
@@ -313,9 +318,7 @@ class StaffDetailScreen extends ConsumerWidget {
                               : bioController.text.trim(),
                           profileImageUrl: staff.profileImageUrl,
                           email: staff.email,
-                          phone: phoneController.text.trim().isEmpty
-                              ? null
-                              : phoneController.text.trim(),
+                          phone: phoneForSave(phoneController.text, staffCc),
                           instagramUrl: staff.instagramUrl,
                           isActive: isActive,
                           isBookable: isBookable,

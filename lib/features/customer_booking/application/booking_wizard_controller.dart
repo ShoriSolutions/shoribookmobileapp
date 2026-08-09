@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/supabase/supabase_providers.dart';
 import '../../../core/time/customer_time_zone.dart';
+import '../../../core/utils/phone_input.dart';
 import '../../../core/utils/timezone_offsets.dart';
 import '../../../models/availability_models.dart';
 import '../../../models/service.dart';
@@ -271,6 +272,22 @@ class BookingWizardController extends AutoDisposeFamilyNotifier<
         );
         return;
       }
+
+      // Normalise the phone/WhatsApp: drop a field left as just the prefilled
+      // dial code, and require a real phone number.
+      final cc = profileData.business.countryCode;
+      final cleanPhone = phoneForSave(state.phone, cc);
+      if (cleanPhone == null) {
+        state = state.copyWith(
+          isSubmitting: false,
+          errorMessage: 'Please enter your phone number',
+        );
+        return;
+      }
+      state = state.copyWith(
+        phone: cleanPhone,
+        whatsapp: phoneForSave(state.whatsapp, cc) ?? '',
+      );
 
       // Blocked-customer guard (polite pre-check; the DB trigger is the
       // authoritative backstop). Only this business is affected.

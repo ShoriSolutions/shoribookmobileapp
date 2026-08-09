@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../core/utils/phone_input.dart';
 import '../../../core/utils/timezone_offsets.dart';
 import '../../../models/customer.dart';
 import '../../../models/service.dart';
@@ -125,14 +126,24 @@ class BookingFormController extends Notifier<BookingFormState> {
       String? customerEmail = state.selectedCustomer?.email;
 
       if (state.creatingNewCustomer) {
+        // Drop a phone/WhatsApp left as just the prefilled dial code.
+        final cc = membership.business.countryCode;
+        final newPhone = phoneForSave(state.newPhone, cc);
+        if (newPhone == null) {
+          state = state.copyWith(
+            isSubmitting: false,
+            errorMessage: "Please enter the client's phone number.",
+          );
+          return null;
+        }
         final created = await ref
             .read(clientsRepositoryProvider)
             .findOrCreateByPhone(
               businessId: membership.business.id,
               firstName: state.newFirstName,
               lastName: state.newLastName,
-              phone: state.newPhone,
-              whatsappNumber: state.newWhatsapp,
+              phone: newPhone,
+              whatsappNumber: phoneForSave(state.newWhatsapp, cc) ?? '',
               email: state.newEmail,
             );
         customerId = created.id;

@@ -884,10 +884,13 @@ class _ConfirmScreenState extends ConsumerState<_ConfirmScreen> {
   void initState() {
     super.initState();
     final s = ref.read(bookingWizardControllerProvider(widget.slug));
+    final cc = widget.data.business.countryCode;
     _firstName = TextEditingController(text: s.firstName);
     _lastName = TextEditingController(text: s.lastName);
-    _phone = TextEditingController(text: s.phone);
-    _whatsapp = TextEditingController(text: s.whatsapp);
+    _phone = TextEditingController(
+        text: s.phone.isNotEmpty ? s.phone : phonePrefill(cc));
+    _whatsapp = TextEditingController(
+        text: s.whatsapp.isNotEmpty ? s.whatsapp : phonePrefill(cc));
   }
 
   @override

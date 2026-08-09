@@ -33,7 +33,15 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.clientId != null) _loadExisting();
+    if (widget.clientId != null) {
+      _loadExisting();
+    } else {
+      // New client: prefill the dial code for the business's country.
+      final cc = ref.read(activeMembershipProvider).valueOrNull
+          ?.business.countryCode;
+      _phone.text = phonePrefill(cc);
+      _whatsapp.text = phonePrefill(cc);
+    }
   }
 
   Future<void> _loadExisting() async {
@@ -72,24 +80,26 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
       if (widget.clientId == null) {
         final membership = await ref.read(activeMembershipProvider.future);
         if (membership == null) return;
+        final cc = membership.business.countryCode;
         await repo.findOrCreateByPhone(
           businessId: membership.business.id,
           firstName: _firstName.text,
           lastName: _lastName.text,
-          phone: _phone.text,
-          whatsappNumber: _whatsapp.text,
+          phone: phoneForSave(_phone.text, cc) ?? _phone.text.trim(),
+          whatsappNumber: phoneForSave(_whatsapp.text, cc) ?? '',
           email: _email.text,
         );
       } else {
         final existing = await repo.fetchById(widget.clientId!);
+        final cc =
+            ref.read(activeMembershipProvider).valueOrNull?.business.countryCode;
         final updated = Customer(
           id: existing.id,
           businessId: existing.businessId,
           firstName: _firstName.text.trim(),
           lastName: _lastName.text.trim().isEmpty ? null : _lastName.text.trim(),
-          phone: _phone.text.trim(),
-          whatsappNumber:
-              _whatsapp.text.trim().isEmpty ? null : _whatsapp.text.trim(),
+          phone: phoneForSave(_phone.text, cc) ?? _phone.text.trim(),
+          whatsappNumber: phoneForSave(_whatsapp.text, cc),
           email: _email.text.trim().isEmpty ? null : _email.text.trim(),
           notes: existing.notes,
           tags: existing.tags,
@@ -157,9 +167,15 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
                           labelText: 'Phone',
                           hintText: kPhoneHint,
                         ),
-                        validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'Phone number is required'
-                            : null,
+                        validator: (v) {
+                          final cc = ref
+                              .read(activeMembershipProvider)
+                              .valueOrNull
+                              ?.business.countryCode;
+                          return phoneForSave(v ?? '', cc) == null
+                              ? 'Enter a phone number'
+                              : null;
+                        },
                       ),
                       const SizedBox(height: 12),
                       TextFormField(

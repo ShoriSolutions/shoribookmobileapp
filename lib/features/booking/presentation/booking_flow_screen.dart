@@ -200,6 +200,9 @@ class _ClientSection extends ConsumerStatefulWidget {
 
 class _ClientSectionState extends ConsumerState<_ClientSection> {
   final _searchController = TextEditingController();
+  final _newPhone = TextEditingController();
+  final _newWhatsapp = TextEditingController();
+  bool _newCustomerSeeded = false;
   List<Customer> _results = [];
   bool _searching = false;
 
@@ -225,6 +228,8 @@ class _ClientSectionState extends ConsumerState<_ClientSection> {
   @override
   void dispose() {
     _searchController.dispose();
+    _newPhone.dispose();
+    _newWhatsapp.dispose();
     super.dispose();
   }
 
@@ -247,6 +252,13 @@ class _ClientSectionState extends ConsumerState<_ClientSection> {
     }
 
     if (state.creatingNewCustomer) {
+      final cc =
+          ref.watch(activeMembershipProvider).valueOrNull?.business.countryCode;
+      if (!_newCustomerSeeded) {
+        _newPhone.text = phonePrefill(cc);
+        _newWhatsapp.text = phonePrefill(cc);
+        _newCustomerSeeded = true;
+      }
       return Card(
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -264,22 +276,24 @@ class _ClientSectionState extends ConsumerState<_ClientSection> {
               ),
               const SizedBox(height: 8),
               TextField(
+                controller: _newPhone,
                 decoration: const InputDecoration(
                   labelText: 'Phone',
                   hintText: kPhoneHint,
                 ),
                 keyboardType: TextInputType.phone,
-                inputFormatters: phoneInputFormatters(null),
+                inputFormatters: phoneInputFormatters(cc),
                 onChanged: (v) => controller.updateNewCustomerField(phone: v),
               ),
               const SizedBox(height: 8),
               TextField(
+                controller: _newWhatsapp,
                 decoration: const InputDecoration(
                   labelText: 'WhatsApp (optional)',
                   hintText: kWhatsAppHint,
                 ),
                 keyboardType: TextInputType.phone,
-                inputFormatters: phoneInputFormatters(null),
+                inputFormatters: phoneInputFormatters(cc),
                 onChanged: (v) => controller.updateNewCustomerField(whatsapp: v),
               ),
               Align(

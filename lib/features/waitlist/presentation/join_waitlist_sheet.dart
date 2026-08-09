@@ -74,8 +74,8 @@ class _JoinWaitlistSheet extends ConsumerStatefulWidget {
 class _JoinWaitlistSheetState extends ConsumerState<_JoinWaitlistSheet> {
   late final TextEditingController _name =
       TextEditingController(text: widget.initialName ?? '');
-  late final TextEditingController _phone =
-      TextEditingController(text: widget.initialPhone ?? '');
+  late final TextEditingController _phone = TextEditingController(
+      text: widget.initialPhone ?? phonePrefill(widget.countryCode));
   bool _saving = false;
 
   @override
@@ -86,7 +86,8 @@ class _JoinWaitlistSheetState extends ConsumerState<_JoinWaitlistSheet> {
   }
 
   Future<void> _submit() async {
-    if (_name.text.trim().isEmpty || _phone.text.trim().isEmpty) {
+    final phone = phoneForSave(_phone.text, widget.countryCode);
+    if (_name.text.trim().isEmpty || phone == null) {
       showAppSnackBar(context,
           message: 'Enter your name and phone number', isError: true);
       return;
@@ -98,7 +99,7 @@ class _JoinWaitlistSheetState extends ConsumerState<_JoinWaitlistSheet> {
             serviceId: widget.serviceId,
             staffProfileId: widget.staffProfileId,
             firstName: _name.text.trim(),
-            phone: _phone.text.trim(),
+            phone: phone,
             preferredDate: widget.preferredDate,
             preferredTime: widget.preferredTime,
           );
@@ -107,7 +108,7 @@ class _JoinWaitlistSheetState extends ConsumerState<_JoinWaitlistSheet> {
       if (!signedIn && res.entryId != null) {
         await ref
             .read(guestWaitlistStoreProvider)
-            .add(id: res.entryId!, phone: _phone.text.trim());
+            .add(id: res.entryId!, phone: phone);
       }
       ref.invalidate(myWaitlistProvider);
       if (!mounted) return;

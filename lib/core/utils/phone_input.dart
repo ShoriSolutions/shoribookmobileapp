@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/services.dart';
 
 /// Region-aware phone input helpers. Keeps a phone field from growing
@@ -31,12 +33,23 @@ const Map<String, String> _dialCodes = {
 String? dialCodeForCountry(String? countryCode) =>
     _dialCodes[(countryCode ?? '').toUpperCase()];
 
+/// The device's region (ISO 3166-1 alpha-2) from the OS locale, or null.
+/// A best-effort default for phone fields that have no business country to
+/// anchor to (e.g. a customer editing their own profile).
+String? deviceCountryCode() => ui.PlatformDispatcher.instance.locale.countryCode;
+
 /// The initial text for an empty phone field: the country's dial code plus a
-/// trailing space so the user types straight into the local number. Falls back
-/// to an empty string when the region has no known code.
+/// trailing space so the user types straight into the local number. NANP
+/// territories show the area code in brackets, e.g. 'BB' -> '+1 (246) ',
+/// 'US' -> '+1 '. Falls back to an empty string when the region has no code.
 String phonePrefill(String? countryCode) {
   final code = dialCodeForCountry(countryCode);
-  return code == null ? '' : '$code ';
+  if (code == null) return '';
+  // NANP: "+1246" -> "+1 (246) "; plain "+1" -> "+1 ".
+  if (code.startsWith('+1') && code.length > 2) {
+    return '+1 (${code.substring(2)}) ';
+  }
+  return '$code ';
 }
 
 /// A phone field's value ready to persist: null when it's empty or contains
