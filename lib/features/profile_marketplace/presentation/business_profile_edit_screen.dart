@@ -557,10 +557,16 @@ class _BusinessProfileEditScreenState
                     TextFormField(
                       controller: _description,
                       enabled: canManage,
-                      maxLines: 3,
+                      minLines: 4,
+                      maxLines: 10,
+                      maxLength: 600,
+                      keyboardType: TextInputType.multiline,
+                      textCapitalization: TextCapitalization.sentences,
                       decoration: const InputDecoration(
-                        labelText: 'Description',
-                        hintText: 'Tell clients what you do…',
+                        labelText: 'About your business',
+                        hintText: 'Tell clients about your business — what you '
+                            'offer, your experience, what makes you different…',
+                        alignLabelWithHint: true,
                       ),
                     ),
 

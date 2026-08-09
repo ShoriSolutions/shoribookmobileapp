@@ -159,7 +159,13 @@ class _Loaded extends ConsumerWidget {
                     ),
                   ],
                   if ((business.description ?? '').isNotEmpty) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
+                    const Text('About',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.ink)),
+                    const SizedBox(height: 8),
                     Text(business.description!,
                         style: const TextStyle(
                             fontSize: 15,
