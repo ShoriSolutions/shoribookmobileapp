@@ -12,6 +12,47 @@ const Set<String> _nanpCodes = {
   'AI', 'VG', 'KY', 'TC', 'MS', 'BM', 'PR', 'DO', 'SX', 'GP', 'MF',
 };
 
+/// E.164 dialling prefix for a country (ISO 3166-1 alpha-2), e.g. 'BB' ->
+/// '+1246'. NANP territories carry their specific area code so the number is
+/// dialable as-is. Returns null for regions we don't have a code for (no
+/// prefill then). Centralised so every phone field can prefill the same way.
+const Map<String, String> _dialCodes = {
+  // NANP (+1) — each Caribbean territory has its own area code.
+  'US': '+1', 'CA': '+1',
+  'BB': '+1246', 'JM': '+1876', 'TT': '+1868', 'BS': '+1242', 'AG': '+1268',
+  'LC': '+1758', 'VC': '+1784', 'GD': '+1473', 'DM': '+1767', 'KN': '+1869',
+  'AI': '+1264', 'VG': '+1284', 'KY': '+1345', 'TC': '+1649', 'MS': '+1664',
+  'BM': '+1441', 'PR': '+1787', 'DO': '+1809', 'SX': '+1721',
+  // Non-NANP neighbours + common regions.
+  'GP': '+590', 'MF': '+590', 'GY': '+592', 'SR': '+597', 'HT': '+509',
+  'GB': '+44',
+};
+
+String? dialCodeForCountry(String? countryCode) =>
+    _dialCodes[(countryCode ?? '').toUpperCase()];
+
+/// The initial text for an empty phone field: the country's dial code plus a
+/// trailing space so the user types straight into the local number. Falls back
+/// to an empty string when the region has no known code.
+String phonePrefill(String? countryCode) {
+  final code = dialCodeForCountry(countryCode);
+  return code == null ? '' : '$code ';
+}
+
+/// A phone field's value ready to persist: null when it's empty or contains
+/// nothing beyond the dial code (i.e. the prefill was left untouched), so we
+/// never store a bare '+1246'.
+String? phoneForSave(String value, String? countryCode) {
+  final trimmed = value.trim();
+  if (trimmed.isEmpty) return null;
+  final digits = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
+  final codeDigits =
+      (dialCodeForCountry(countryCode) ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+  // Only the dial code (or fewer digits) => the user never entered a number.
+  if (digits.length <= codeDigits.length) return null;
+  return trimmed;
+}
+
 /// The most digits a phone number should have for [countryCode]. Defaults to
 /// the E.164 maximum (15) when the region is unknown or non-NANP.
 int phoneMaxDigits(String? countryCode) {

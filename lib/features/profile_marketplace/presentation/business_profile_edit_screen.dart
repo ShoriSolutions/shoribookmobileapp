@@ -68,10 +68,16 @@ class _BusinessProfileEditScreenState
   void _seed(Business b) {
     _name.text = b.name;
     _description.text = b.description ?? '';
-    _phone.text = b.phone ?? '';
+    // Prefill an empty phone/WhatsApp with the dial code for the country the
+    // account was created under, so vendors type straight into the local number.
+    _phone.text = (b.phone?.isNotEmpty ?? false)
+        ? b.phone!
+        : phonePrefill(b.countryCode);
     _email.text = b.email ?? '';
     _address.text = b.address ?? '';
-    _whatsapp.text = b.whatsappNumber ?? '';
+    _whatsapp.text = (b.whatsappNumber?.isNotEmpty ?? false)
+        ? b.whatsappNumber!
+        : phonePrefill(b.countryCode);
     _instagram.text = b.instagramUrl ?? '';
     _facebook.text = b.facebookUrl ?? '';
     _tiktok.text = b.tiktokUrl ?? '';
@@ -329,10 +335,10 @@ class _BusinessProfileEditScreenState
           name: _name.text.trim(),
           category: _category,
           description: _nullIfEmpty(_description.text),
-          phone: _nullIfEmpty(_phone.text),
+          phone: phoneForSave(_phone.text, biz.countryCode),
           email: _nullIfEmpty(_email.text),
           address: _nullIfEmpty(_address.text),
-          whatsappNumber: _nullIfEmpty(_whatsapp.text),
+          whatsappNumber: phoneForSave(_whatsapp.text, biz.countryCode),
           instagramUrl: _nullIfEmpty(_instagram.text),
           facebookUrl: _nullIfEmpty(_facebook.text),
           tiktokUrl: _nullIfEmpty(_tiktok.text),
