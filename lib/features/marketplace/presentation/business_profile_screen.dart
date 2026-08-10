@@ -465,17 +465,27 @@ class _Loaded extends ConsumerWidget {
                 context.push(RoutePaths.bookingWizard(business.slug)),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Book appointment',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w700)),
+                const Flexible(
+                  child: Text('Book appointment',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w700)),
+                ),
                 if (minPrice != null) ...[
                   const SizedBox(width: 8),
-                  Text('· from ${formatCurrency(minPrice, business.currency)}',
-                      style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white70)),
+                  Flexible(
+                    child: Text(
+                        '· from ${formatCurrency(minPrice, business.currency)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white70)),
+                  ),
                 ],
               ],
             ),
