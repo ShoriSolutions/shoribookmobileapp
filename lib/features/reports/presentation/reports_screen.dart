@@ -81,13 +81,19 @@ class ReportsScreen extends ConsumerWidget {
                                 style: const TextStyle(
                                     fontSize: 14, color: AppColors.muted)),
                             const SizedBox(height: 6),
-                            Text(
-                              formatCurrency(summary.totalRevenue, currency),
-                              style: const TextStyle(
-                                  fontSize: 34,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -1,
-                                  color: AppColors.ink),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                formatCurrency(summary.totalRevenue, currency),
+                                maxLines: 1,
+                                softWrap: false,
+                                style: const TextStyle(
+                                    fontSize: 34,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -1,
+                                    color: AppColors.ink),
+                              ),
                             ),
                             if (summary.revenueByDay.isNotEmpty) ...[
                               const SizedBox(height: 16),
@@ -255,14 +261,18 @@ class _Tile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                  color: color)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(value,
+                maxLines: 1,
+                softWrap: false,
+                style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                    color: color)),
+          ),
           const SizedBox(height: 4),
           Text(label,
               style: const TextStyle(fontSize: 14, color: AppColors.muted)),
