@@ -339,11 +339,14 @@ class _StatTile extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.w800, color: color)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(value,
+                maxLines: 1,
+                softWrap: false,
+                style: TextStyle(
+                    fontSize: 20, fontWeight: FontWeight.w800, color: color)),
+          ),
           const SizedBox(height: 2),
           Text(label,
               style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
