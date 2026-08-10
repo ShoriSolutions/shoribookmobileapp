@@ -19,6 +19,9 @@ mobile app; admin actions are exposed as RPCs for the web dashboard).
 _Rolling log of what shipped in the last day, newest first. Timestamps are
 local (AST, UTC‑04:00). Snapshot generated 2026‑08‑09._
 
+- **2026‑08‑09** — Email: added `dispatch-emails` Edge Function — a serverless
+  Resend drainer for `email_outbox` (no Node/SMTP host needed); set
+  `RESEND_API_KEY` + `EMAIL_FROM` and schedule it. See `docs/FEATURE_NOTES.md`.
 - **2026‑08‑09** — Docs: added [`docs/SUBSCRIPTION_SETUP.md`](docs/SUBSCRIPTION_SETUP.md)
   go‑live checklist; README roadmap updated — receipt validation is done
   (blocked only on store credentials).

@@ -97,18 +97,28 @@ Supabase Edge Functions run on Deno and can't run Nodemailer, so email is now
   notices (`message`). Message recipients come from `claim_message_email_targets`
   (unread past a 3-min grace, mute-aware, 60-min cooldown, atomic claim so no
   double-send; recipient = business **owner** or the **customer** account).
-- **Consumer:** `backend/nodemailer/email-dispatcher.mjs` — one worker that
-  drains the outbox via `claim_outbox_emails` (FOR UPDATE SKIP LOCKED, so you
-  can run several) and sends with your SMTP Nodemailer transport. Failures
-  requeue up to 5 attempts, then mark `failed`.
+- **Consumer — pick ONE** (both drain the same outbox via `claim_outbox_emails`,
+  FOR UPDATE SKIP LOCKED, so they never double-send; failures requeue up to 5
+  attempts then mark `failed`):
+  - **Resend (serverless, recommended)** — `dispatch-emails` Edge Function
+    sends via Resend's HTTP API. No Node host to run; just deploy + schedule.
+  - **SMTP (self-hosted)** — `backend/nodemailer/email-dispatcher.mjs`, a Node
+    worker using your own SMTP.
 
-**To activate:**
+**To activate with Resend (serverless):**
 1. Run migrations `20260721000003` + `20260721000004`.
-2. Re-deploy the producer: `supabase functions deploy process-reminders
-   --no-verify-jwt`. (Resend is no longer used — `RESEND_API_KEY` can be
-   removed.)
-3. Run `email-dispatcher.mjs` on a schedule in your Node backend
-   (`npm i @supabase/supabase-js nodemailer`, set SMTP + Supabase env).
+2. Deploy the producer: `supabase functions deploy process-reminders
+   --no-verify-jwt`.
+3. Deploy the drainer: `supabase functions deploy dispatch-emails
+   --no-verify-jwt`.
+4. Set Edge Function secrets: `RESEND_API_KEY` and `EMAIL_FROM`
+   (a verified Resend sender/domain, e.g. `Shorivo <noreply@shorivo.app>`).
+5. Schedule `dispatch-emails` every minute (pg_cron + `net.http_post`, or
+   Supabase scheduled functions), alongside `process-reminders`.
+
+**Or with SMTP (self-hosted):** steps 1–2 above, then run
+`email-dispatcher.mjs` on a schedule in your Node backend
+(`npm i @supabase/supabase-js nodemailer`, set SMTP + Supabase env).
 
 `push` / `whatsapp` reminder channels stay no-ops in the Edge Function and
 fall back to email → outbox.
