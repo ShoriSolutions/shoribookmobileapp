@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import '../map/map_style.dart';
 import '../theme/app_colors.dart';
-
-/// OpenStreetMap tiles need no API key. A User-Agent identifying the app
-/// is required by OSM's tile usage policy.
-const String _osmUrlTemplate = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const String _osmUserAgent = 'com.shorisolutions.shorivo';
 
 /// Fallback centre when no location is set yet (Barbados).
 const LatLng kDefaultMapCenter = LatLng(13.1939, -59.5432);
 
 /// Interactive map that lets the owner tap to drop/move the location pin.
+/// Renders MapLibre vector tiles (MapTiler) with a raster OSM fallback.
 class LocationPickerMap extends StatefulWidget {
   const LocationPickerMap({
     super.key,
@@ -49,35 +46,39 @@ class _LocationPickerMapState extends State<LocationPickerMap> {
       borderRadius: BorderRadius.circular(12),
       child: SizedBox(
         height: widget.height,
-        child: FlutterMap(
-          mapController: _controller,
-          options: MapOptions(
-            initialCenter: sel ?? kDefaultMapCenter,
-            initialZoom: sel != null ? 15 : 11,
-            onTap: (_, point) => widget.onChanged(point),
-          ),
-          children: [
-            TileLayer(
-              urlTemplate: _osmUrlTemplate,
-              userAgentPackageName: _osmUserAgent,
-            ),
-            if (sel != null)
-              MarkerLayer(
-                markers: [
-                  Marker(
-                    point: sel,
-                    width: 44,
-                    height: 44,
-                    alignment: Alignment.bottomCenter,
-                    child: const Icon(
-                      Icons.location_on,
-                      size: 40,
-                      color: AppColors.terracotta,
-                    ),
-                  ),
-                ],
+        child: FutureBuilder<Style?>(
+          future: loadMapStyle(),
+          builder: (context, snap) {
+            final style = snap.data;
+            return FlutterMap(
+              mapController: _controller,
+              options: MapOptions(
+                initialCenter: sel ?? kDefaultMapCenter,
+                initialZoom: sel != null ? 15 : 11,
+                onTap: (_, point) => widget.onChanged(point),
               ),
-          ],
+              children: [
+                mapBaseLayer(style),
+                if (sel != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: sel,
+                        width: 44,
+                        height: 44,
+                        alignment: Alignment.bottomCenter,
+                        child: const Icon(
+                          Icons.location_on,
+                          size: 40,
+                          color: AppColors.terracotta,
+                        ),
+                      ),
+                    ],
+                  ),
+                mapAttribution(style),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -98,35 +99,39 @@ class MapPreview extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: SizedBox(
         height: height,
-        child: FlutterMap(
-          options: MapOptions(
-            initialCenter: point,
-            initialZoom: 15,
-            interactionOptions: const InteractionOptions(
-              flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-            ),
-          ),
-          children: [
-            TileLayer(
-              urlTemplate: _osmUrlTemplate,
-              userAgentPackageName: _osmUserAgent,
-            ),
-            MarkerLayer(
-              markers: [
-                Marker(
-                  point: point,
-                  width: 44,
-                  height: 44,
-                  alignment: Alignment.bottomCenter,
-                  child: const Icon(
-                    Icons.location_on,
-                    size: 40,
-                    color: AppColors.terracotta,
-                  ),
+        child: FutureBuilder<Style?>(
+          future: loadMapStyle(),
+          builder: (context, snap) {
+            final style = snap.data;
+            return FlutterMap(
+              options: MapOptions(
+                initialCenter: point,
+                initialZoom: 15,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                 ),
+              ),
+              children: [
+                mapBaseLayer(style),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: point,
+                      width: 44,
+                      height: 44,
+                      alignment: Alignment.bottomCenter,
+                      child: const Icon(
+                        Icons.location_on,
+                        size: 40,
+                        color: AppColors.terracotta,
+                      ),
+                    ),
+                  ],
+                ),
+                mapAttribution(style),
               ],
-            ),
-          ],
+            );
+          },
         ),
       ),
     );

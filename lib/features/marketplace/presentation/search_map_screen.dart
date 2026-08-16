@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/map/map_style.dart';
 import '../../../core/utils/location_service.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/osm_map.dart';
@@ -305,38 +306,42 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
 
     return Stack(
       children: [
-        FlutterMap(
-          mapController: _mapController,
-          options: MapOptions(
-            initialCenter: center,
-            initialZoom: 13,
-            interactionOptions: const InteractionOptions(
-                flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
-          ),
-          children: [
-            TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.shorisolutions.shorivo',
-            ),
-            MarkerLayer(
-              markers: [
-                for (final b in withCoords)
-                  Marker(
-                    point: LatLng(b.latitude!, b.longitude!),
-                    width: b.id == selected?.id ? 52 : 40,
-                    height: b.id == selected?.id ? 52 : 40,
-                    alignment: Alignment.bottomCenter,
-                    child: GestureDetector(
-                      onTap: () => setState(() => _selectedId = b.id),
-                      child: _Pin(
-                        visual: CategoryVisual.of(b.category),
-                        active: b.id == selected?.id,
+        FutureBuilder<Style?>(
+          future: loadMapStyle(),
+          builder: (context, snap) {
+            final style = snap.data;
+            return FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: center,
+                initialZoom: 13,
+                interactionOptions: const InteractionOptions(
+                    flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
+              ),
+              children: [
+                mapBaseLayer(style),
+                MarkerLayer(
+                  markers: [
+                    for (final b in withCoords)
+                      Marker(
+                        point: LatLng(b.latitude!, b.longitude!),
+                        width: b.id == selected?.id ? 52 : 40,
+                        height: b.id == selected?.id ? 52 : 40,
+                        alignment: Alignment.bottomCenter,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedId = b.id),
+                          child: _Pin(
+                            visual: CategoryVisual.of(b.category),
+                            active: b.id == selected?.id,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                  ],
+                ),
+                mapAttribution(style),
               ],
-            ),
-          ],
+            );
+          },
         ),
         Positioned(
           top: 12,

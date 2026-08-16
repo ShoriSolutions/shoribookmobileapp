@@ -14,6 +14,12 @@ class Env {
     'SUPABASE_ANON_KEY',
   );
 
+  /// MapTiler API key for MapLibre vector map tiles. When empty, maps fall
+  /// back to raster OpenStreetMap tiles so the app still works in dev.
+  static const String maptilerKey = String.fromEnvironment('MAPTILER_KEY');
+
   static bool get isConfigured =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
+
+  static bool get hasMapTiler => maptilerKey.isNotEmpty;
 }
