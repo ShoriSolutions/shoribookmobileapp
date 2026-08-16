@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
+import 'app_spacing.dart';
 
 /// Light theme only for the MVP — structured as a static builder so a
 /// future AppTheme.dark is a pure addition, not a rewrite.
@@ -75,7 +76,7 @@ class AppTheme {
         color: AppColors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadius.cardBr,
           side: const BorderSide(color: AppColors.parchment),
         ),
         margin: EdgeInsets.zero,
@@ -93,19 +94,19 @@ class AppTheme {
           vertical: 14,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.controlBr,
           borderSide: const BorderSide(color: AppColors.parchment),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.controlBr,
           borderSide: const BorderSide(color: AppColors.parchment),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.controlBr,
           borderSide: const BorderSide(color: AppColors.sage, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.controlBr,
           borderSide: const BorderSide(color: AppColors.danger),
         ),
         labelStyle: const TextStyle(color: AppColors.muted),
@@ -116,7 +117,7 @@ class AppTheme {
           foregroundColor: AppColors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: AppRadius.controlBr,
           ),
           textStyle: const TextStyle(
             fontSize: 15,
@@ -130,7 +131,7 @@ class AppTheme {
           side: const BorderSide(color: AppColors.parchment),
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: AppRadius.controlBr,
           ),
         ),
       ),
@@ -149,7 +150,7 @@ class AppTheme {
         contentTextStyle: const TextStyle(color: AppColors.white),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.controlBr,
         ),
       ),
     );
