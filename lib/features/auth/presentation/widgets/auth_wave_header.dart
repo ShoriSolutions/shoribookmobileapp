@@ -95,6 +95,7 @@ class _AuthWaveHeaderState extends State<AuthWaveHeader>
               top: topInset + 2,
               left: 4,
               child: IconButton(
+                tooltip: 'Back',
                 icon: const Icon(Icons.arrow_back, color: AppColors.ink),
                 onPressed:
                     widget.onBack ?? () => Navigator.of(context).maybePop(),

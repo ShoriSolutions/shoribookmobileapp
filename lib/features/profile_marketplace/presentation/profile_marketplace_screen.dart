@@ -155,6 +155,7 @@ class ProfileMarketplaceScreen extends ConsumerWidget {
                   title: const Text('Your booking link'),
                   subtitle: Text(url),
                   trailing: IconButton(
+                    tooltip: 'Copy',
                     icon: const Icon(Icons.copy_outlined),
                     onPressed: () async {
                       await Clipboard.setData(ClipboardData(text: url));

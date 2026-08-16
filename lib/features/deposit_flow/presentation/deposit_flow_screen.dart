@@ -144,12 +144,14 @@ class _DepositFlowScreenState extends ConsumerState<DepositFlowScreen> {
         title: Text('Step ${_step + 1} of $_totalSteps'),
         leading: _step == 0 || _step == 3
             ? IconButton(
+                tooltip: 'Close',
                 icon: const Icon(Icons.close),
                 onPressed: () => context.canPop()
                     ? context.pop()
                     : context.go(RoutePaths.discover),
               )
             : IconButton(
+                tooltip: 'Back',
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () => setState(() => _step -= 1),
               ),
@@ -809,6 +811,7 @@ class _CopyRow extends StatelessWidget {
           ),
           if (onCopy != null)
             IconButton(
+              tooltip: 'Copy',
               icon: const Icon(Icons.copy, size: 18, color: AppColors.sageDark),
               onPressed: onCopy,
             ),

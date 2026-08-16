@@ -90,6 +90,7 @@ class _CustomerRegisterScreenState
           Align(
             alignment: Alignment.centerLeft,
             child: IconButton(
+              tooltip: 'Back',
               padding: EdgeInsets.zero,
               icon: const Icon(Icons.arrow_back, color: AppColors.ink),
               onPressed: () => context.canPop()
@@ -132,6 +133,7 @@ class _CustomerRegisterScreenState
             onChanged: (_) => setState(() {}),
             validator: PasswordPolicy.validate,
             suffixIcon: IconButton(
+              tooltip: 'Show or hide password',
               icon: Icon(
                   _obscurePassword
                       ? Icons.visibility_outlined

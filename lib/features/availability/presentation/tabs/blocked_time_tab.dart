@@ -286,6 +286,7 @@ class _BlockCard extends StatelessWidget {
         isThreeLine: block.reason != null,
         trailing: canDelete
             ? IconButton(
+                tooltip: 'Delete',
                 icon: const Icon(Icons.delete_outline, color: AppColors.danger),
                 onPressed: onDelete,
               )

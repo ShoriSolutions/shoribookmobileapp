@@ -81,6 +81,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     IconButton(
+                      tooltip: 'Close',
                       padding: EdgeInsets.zero,
                       icon: const Icon(Icons.close, color: AppColors.ink),
                       onPressed: _guest,
@@ -166,6 +167,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   validator: (v) =>
                       (v == null || v.isEmpty) ? 'Enter your password' : null,
                   suffixIcon: IconButton(
+                    tooltip: 'Show or hide password',
                     icon: Icon(
                         _obscurePassword
                             ? Icons.visibility_outlined

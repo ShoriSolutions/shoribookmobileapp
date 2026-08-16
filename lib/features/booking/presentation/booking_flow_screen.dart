@@ -71,6 +71,7 @@ class BookingFlowScreen extends ConsumerWidget {
               child: Row(
                 children: [
                   IconButton(
+                    tooltip: 'Close',
                     icon: const Icon(Icons.close, color: AppColors.ink),
                     onPressed: () => context.pop(),
                   ),

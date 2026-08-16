@@ -162,6 +162,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               if (ref.watch(authStatusProvider) == AuthStatus.authenticated) ...[
                 _CircleIconButton(
                   icon: Icons.forum_outlined,
+                  tooltip: 'Messages',
                   background: AppColors.sageLight,
                   foreground: AppColors.sageDark,
                   badge: ref.watch(unreadConversationsProvider),
@@ -171,6 +172,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               ],
               _CircleIconButton(
                 icon: Icons.person_outline,
+                tooltip: 'Your profile',
                 background: AppColors.sageLight,
                 foreground: AppColors.sageDark,
                 avatarUrl: ref.watch(myProfileProvider).valueOrNull?.avatarUrl,
@@ -734,6 +736,7 @@ class _CircleIconButton extends StatelessWidget {
     required this.onTap,
     this.badge = 0,
     this.avatarUrl,
+    this.tooltip,
   });
 
   final IconData icon;
@@ -742,11 +745,12 @@ class _CircleIconButton extends StatelessWidget {
   final VoidCallback onTap;
   final int badge;
   final String? avatarUrl;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
     final hasAvatar = avatarUrl != null && avatarUrl!.isNotEmpty;
-    return InkWell(
+    final button = InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
       child: Stack(
@@ -798,6 +802,7 @@ class _CircleIconButton extends StatelessWidget {
         ],
       ),
     );
+    return tooltip == null ? button : Tooltip(message: tooltip!, child: button);
   }
 }
 

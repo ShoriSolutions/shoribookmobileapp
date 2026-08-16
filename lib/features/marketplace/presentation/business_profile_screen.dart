@@ -236,6 +236,7 @@ class _Loaded extends ConsumerWidget {
               padding: const EdgeInsets.only(left: 12),
               child: _HeroCircleButton(
                 icon: Icons.arrow_back,
+                tooltip: 'Back',
                 onTap: () => context.pop(),
               ),
             )
@@ -244,6 +245,7 @@ class _Loaded extends ConsumerWidget {
         Builder(
           builder: (ctx) => _HeroCircleButton(
             icon: Icons.ios_share,
+            tooltip: 'Share',
             onTap: () => _shareBusiness(ctx, business),
           ),
         ),
@@ -803,13 +805,15 @@ class _Card extends StatelessWidget {
 }
 
 class _HeroCircleButton extends StatelessWidget {
-  const _HeroCircleButton({required this.icon, required this.onTap});
+  const _HeroCircleButton(
+      {required this.icon, required this.onTap, this.tooltip});
   final IconData icon;
   final VoidCallback onTap;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    final button = InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
       child: Container(
@@ -823,5 +827,6 @@ class _HeroCircleButton extends StatelessWidget {
         child: Icon(icon, size: 20, color: Colors.white),
       ),
     );
+    return tooltip == null ? button : Tooltip(message: tooltip!, child: button);
   }
 }

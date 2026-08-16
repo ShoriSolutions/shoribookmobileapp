@@ -45,6 +45,7 @@ class NotificationsFeedScreen extends ConsumerWidget {
               child: Row(
                 children: [
                   IconButton(
+                    tooltip: 'Back',
                     icon: const Icon(Icons.arrow_back, color: AppColors.ink),
                     onPressed: () => context.canPop()
                         ? context.pop()

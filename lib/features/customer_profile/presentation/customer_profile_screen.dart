@@ -205,6 +205,7 @@ class CustomerProfileScreen extends ConsumerWidget {
               ),
             ),
             IconButton(
+              tooltip: 'Edit',
               icon: const Icon(Icons.edit_outlined, color: AppColors.muted),
               onPressed: () => context.push(RoutePaths.editCustomerProfile),
             ),

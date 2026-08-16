@@ -136,6 +136,7 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
       child: Row(
         children: [
           IconButton(
+            tooltip: 'Back',
             icon: const Icon(Icons.arrow_back, color: AppColors.ink),
             onPressed: () =>
                 context.canPop() ? context.pop() : context.go(RoutePaths.discover),
@@ -152,6 +153,7 @@ class _SearchMapScreenState extends ConsumerState<SearchMapScreen> {
                 suffixIcon: _searchController.text.isEmpty
                     ? null
                     : IconButton(
+                        tooltip: 'Clear',
                         icon: const Icon(Icons.cancel,
                             size: 18, color: AppColors.faint),
                         onPressed: () {

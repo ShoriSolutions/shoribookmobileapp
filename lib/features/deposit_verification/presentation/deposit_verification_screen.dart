@@ -129,6 +129,7 @@ class _DepositCardState extends ConsumerState<_DepositCard> {
               top: 4,
               right: 4,
               child: IconButton(
+                tooltip: 'Close',
                 icon: const Icon(Icons.close, color: Colors.white),
                 onPressed: () => Navigator.pop(ctx),
               ),

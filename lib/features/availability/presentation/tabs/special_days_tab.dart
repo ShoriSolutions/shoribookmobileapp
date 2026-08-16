@@ -286,6 +286,7 @@ class _SpecialDayCard extends StatelessWidget {
         isThreeLine: day.note != null,
         trailing: canDelete
             ? IconButton(
+                tooltip: 'Delete',
                 icon: const Icon(Icons.delete_outline, color: AppColors.danger),
                 onPressed: onDelete,
               )

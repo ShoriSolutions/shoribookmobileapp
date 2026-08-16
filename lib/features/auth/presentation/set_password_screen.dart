@@ -87,6 +87,7 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
                     labelText: 'New password',
                     hintText: '8–12 characters',
                     suffixIcon: IconButton(
+                      tooltip: 'Show or hide password',
                       icon: Icon(
                         _obscure
                             ? Icons.visibility_outlined

@@ -31,6 +31,7 @@ class ReportsScreen extends ConsumerWidget {
                 children: [
                   if (context.canPop())
                     IconButton(
+                      tooltip: 'Back',
                       icon: const Icon(Icons.arrow_back, color: AppColors.ink),
                       onPressed: () => context.pop(),
                     )

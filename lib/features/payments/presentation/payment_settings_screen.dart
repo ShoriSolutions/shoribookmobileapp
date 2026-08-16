@@ -244,6 +244,7 @@ class _PaymentSettingsScreenState extends ConsumerState<PaymentSettingsScreen> {
         keyboard: TextInputType.phone,
         obscure: _obscureAccount,
         suffix: IconButton(
+          tooltip: 'Show or hide password',
           icon: Icon(
               _obscureAccount
                   ? Icons.visibility_outlined

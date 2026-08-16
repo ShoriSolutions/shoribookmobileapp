@@ -127,6 +127,7 @@ class _ConversationsListScreenState
       appBar: AppBar(
         leading: _selecting
             ? IconButton(
+                tooltip: 'Close',
                 icon: const Icon(Icons.close),
                 onPressed: _deleting ? null : _cancelSelect,
               )

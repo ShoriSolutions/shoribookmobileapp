@@ -44,6 +44,7 @@ class StaffDetailScreen extends ConsumerWidget {
           if (canManage)
             asyncData.maybeWhen(
               data: (data) => IconButton(
+                tooltip: 'Edit',
                 icon: const Icon(Icons.edit_outlined),
                 onPressed: () => _showEditSheet(context, ref, data.$1),
               ),
@@ -254,6 +255,7 @@ class StaffDetailScreen extends ConsumerWidget {
                       ),
                     ),
                     IconButton(
+                      tooltip: 'Add',
                       icon: const Icon(Icons.add_circle, color: AppColors.sage),
                       onPressed: () {
                         final v = customRoleController.text.trim();

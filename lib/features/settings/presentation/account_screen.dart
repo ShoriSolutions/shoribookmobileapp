@@ -29,6 +29,7 @@ class AccountScreen extends ConsumerWidget {
             Row(
               children: [
                 IconButton(
+                  tooltip: 'Back',
                   icon: const Icon(Icons.arrow_back, color: AppColors.ink),
                   onPressed: () => context.pop(),
                 ),

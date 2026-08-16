@@ -213,6 +213,7 @@ class _ServiceFormScreenState extends ConsumerState<ServiceFormScreen> {
         actions: [
           if (_existing != null)
             IconButton(
+              tooltip: 'Delete',
               icon: const Icon(Icons.delete_outline),
               onPressed: _delete,
             ),

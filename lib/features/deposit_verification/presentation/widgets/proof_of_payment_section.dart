@@ -146,6 +146,7 @@ class _ProofCardState extends ConsumerState<_ProofCard> {
               top: 4,
               right: 4,
               child: IconButton(
+                tooltip: 'Close',
                 icon: const Icon(Icons.close, color: Colors.white),
                 onPressed: () => Navigator.pop(ctx),
               ),

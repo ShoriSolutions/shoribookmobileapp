@@ -193,6 +193,7 @@ class _BusinessRegisterScreenState
               labelText: 'Password',
               hintText: '8–12 characters',
               suffixIcon: IconButton(
+                tooltip: 'Show or hide password',
                 icon: Icon(
                   _obscurePassword
                       ? Icons.visibility_outlined

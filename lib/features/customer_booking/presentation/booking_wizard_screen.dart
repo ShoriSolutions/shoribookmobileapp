@@ -131,6 +131,7 @@ class _PushHeader extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
+            tooltip: 'Back',
             icon: const Icon(Icons.arrow_back, color: AppColors.ink),
             onPressed: onBack,
           ),

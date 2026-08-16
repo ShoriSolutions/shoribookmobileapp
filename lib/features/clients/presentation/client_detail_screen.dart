@@ -33,6 +33,7 @@ class ClientDetailScreen extends ConsumerWidget {
         actions: [
           if (canEdit)
             IconButton(
+              tooltip: 'Edit',
               icon: const Icon(Icons.edit_outlined),
               onPressed: () => context.push(RoutePaths.clientEdit(clientId)),
             ),
@@ -446,6 +447,7 @@ class _AddNoteFieldState extends ConsumerState<_AddNoteField> {
         ),
         const SizedBox(width: 8),
         IconButton.filled(
+          tooltip: 'Send',
           onPressed: _saving ? null : _submit,
           icon: const Icon(Icons.send),
         ),
