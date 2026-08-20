@@ -42,15 +42,11 @@ class SubscriptionRepository {
     }
   }
 
-  Future<TrialEligibility> startTrial(String businessId) async {
-    try {
-      final res =
-          await _client.rpc('start_trial', params: {'p_business_id': businessId});
-      return TrialEligibility.fromJson((res as Map).cast<String, dynamic>());
-    } catch (e) {
-      throw AppException.from(e);
-    }
-  }
+  // NOTE: there is deliberately no startTrial() here. The pro side is
+  // pay-to-enter: the 14-day free trial is delivered only through the store's
+  // introductory offer (Apple/Google IAP, card required), verified server-side
+  // by verify-purchase. The cardless start_trial RPC is revoked from clients
+  // (see migration 20260820000000_lock_start_trial_paywall.sql).
 
   /// Persists the vendor's auto-renew / billing-period preference. The
   /// actual renewal charge is performed by the app store (auto-renewable
