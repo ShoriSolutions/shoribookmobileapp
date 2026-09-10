@@ -1,6 +1,9 @@
 // send-security-alert — emails account owners when their login hit the
 // 5-attempt limit ("was this you?"). Drains public.security_alerts (queued
-// by record_failed_login) and marks rows sent.
+// by record_failed_login), hands each alert to the email queue
+// (public.email_outbox, category 'security'), and marks the alert sent.
+// dispatch-emails does the actual Resend send, so security alerts count
+// toward the same daily Resend budget and go out first (highest priority).
 //
 // Deploy + schedule (Supabase):
 //   supabase functions deploy send-security-alert --no-verify-jwt
@@ -10,41 +13,11 @@
 //   service-role client, so the cron job needs no stored key.
 //
 // Secrets (Edge Function env — never in the DB or the app):
-//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-//   EMAIL_PROVIDER=resend|sendgrid|ses  + that provider's API key/from-addr
-//
-// Until a provider is implemented below, alerts queue but aren't emailed.
+//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (injected by the platform)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const FROM = Deno.env.get("SECURITY_FROM_EMAIL") ??
-  "Shorivo <contact@shorisolutions.com>";
-const APP_NAME = "ShoriBooks";
-
-interface EmailResult {
-  ok: boolean;
-  error?: string;
-}
-
-// Sends via Resend. Set RESEND_API_KEY (and optionally SECURITY_FROM_EMAIL).
-async function sendEmail(to: string, subject: string, body: string): Promise<EmailResult> {
-  const key = Deno.env.get("RESEND_API_KEY");
-  if (!key) return { ok: false, error: "RESEND_API_KEY not set" };
-  try {
-    const r = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ from: FROM, to, subject, html: body }),
-    });
-    if (r.ok) return { ok: true };
-    return { ok: false, error: `resend ${r.status}: ${await r.text()}` };
-  } catch (e) {
-    return { ok: false, error: String(e) };
-  }
-}
+const APP_NAME = "Shorivo";
 
 function alertEmail(email: string): { subject: string; body: string } {
   return {
@@ -64,6 +37,7 @@ Deno.serve(async () => {
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    { auth: { persistSession: false } },
   );
 
   const { data: alerts, error } = await supabase
@@ -77,20 +51,28 @@ Deno.serve(async () => {
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 
-  let sent = 0;
+  let queued = 0;
   for (const a of alerts ?? []) {
+    if (!a.email) continue;
     const { subject, body } = alertEmail(a.email);
-    const res = await sendEmail(a.email, subject, body);
-    if (res.ok) {
+    const { error: qErr } = await supabase.from("email_outbox").insert({
+      to_email: a.email,
+      subject,
+      html: body,
+      category: "security",
+      dedupe_key: `security_alert:${a.id}`,
+    });
+    // 23505 = already queued by an overlapping run; either way it's handed off.
+    if (!qErr || qErr.code === "23505") {
       await supabase
         .from("security_alerts")
         .update({ sent_at: new Date().toISOString() })
         .eq("id", a.id);
-      sent++;
+      queued++;
     }
   }
 
-  return new Response(JSON.stringify({ processed: alerts?.length ?? 0, sent }), {
+  return new Response(JSON.stringify({ processed: alerts?.length ?? 0, queued }), {
     headers: { "Content-Type": "application/json" },
   });
 });

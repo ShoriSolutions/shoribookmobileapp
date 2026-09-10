@@ -120,6 +120,23 @@ Supabase Edge Functions run on Deno and can't run Nodemailer, so email is now
 `email-dispatcher.mjs` on a schedule in your Node backend
 (`npm i @supabase/supabase-js nodemailer`, set SMTP + Supabase env).
 
+**Staying inside Resend's free plan** (100 emails/day, 3,000/month, 10
+requests/second — per Resend team, so the website and Supabase Auth's SMTP
+emails share it):
+- `dispatch-emails` reads the team's real sends over the last 24 hours from
+  Resend and only sends while that stays under `RESEND_DAILY_LIMIT` (default
+  95) minus `RESEND_DAILY_RESERVE` (default 15, kept for Auth emails such as
+  password resets). Anything over budget stays queued for later; a Resend 429
+  returns the email to the queue without spending a retry
+  (`release_outbox_email`). 95/day keeps a 31-day month under 3,000.
+- Send order when the budget is tight: security alerts → booking/trial emails
+  → new-message notices (`claim_outbox_emails`, migration `20260910000000`).
+- `send-security-alert` queues its emails into the outbox, so they count too.
+- Supabase Auth's own email limit is set to 10/hour (Auth → Rate Limits) so a
+  flood of sign-ups or reset requests can't use up the day.
+- Each run's reply (`net._http_response`) shows `used24h` and `budget`.
+- On a paid Resend plan, raise `RESEND_DAILY_LIMIT` (and the Auth limit).
+
 `push` / `whatsapp` reminder channels stay no-ops in the Edge Function and
 fall back to email → outbox.
 
