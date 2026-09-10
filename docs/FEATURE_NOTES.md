@@ -112,7 +112,7 @@ Supabase Edge Functions run on Deno and can't run Nodemailer, so email is now
 3. Deploy the drainer: `supabase functions deploy dispatch-emails
    --no-verify-jwt`.
 4. Set Edge Function secrets: `RESEND_API_KEY` and `EMAIL_FROM`
-   (a verified Resend sender/domain, e.g. `Shorivo <noreply@shorivo.app>`).
+   (a verified Resend sender/domain, e.g. `Shorivo <contact@shorisolutions.com>`).
 5. Schedule `dispatch-emails` every minute (pg_cron + `net.http_post`, or
    Supabase scheduled functions), alongside `process-reminders`.
 

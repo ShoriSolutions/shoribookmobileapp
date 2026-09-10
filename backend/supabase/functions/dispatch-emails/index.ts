@@ -18,14 +18,14 @@
 //
 // Secrets (Edge Function env -- never in the DB or the app):
 //   RESEND_API_KEY   -- Resend API key (server only)
-//   EMAIL_FROM       -- e.g. "Shorivo <noreply@shorivo.app>" (must be a
+//   EMAIL_FROM       -- e.g. "Shorivo <contact@shorisolutions.com>" (must be a
 //                       verified Resend sender/domain)
 //   (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are injected by the platform.)
 // ================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const FROM = Deno.env.get("EMAIL_FROM") ?? "Shorivo <noreply@shorivo.app>";
+const FROM = Deno.env.get("EMAIL_FROM") ?? "Shorivo <contact@shorisolutions.com>";
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY");
 const BATCH = 50;
 

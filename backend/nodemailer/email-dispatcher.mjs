@@ -33,7 +33,7 @@ const transport = nodemailer.createTransport({
   auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
 })
 
-const FROM = process.env.EMAIL_FROM ?? 'Shorivo <noreply@shorivo.app>'
+const FROM = process.env.EMAIL_FROM ?? 'Shorivo <contact@shorisolutions.com>'
 
 export async function runOnce(batch = 50) {
   const { data, error } = await supabase.rpc('claim_outbox_emails', {

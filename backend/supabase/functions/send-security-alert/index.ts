@@ -15,7 +15,8 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const FROM = Deno.env.get("SECURITY_FROM_EMAIL") ?? "security@shorisolutions.com";
+const FROM = Deno.env.get("SECURITY_FROM_EMAIL") ??
+  "Shorivo <contact@shorisolutions.com>";
 const APP_NAME = "ShoriBooks";
 
 interface EmailResult {
