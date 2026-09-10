@@ -53,3 +53,6 @@ app.*.map.json
 /android/key.properties
 *.jks
 *.keystore
+
+# Supabase CLI cache (created when running the CLI from the repo root)
+/supabase/.temp/
