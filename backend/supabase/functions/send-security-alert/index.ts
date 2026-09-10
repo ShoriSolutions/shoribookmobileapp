@@ -3,9 +3,11 @@
 // by record_failed_login) and marks rows sent.
 //
 // Deploy + schedule (Supabase):
-//   supabase functions deploy send-security-alert
+//   supabase functions deploy send-security-alert --no-verify-jwt
 //   then a cron (every minute) invokes it, OR call it from a DB webhook on
-//   INSERT into security_alerts.
+//   INSERT into security_alerts. No JWT check (like dispatch-emails /
+//   process-reminders): it only drains alerts already queued, using its own
+//   service-role client, so the cron job needs no stored key.
 //
 // Secrets (Edge Function env — never in the DB or the app):
 //   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
