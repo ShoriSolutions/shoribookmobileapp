@@ -18,12 +18,21 @@ import '../../../models/message.dart';
 import '../../../routing/route_paths.dart';
 import '../application/messaging_providers.dart';
 
-/// The conversation thread: booking summary (for booking chats), live
-/// message history, read receipts, a typing indicator, quick actions, and
-/// the composer. Muting/archiving/blocking/reporting live in the menu.
+/// The conversation thread: live message history, read receipts, a typing
+/// indicator and the composer, plus the booking the conversation is currently
+/// about. One thread holds all of a customer's chat with a business, so each
+/// message carries the booking it's about (if any): the card at the top shows
+/// the booking new messages will be tagged with, and a small label in the
+/// history marks where the booking being discussed changes.
+/// Muting/archiving/blocking/reporting live in the menu.
 class ConversationThreadScreen extends ConsumerStatefulWidget {
-  const ConversationThreadScreen({super.key, required this.conversationId});
+  const ConversationThreadScreen(
+      {super.key, required this.conversationId, this.bookingId});
   final String conversationId;
+
+  /// The booking this chat was opened from (the booking's "Message" button).
+  /// New messages are tagged with it until the user clears or changes it.
+  final String? bookingId;
 
   @override
   ConsumerState<ConversationThreadScreen> createState() =>
@@ -42,12 +51,41 @@ class _ConversationThreadScreenState
   bool _peerTyping = false;
   bool _sentTyping = false;
 
+  // Which booking new messages are about. Starts as the booking the chat was
+  // opened from; otherwise it follows the booking of the latest message. The
+  // user can clear it (✕ on the card) or pick one by tapping a booking label.
+  String? _pickedBookingId;
+  bool _bookingCleared = false;
+
   bool get _asVendor => ref.read(isVendorMessagingProvider);
   String get _mySide => _asVendor ? 'vendor' : 'customer';
+
+  String? _aboutBooking(List<Message>? messages) {
+    if (_bookingCleared) return null;
+    if (_pickedBookingId != null) return _pickedBookingId;
+    if (messages == null || messages.isEmpty) return null;
+    final latest =
+        messages.reduce((a, b) => a.createdAt.isAfter(b.createdAt) ? a : b);
+    return latest.appointmentId;
+  }
+
+  String? get _currentBooking => _aboutBooking(
+      ref.read(messagesProvider(widget.conversationId)).valueOrNull);
+
+  void _clearBooking() => setState(() {
+        _bookingCleared = true;
+        _pickedBookingId = null;
+      });
+
+  void _pickBooking(String id) => setState(() {
+        _bookingCleared = false;
+        _pickedBookingId = id;
+      });
 
   @override
   void initState() {
     super.initState();
+    _pickedBookingId = widget.bookingId;
     // Mark read on open, and again whenever new inbound messages arrive.
     WidgetsBinding.instance.addPostFrameCallback((_) => _markRead());
     _setupTyping();
@@ -105,7 +143,8 @@ class _ConversationThreadScreenState
     try {
       await ref
           .read(messagingRepositoryProvider)
-          .sendMessage(widget.conversationId, text);
+          .sendMessage(widget.conversationId, text,
+              appointmentId: _currentBooking);
       _composer.clear();
     } catch (e) {
       if (mounted) {
@@ -143,7 +182,7 @@ class _ConversationThreadScreenState
       final path = await repo.uploadAttachment(widget.conversationId, bytes,
           ext: ext);
       await repo.sendMessage(widget.conversationId, '',
-          type: 'image', attachmentUrl: path);
+          type: 'image', attachmentUrl: path, appointmentId: _currentBooking);
     } catch (e) {
       if (mounted) {
         showAppSnackBar(context,
@@ -187,6 +226,7 @@ class _ConversationThreadScreenState
   Widget build(BuildContext context) {
     final conv = ref.watch(conversationByIdProvider(widget.conversationId));
     final messagesAsync = ref.watch(messagesProvider(widget.conversationId));
+    final about = _aboutBooking(messagesAsync.valueOrNull);
     final title = conv?.titleFor(asVendor: _asVendor) ??
         (_asVendor ? 'Customer' : 'Business');
     // Peer photo: the customer's avatar (vendor view, avatar-only, no PII) or
@@ -260,9 +300,11 @@ class _ConversationThreadScreenState
       ),
       body: Column(
         children: [
-          if (conv != null && conv.isBooking && conv.appointmentId != null)
+          if (about != null)
             _BookingSummary(
-                appointmentId: conv.appointmentId!, asVendor: _asVendor),
+                appointmentId: about,
+                asVendor: _asVendor,
+                onClear: _clearBooking),
           Expanded(
             child: messagesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -276,7 +318,7 @@ class _ConversationThreadScreenState
                     child: Padding(
                       padding: const EdgeInsets.all(32),
                       child: Text(
-                        conv?.isBooking ?? false
+                        about != null
                             ? 'Say hello — ask about arrival time, parking, or '
                                 'anything about your appointment.'
                             : 'Send a message to start the conversation.',
@@ -300,6 +342,11 @@ class _ConversationThreadScreenState
                     final row = rows[rows.length - 1 - i];
                     if (row.date != null) {
                       return _DateSeparator(day: row.date!);
+                    }
+                    if (row.bookingId != null) {
+                      final id = row.bookingId!;
+                      return _BookingTag(
+                          appointmentId: id, onTap: () => _pickBooking(id));
                     }
                     final msg = row.msg!;
                     return _MessageBubble(
@@ -327,11 +374,15 @@ class _ConversationThreadScreenState
   }
 }
 
-// ── Booking summary + quick actions ────────────────────────────────────────
+// ── The booking this conversation is about + quick actions ─────────────────
 class _BookingSummary extends ConsumerWidget {
-  const _BookingSummary({required this.appointmentId, required this.asVendor});
+  const _BookingSummary(
+      {required this.appointmentId, required this.asVendor, this.onClear});
   final String appointmentId;
   final bool asVendor;
+
+  /// Stops tagging new messages with this booking (hides the card).
+  final VoidCallback? onClear;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -357,6 +408,26 @@ class _BookingSummary extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text('ABOUT THIS BOOKING',
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.6,
+                        color: AppColors.sageDark)),
+              ),
+              if (onClear != null)
+                IconButton(
+                  tooltip: 'Not about this booking',
+                  onPressed: onClear,
+                  visualDensity: VisualDensity.compact,
+                  iconSize: 18,
+                  icon: const Icon(Icons.close, color: AppColors.sageDark),
+                ),
+            ],
+          ),
           Row(
             children: [
               const Icon(Icons.event_available,
@@ -808,11 +879,14 @@ class _ConversationMenu extends ConsumerWidget {
   }
 }
 
-/// One rendered row in the thread: either a date separator or a message with
-/// its WhatsApp-style grouping flags.
+/// One rendered row in the thread: a date separator, a booking label (where
+/// the booking being discussed changes), or a message with its WhatsApp-style
+/// grouping flags.
 class _Row {
-  const _Row._(this.date, this.msg, this.showTail, this.firstOfGroup);
+  const _Row._(this.date, this.msg, this.showTail, this.firstOfGroup,
+      [this.bookingId]);
   factory _Row.date(DateTime day) => _Row._(day, null, false, false);
+  factory _Row.booking(String id) => _Row._(null, null, false, false, id);
   factory _Row.msg(Message m,
           {required bool showTail, required bool firstOfGroup}) =>
       _Row._(null, m, showTail, firstOfGroup);
@@ -821,6 +895,7 @@ class _Row {
   final Message? msg;
   final bool showTail;
   final bool firstOfGroup;
+  final String? bookingId;
 }
 
 DateTime _dayOf(DateTime dt) {
@@ -837,8 +912,14 @@ bool _sameGroup(Message? a, Message? b) {
   return _dayOf(a.createdAt) == _dayOf(b.createdAt);
 }
 
+/// Whether a booking label goes in front of [m]: it's about a booking, and a
+/// different one from the message before it.
+bool _startsBookingRun(Message? prev, Message m) =>
+    m.appointmentId != null && m.appointmentId != prev?.appointmentId;
+
 /// Builds the chronological row list: a date separator before the first
-/// message of each day, then each message tagged with group boundaries.
+/// message of each day, a booking label wherever the booking being discussed
+/// changes, then each message tagged with group boundaries.
 List<_Row> _buildChatRows(List<Message> input) {
   // Guarantee chronological order (oldest -> newest) regardless of the source
   // order, so the reversed list shows the newest message at the bottom.
@@ -849,19 +930,77 @@ List<_Row> _buildChatRows(List<Message> input) {
   for (var i = 0; i < messages.length; i++) {
     final m = messages[i];
     final day = _dayOf(m.createdAt);
+    final prev = i > 0 ? messages[i - 1] : null;
+    final next = i < messages.length - 1 ? messages[i + 1] : null;
     if (lastDay == null || day != lastDay) {
       rows.add(_Row.date(day));
       lastDay = day;
     }
-    final prev = i > 0 ? messages[i - 1] : null;
-    final next = i < messages.length - 1 ? messages[i + 1] : null;
+    final labelled = _startsBookingRun(prev, m);
+    if (labelled) rows.add(_Row.booking(m.appointmentId!));
     rows.add(_Row.msg(
       m,
-      firstOfGroup: !_sameGroup(prev, m),
-      showTail: !_sameGroup(m, next),
+      firstOfGroup: labelled || !_sameGroup(prev, m),
+      showTail: !_sameGroup(m, next) ||
+          (next != null && _startsBookingRun(m, next)),
     ));
   }
   return rows;
+}
+
+/// Small label in the history marking which booking the following messages
+/// are about. Tap it to make that booking the one you're replying about.
+class _BookingTag extends ConsumerWidget {
+  const _BookingTag({required this.appointmentId, required this.onTap});
+  final String appointmentId;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final appt =
+        ref.watch(conversationAppointmentProvider(appointmentId)).valueOrNull;
+    final label = appt == null
+        ? 'About a booking'
+        : 'About ${appt.serviceName ?? 'a booking'} · '
+            '${DateFormat('EEE d MMM').format(appt.startTime.toLocal())}';
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 2),
+      child: Center(
+        child: Tooltip(
+          message: 'Reply about this booking',
+          child: Material(
+            color: AppColors.sageLight,
+            borderRadius: BorderRadius.circular(999),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: onTap,
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.event_available,
+                        size: 14, color: AppColors.sageDark),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.sageDark)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Centered "Today / Yesterday / date" chip between days, like WhatsApp.

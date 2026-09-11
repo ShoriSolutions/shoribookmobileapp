@@ -12,14 +12,23 @@ import '../../../models/conversation.dart';
 import '../../../routing/route_paths.dart';
 import '../application/messaging_providers.dart';
 
-/// How the conversation list is split into categories.
+/// How the conversation list is split. There's one thread per customer and
+/// business, so this describes the customer, not a single message: "Booked"
+/// once they've made a booking with the business, "Enquiries" before that.
+/// (Each message carries the booking it's about -- see Message.appointmentId.)
 enum _ChatFilter { all, bookings, questions }
 
 extension on _ChatFilter {
   String get label => switch (this) {
         _ChatFilter.all => 'All',
-        _ChatFilter.bookings => 'Bookings',
-        _ChatFilter.questions => 'Questions',
+        _ChatFilter.bookings => 'Booked',
+        _ChatFilter.questions => 'Enquiries',
+      };
+
+  String get emptyTitle => switch (this) {
+        _ChatFilter.all => 'No messages yet',
+        _ChatFilter.bookings => 'No booked chats yet',
+        _ChatFilter.questions => 'No enquiries yet',
       };
 
   bool matches(Conversation c) => switch (this) {
@@ -173,7 +182,7 @@ class _ConversationsListScreenState
                         icon: '💬',
                         title: all.isEmpty
                             ? 'No messages yet'
-                            : 'No ${_filter.label.toLowerCase()} chats',
+                            : _filter.emptyTitle,
                         message: all.isEmpty
                             ? (asVendor
                                 ? 'Messages from your customers about their '

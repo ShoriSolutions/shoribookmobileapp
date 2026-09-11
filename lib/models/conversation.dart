@@ -1,9 +1,12 @@
-/// A messaging thread between a business and a customer. Either a
-/// pre-booking 'enquiry' or a 'booking' conversation tied to an
-/// appointment. Per-side state (archive/mute/last-read) lets each party
-/// manage their own view. `businessName`/`businessLogoUrl` are joined for
-/// the customer's list view; `customerDisplayName` is denormalised for the
-/// vendor's.
+/// A messaging thread between a business and a customer. There is one
+/// thread per customer account per business, holding all of their chat.
+/// `type` is 'booking' once the customer has booked with the business
+/// ('enquiry' before that) and `appointmentId` is their latest booking --
+/// both describe the customer, not a single message. The booking a message
+/// is about lives on the message itself (`Message.appointmentId`).
+/// Per-side state (archive/mute/last-read) lets each party manage their own
+/// view. `businessName`/`businessLogoUrl` are joined for the customer's list
+/// view; `customerDisplayName` is denormalised for the vendor's.
 class Conversation {
   final String id;
   final String businessId;

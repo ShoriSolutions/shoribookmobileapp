@@ -140,6 +140,25 @@ emails share it):
 `push` / `whatsapp` reminder channels stay no-ops in the Edge Function and
 fall back to email → outbox.
 
+### Chat: one thread per customer, bookings tagged per message
+There is one chat per customer account per business
+(`uq_conversations_customer`). Each message can carry the booking it's about
+(`messages.appointment_id`), set when the customer writes from a booking's
+**Message** button. The thread shows a small booking label wherever the
+booking being discussed changes, and the card at the top shows the booking new
+messages will be tagged with (clear it with ✕, or tap a label to pick one).
+`conversations.type` / `appointment_id` now just mean "has booked" / "latest
+booking" — the list filter is **Booked / Enquiries**. The server checks every
+booking passed in belongs to that customer and business
+(`get_or_create_conversation`, `send_message`). A chat is created when a
+customer opens one, not on every booking; chats with no messages are hidden
+from both inboxes; guest (no-account) sessions can't open chats. Migration
+`20260910000001`.
+
+The **website** uses a separate chat system (`chat_conversations` /
+`chat_messages`, via `start_chat_conversation` / `send_chat_message`). The two
+don't see each other's messages; unifying them needs the website's code.
+
 ### Message push notifications — backend built; optional (needs Firebase)
 Instant push is **optional** — email (above) already covers offline users.
 If you later want banner-style push:

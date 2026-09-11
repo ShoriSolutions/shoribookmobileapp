@@ -167,6 +167,9 @@ class MessagingRepository {
   }
 
   // ── Write RPCs ───────────────────────────────────────────────────────────
+  /// The customer's single chat with [businessId] (created on first use).
+  /// Pass [appointmentId] when opening it from one of their bookings; the
+  /// server checks that booking is theirs at that business.
   Future<String> getOrCreateConversation({
     required String businessId,
     String? appointmentId,
@@ -176,18 +179,24 @@ class MessagingRepository {
         'p_business_id': businessId,
         'p_appointment_id': appointmentId,
       });
-      return res as String;
+      if (res is! String) {
+        throw const AppException('Could not open this chat. Please try again.');
+      }
+      return res;
     } catch (e) {
       throw AppException.from(e);
     }
   }
 
+  /// Sends a message. [appointmentId] tags it with the booking it's about;
+  /// the server checks that booking belongs to this chat's customer.
   Future<void> sendMessage(
     String conversationId,
     String body, {
     String type = 'text',
     String? attachmentUrl,
     Map<String, dynamic>? metadata,
+    String? appointmentId,
   }) async {
     try {
       final params = <String, dynamic>{
@@ -199,6 +208,7 @@ class MessagingRepository {
       // migration hasn't been applied yet.
       if (attachmentUrl != null) params['p_attachment_url'] = attachmentUrl;
       if (metadata != null) params['p_metadata'] = metadata;
+      if (appointmentId != null) params['p_appointment_id'] = appointmentId;
       await _client.rpc('send_message', params: params);
     } catch (e) {
       throw AppException.from(e);

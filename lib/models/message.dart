@@ -1,7 +1,9 @@
 /// A single message in a conversation. `senderRole` is 'vendor',
 /// 'customer', or 'system' (automated status notes). Attachment / metadata
 /// fields are present now so photos, documents, voice and location can be
-/// added without a model change.
+/// added without a model change. `appointmentId` is the booking the message
+/// is about, if any (one thread holds all of a customer's chat with a
+/// business, so the booking rides on each message).
 class Message {
   final String id;
   final String conversationId;
@@ -11,6 +13,7 @@ class Message {
   final String messageType; // 'text' | 'image' | 'document' | 'voice' | 'location' | 'system'
   final String? attachmentUrl;
   final Map<String, dynamic>? metadata;
+  final String? appointmentId;
   final DateTime? deliveredAt;
   final DateTime? readAt;
   final DateTime createdAt;
@@ -24,6 +27,7 @@ class Message {
     this.messageType = 'text',
     this.attachmentUrl,
     this.metadata,
+    this.appointmentId,
     this.deliveredAt,
     this.readAt,
     required this.createdAt,
@@ -40,6 +44,7 @@ class Message {
         messageType: json['message_type'] as String? ?? 'text',
         attachmentUrl: json['attachment_url'] as String?,
         metadata: (json['metadata'] as Map?)?.cast<String, dynamic>(),
+        appointmentId: json['appointment_id'] as String?,
         deliveredAt: json['delivered_at'] == null
             ? null
             : DateTime.parse(json['delivered_at'] as String),

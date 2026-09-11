@@ -46,7 +46,10 @@ class RoutePaths {
   static const helpFaq = '/help';
   static const messages = '/messages';
   static const conversationRoute = '/messages/:id';
-  static String conversation(String id) => '/messages/$id';
+  /// [bookingId] opens the chat about that booking: new messages are tagged
+  /// with it.
+  static String conversation(String id, {String? bookingId}) =>
+      bookingId == null ? '/messages/$id' : '/messages/$id?booking=$bookingId';
   static const deleteAccount = '/delete-account';
   static const settings = '/settings';
   static const accountSettings = '/account-settings';

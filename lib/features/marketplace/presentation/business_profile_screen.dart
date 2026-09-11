@@ -6,7 +6,6 @@ import 'package:latlong2/latlong.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/config/app_links.dart';
-import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/directions.dart';
@@ -19,7 +18,7 @@ import '../../../models/service.dart';
 import '../../../routing/route_paths.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../favorites/presentation/widgets/favorite_button.dart';
-import '../../messaging/application/messaging_providers.dart';
+import '../../messaging/presentation/open_conversation.dart';
 import '../../messaging/presentation/sign_in_to_message.dart';
 import '../../reviews/application/reviews_providers.dart';
 import '../../reviews/presentation/widgets/review_card.dart';
@@ -311,23 +310,7 @@ class _Loaded extends ConsumerWidget {
       await showSignInToMessagePrompt(context);
       return;
     }
-    try {
-      final id = await ref
-          .read(messagingRepositoryProvider)
-          .getOrCreateConversation(businessId: business.id);
-      if (context.mounted) context.push(RoutePaths.conversation(id));
-    } catch (e) {
-      if (context.mounted) {
-        final msg = AppException.from(e).message;
-        showAppSnackBar(context,
-            message: msg.contains('pre_booking_disabled')
-                ? "This business isn't taking questions right now."
-                : msg.contains('messaging_disabled')
-                    ? 'This business has messaging turned off.'
-                    : msg,
-            isError: true);
-      }
-    }
+    await openBusinessChat(context, ref, businessId: business.id);
   }
 
   Widget _contactActions(BuildContext context, Business business) {

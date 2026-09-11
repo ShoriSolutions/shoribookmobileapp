@@ -48,7 +48,9 @@ final activeConversationsProvider =
   return ref.watch(conversationsProvider).whenData((list) {
     final visible = [
       for (final c in list)
-        if (!c.archivedFor(asVendor: asVendor)) c,
+        // Hide archived chats, and ones nobody has written in yet (opened and
+        // abandoned) -- those stay reachable from the Message buttons.
+        if (!c.archivedFor(asVendor: asVendor) && c.lastMessageAt != null) c,
     ];
     visible.sort((a, b) {
       final au = a.unreadFor(asVendor: asVendor) ? 1 : 0;

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
-import '../../../core/errors/app_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/time/customer_time_zone.dart';
 import '../../../core/time/time_zone_service.dart';
@@ -22,7 +21,7 @@ import '../../deposit_verification/presentation/widgets/proof_of_payment_section
 import '../../marketplace/presentation/widgets/category_visuals.dart';
 import '../../reviews/application/reviews_providers.dart';
 import '../../reviews/presentation/review_submit_screen.dart';
-import '../../messaging/application/messaging_providers.dart';
+import '../../messaging/presentation/open_conversation.dart';
 import '../application/my_bookings_providers.dart';
 import '../data/my_bookings_repository.dart';
 
@@ -147,24 +146,12 @@ class BookingDetailScreen extends ConsumerWidget {
     }
   }
 
+  /// Opens the chat with this business about this booking: messages sent
+  /// from there are tagged with the booking.
   Future<void> _openConversation(
-      BuildContext context, WidgetRef ref, Appointment appt) async {
-    final repo = ref.read(messagingRepositoryProvider);
-    try {
-      final id = await repo.getOrCreateConversation(
-          businessId: appt.businessId, appointmentId: appt.id);
-      if (context.mounted) context.push(RoutePaths.conversation(id));
-    } catch (e) {
-      if (context.mounted) {
-        final msg = AppException.from(e).message;
-        showAppSnackBar(context,
-            message: msg.contains('messaging_disabled')
-                ? 'This business has turned off messaging.'
-                : msg,
-            isError: true);
-      }
-    }
-  }
+          BuildContext context, WidgetRef ref, Appointment appt) =>
+      openBusinessChat(context, ref,
+          businessId: appt.businessId, bookingId: appt.id);
 
   void _addToCalendar(BuildContext context, Appointment a) {
     showAddToCalendarSheet(

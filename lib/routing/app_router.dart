@@ -621,8 +621,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RoutePaths.conversationRoute,
-        builder: (c, s) =>
-            ConversationThreadScreen(conversationId: s.pathParameters['id']!),
+        builder: (c, s) => ConversationThreadScreen(
+          conversationId: s.pathParameters['id']!,
+          bookingId: s.uri.queryParameters['booking'],
+        ),
       ),
       GoRoute(
         path: RoutePaths.deleteAccount,
