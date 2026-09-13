@@ -18,7 +18,7 @@ class SupportContent {
   /// Bump this whenever the Terms/Privacy text below materially changes.
   /// Stored on the account at sign-up (terms_version) so you can tell who
   /// accepted which version.
-  static const termsVersion = '2026-07.4';
+  static const termsVersion = '2026-09.1';
 
   /// Questions a person booking an appointment would ask.
   static const customerFaq = <(String, String)>[
@@ -148,7 +148,7 @@ class SupportContent {
   ];
 
   static const termsOfService = '''
-Last updated 29 July 2026.
+Last updated 13 September 2026.
 
 
 1. Acceptance of these terms
@@ -170,17 +170,27 @@ Each business sets its own service prices, deposit requirements, and cancellatio
 Shorivo records deposit and payment status that businesses report (for example, cash, bank transfer, or card handled directly with the business) so both sides have an accurate record. Shorivo does not currently process payments or hold funds — any exchange of money happens directly between you and the business, on whatever terms that business states.
 A confirmed booking reserves a time slot with a specific business; it does not obligate Shorivo to perform the service, and it isn't a guarantee against a business cancelling, rescheduling, or closing.
 
-5. Cancellations and no-shows
+5. Vendor subscriptions and billing
+Listing a business on Shorivo requires a subscription, which starts with a free trial (currently 14 days). The plan, price, billing period, and trial length are shown before you subscribe. Customers never pay Shorivo to book.
+• Who bills you. On iPhone and iPad, subscriptions are sold through Apple's In-App Purchase and billed by Apple to your Apple Account. On Android, subscriptions are purchased on shorivo.com and billed by us or our payment provider. Whichever applies, that seller's own terms govern the transaction.
+• Free trial. Valid payment details are required to start a trial. Nothing is charged during the trial, but if you don't cancel before it ends, the subscription begins and the first payment is taken. Starting a paid subscription early forfeits the rest of the trial.
+• Automatic renewal. Subscriptions renew automatically for the same period at the then-current price, and payment is taken within 24 hours before each renewal, unless you cancel at least 24 hours before the current period ends.
+• Cancelling. Cancel an Apple-billed subscription in your Apple Account settings; cancel a website-billed subscription from your account on shorivo.com. Cancelling stops future renewals — your access continues until the end of the period already paid for.
+• Price and plan changes. We may change prices or what a plan includes. We'll give notice before a change affects a renewal, and you can cancel before it takes effect.
+• Refunds are covered by our Refund Policy. Purchases billed by Apple are refunded by Apple under Apple's own policy.
+If a subscription lapses, your data is kept but business tools stop working until you subscribe again.
+
+6. Cancellations and no-shows
 Cancellation windows, late-cancellation fees, and no-show fees are set by each business and shown at booking time. Disputes about a specific cancellation, fee, or no-show are between you and the business — we encourage resolving them directly first, and we may assist where we reasonably can, but Shorivo doesn't adjudicate individual service disputes or issue refunds on a business's behalf.
 
-6. Reviews
+7. Reviews
 Customers may leave a rating and written review after an appointment has taken place. Reviews must reflect a genuine experience with that business — no fake reviews, no reviews for appointments that didn't happen, and no review left or removed in exchange for payment or favors.
 Businesses may not create fake customer accounts or bookings to inflate their own rating, and may not offer incentives conditioned on a positive review.
 
-7. Messaging
+8. Messaging
 Signed-in customers can message a business directly through the Service. Messages should stay relevant to bookings and service inquiries. Harassment, spam, unsolicited promotional messages, and abusive language are not allowed on either side, and may result in suspension.
 
-8. Acceptable use
+9. Acceptable use
 You agree not to:
 • Scrape, harvest, or bulk-extract data from the Service.
 • Attempt to bypass security controls, rate limits, or access restrictions.
@@ -189,48 +199,51 @@ You agree not to:
 • Reverse-engineer or resell the Service without our written permission.
 We may suspend or terminate access for violating these Terms, including repeated cancellations, no-shows, abusive behavior toward a business or customer, or fraudulent bookings — reflected in the trust and account-standing tools built into the Service.
 
-9. Business responsibilities
+10. Business responsibilities
 Businesses listing on Shorivo are responsible for:
 • Holding any license, permit, or certification required to legally provide their listed services.
 • Keeping their service list, pricing, hours, and availability accurate.
 • Honoring confirmed bookings, or cancelling/rescheduling with reasonable notice.
 • Their own tax, insurance, and regulatory obligations — Shorivo is not a party to these.
 
-10. Intellectual property
+11. Intellectual property
 The Shorivo name, logo, and software are owned by Shori Solutions. Businesses retain all rights to their own content — service descriptions, photos, and business name — uploaded to their profile, and grant us a license to display it on the Service for the purpose of operating the marketplace.
 
-11. Third-party services
-Shorivo relies on third-party infrastructure to operate — including Supabase for hosting, authentication, and the database, and an SMTP email provider for transactional email delivery. Their handling of data is described in our Privacy Policy.
+12. Third-party services
+Shorivo relies on third-party infrastructure to operate — including Supabase for hosting, authentication, and the database; Resend for delivering transactional and account email; MapTiler for the maps shown in the app; and Apple or Google where they bill a subscription. Their handling of data is described in our Privacy Policy.
 
-12. Disclaimers and limitation of liability
+13. Disclaimers and limitation of liability
 The Service is provided "as is", without warranties of any kind. We don't guarantee the quality, safety, timeliness, or legality of services offered by businesses on the platform, and we're not liable for disputes, injuries, or losses arising from an appointment itself.
 To the fullest extent permitted by law, Shorivo's total liability for any claim relating to the Service is limited to the amount (if any) you paid us directly in the twelve months before the claim arose.
 
-13. Termination
+14. Termination
 You may stop using the Service and delete your account at any time from your Account page. We may suspend or terminate an account for violating these Terms. Deleting an account does not remove appointment records held by a business you booked with — those remain part of that business's records, unlinked from your account.
 
-14. Changes to these terms
+15. Changes to these terms
 We may update these Terms from time to time. We'll update the "Last updated" date above when we do, and material changes will be communicated to registered users. Continuing to use the Service after an update means you accept the revised Terms.
 
-15. Governing law
+16. Governing law
 These Terms are governed by the laws of Barbados, without regard to conflict-of-law principles, and any dispute not resolved informally will be subject to the exclusive jurisdiction of the courts of Barbados.
 
-16. Contact
+17. Contact
 Questions about these Terms? Reach us at contact@shorisolutions.com.
 ''';
 
   static const privacyPolicy = '''
-Last updated 29 July 2026.
+Last updated 13 September 2026.
 
 
 1. Scope
 This Privacy Policy explains how Shori Solutions ("Shorivo", "we", "us") handles information when you use the Service — as a business, a registered customer, or a guest booking an appointment. It should be read alongside the Terms of Service.
 
 2. Information we collect
-Account information. Name and email for registered users; business name, category, location, and contact details for business profiles.
+Account information. Name, email, and phone for registered users; the address you choose to save on your profile (country, city, parish or state, postal code, street, and coordinates if you use location autofill); business name, category, location, and contact details for business profiles; and the name, photo, role, and bio of each staff member a business adds.
 Booking information. When you book an appointment — as a guest or a registered customer — the business you book with collects your name, phone number, and (optionally) email and notes, so they can provide the service. This information belongs to that business's customer records.
 Messages. Content you send through the messaging feature, stored so both sides of the conversation can see it.
 Reviews. The name, rating, and written review you choose to submit after a completed appointment.
+Photos and files. Profile photos, business cover and gallery images, photos sent in a message, and proof-of-payment images uploaded for a deposit. A deposit proof is visible to the business you booked with, and to us where needed for support or a fraud investigation — so include only what's needed to show the payment.
+Device location. Collected only when you tap "Near me", "Use my current location", or open directions to a business. See the mobile app addendum below.
+Account standing. Counts of completed appointments, cancellations, and no-shows, used to calculate the trust and account-standing signals described in the Terms, which can limit booking or messaging after repeated problems.
 Usage information. Basic technical data such as IP address and request timing, used for security, rate limiting, and abuse prevention.
 
 3. How we use it
@@ -243,11 +256,14 @@ Usage information. Basic technical data such as IP address and request timing, u
 4. How information is shared
 We don't sell your information. Information is shared only as follows:
 • With the specific business you book, message, or review — that's the point of the Service.
-• With service providers who help us operate the Service under contract: Supabase (application hosting, authentication, and database) and our SMTP email provider (delivery of transactional email). They're only permitted to use it to provide that service to us.
+• With service providers who help us operate the Service under contract: Supabase (application hosting, authentication, and database), Resend (delivery of transactional and account email), and MapTiler (map tiles — whenever a map is displayed, MapTiler receives that request, including your IP address and the area of the map being viewed). They're only permitted to use it to provide that service to us.
+• With Apple or Google when they bill a subscription. They process that payment; we never receive your card details.
+• Publicly, by design, for parts of a business listing: a business's profile, services, prices, hours, gallery, reviews, and the names and photos of its staff are visible to anyone browsing the marketplace, signed in or not. Customer names appear only in the reviews you choose to leave.
 • When required by law, or to protect the rights, safety, or property of Shorivo, our users, or the public.
 
 5. Data retention
 We keep information for as long as needed to provide the Service and meet legal and record-keeping obligations. Appointment records are retained by the business you booked with as part of their own customer history, even after you delete your account.
+Photos and files you upload — profile photos, gallery images, message attachments, and deposit proofs — are kept for as long as the account, listing, conversation, or booking record they belong to exists.
 Deleting your account does not delete a business you own — an owner must transfer ownership or close the business first, so a business's data isn't lost as a side effect of one person leaving.
 
 6. Your rights and choices
@@ -278,7 +294,8 @@ Questions about this Policy or your information? Reach us at contact@shorisoluti
 
 — SHORIVO MOBILE APP ADDENDUM —
 
-Location. The Shorivo mobile app can use your device's approximate location, only when you tap "Near me" or open directions to a business, to show nearby businesses and distances. It is never used to profile you, calculate any trust or reputation score, or track you across the app, and you can decline the permission and still use the rest of the app.
+Location. The Shorivo mobile app can use your device's location in three places, each only when you tap it: "Near me" (to sort businesses by distance), "Use my current location" on an address form (to fill in your address fields, which you can then edit), and directions to a business. It is never used to profile you, calculate any trust or reputation score, decide which currency or prices you see, or track you in the background — and you can decline the permission and still use the rest of the app.
+Maps. Map views load imagery from MapTiler. When a map is shown, MapTiler receives the request, including your IP address and the map area — not your identity or your bookings.
 ''';
 
   // Mirrors the Refund Policy published at shorivo.com/refund-policy.
