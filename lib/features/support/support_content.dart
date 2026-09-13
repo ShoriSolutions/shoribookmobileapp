@@ -5,13 +5,15 @@
 class SupportContent {
   const SupportContent._();
 
-  /// Where "Contact support" and the 90-day appeal email are sent.
-  /// PLACEHOLDER — change this to your real support inbox before launch.
-  static const supportEmail = 'support@shorivo.app';
+  /// Where "Contact support" and the 90-day appeal email are sent. Same
+  /// address as the Terms/Privacy copy below and the app's email sender, so
+  /// customers only ever see one Shori Solutions address.
+  static const supportEmail = 'contact@shorisolutions.com';
 
   /// The number customers can call for help. Shown on the Support tab and
   /// used for tap-to-call.
-  /// PLACEHOLDER — change this to your real support line before launch.
+  /// PLACEHOLDER — this is still a fake 555 number. Replace it with the real
+  /// Shori Solutions support line before launch.
   static const supportPhone = '+1 (246) 555-0100';
 
   /// Bump this whenever the Terms/Privacy text below materially changes.
