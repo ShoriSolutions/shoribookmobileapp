@@ -474,7 +474,7 @@ class _DetailsCard extends StatelessWidget {
         ),
       ),
       ('Duration', '$duration min'),
-      ('Price', formatCurrency(appointment.price, appointment.currency)),
+      ('Price', formatPrice(appointment.price, appointment.currency)),
       ('Booking source', BookingSource.label(appointment.bookingSource)),
     ];
 

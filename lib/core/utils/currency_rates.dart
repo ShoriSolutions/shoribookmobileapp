@@ -34,6 +34,12 @@ class CurrencyRates {
     'IE': 'EUR', 'FR': 'EUR', 'DE': 'EUR', 'ES': 'EUR', 'IT': 'EUR',
   };
 
+  /// The mapped currency for a country, or null when there is no mapping.
+  /// Callers serving the app's home market should fall back to
+  /// kDefaultCurrency -- see currencyForCountry() in currency_formatter.dart.
+  static String? lookupCountryCurrency(String? countryCode) =>
+      _countryCurrency[(countryCode ?? '').toUpperCase()];
+
   static String currencyForCountry(String? countryCode) =>
       _countryCurrency[(countryCode ?? '').toUpperCase()] ?? 'USD';
 

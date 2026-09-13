@@ -3,6 +3,7 @@ import '../../../models/appointment.dart';
 import '../../../models/customer.dart';
 import '../../../models/service.dart';
 import '../../../models/staff_profile.dart';
+import '../../../core/utils/currency_formatter.dart';
 
 class BookingFormState {
   final Customer? selectedCustomer;
@@ -50,7 +51,7 @@ class BookingFormState {
     this.time,
     this.durationMinutes = 60,
     this.price = 0,
-    this.currency = 'BBD',
+    this.currency = kDefaultCurrency,
     this.depositRequired = false,
     this.depositAmount,
     this.depositStatus = DepositStatus.notRequired,

@@ -1,3 +1,5 @@
+import '../core/utils/currency_formatter.dart';
+
 class Service {
   final String id;
   final String businessId;
@@ -58,7 +60,7 @@ class Service {
     category: json['category'] as String?,
     durationMinutes: json['duration_minutes'] as int? ?? 60,
     price: (json['price'] as num?)?.toDouble() ?? 0,
-    currency: json['currency'] as String? ?? 'BBD',
+    currency: json['currency'] as String? ?? kDefaultCurrency,
     depositRequired: json['deposit_required'] as bool? ?? false,
     depositAmount: (json['deposit_amount'] as num?)?.toDouble(),
     depositType: json['deposit_type'] as String? ?? 'FIXED',

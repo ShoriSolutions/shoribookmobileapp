@@ -463,7 +463,10 @@ class _Loaded extends ConsumerWidget {
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
-                        '· from ${formatCurrency(minPrice, business.currency)}',
+                        // A free service shouldn't read "from Free".
+                        minPrice == 0
+                            ? '· Free'
+                            : '· from ${formatPrice(minPrice, business.currency)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -663,7 +666,7 @@ class _ServiceRow extends StatelessWidget {
                   ],
                 ),
               ),
-              Text(formatCurrency(service.price, currency),
+              Text(formatPrice(service.price, currency),
                   style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w800,

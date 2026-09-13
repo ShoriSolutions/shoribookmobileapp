@@ -237,7 +237,7 @@ class _ServiceTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text(formatCurrency(service.price, service.currency),
+                Text(formatPrice(service.price, service.currency),
                     style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,

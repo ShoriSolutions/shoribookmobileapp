@@ -324,7 +324,7 @@ class BookingDetailScreen extends ConsumerWidget {
                       _detailRow(
                           Icons.access_time,
                           '${appt.endTime.difference(appt.startTime).inMinutes} min'
-                          '${appt.price != null ? ' · ${formatCurrency(appt.price, appt.currency)}' : ''}'),
+                          '${appt.price != null ? ' · ${formatPrice(appt.price, appt.currency)}' : ''}'),
                       const Divider(color: AppColors.divider, height: 1),
                       _detailRow(Icons.credit_card_outlined, 'Ref ${_ref(appt)}',
                           bold: true),

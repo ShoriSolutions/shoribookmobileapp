@@ -19,6 +19,7 @@ import '../application/subscription_providers.dart';
 import 'widgets/feature_list.dart';
 import 'widgets/pricing_card.dart';
 import 'widgets/trial_badge.dart';
+import '../../app_mode/application/user_currency_provider.dart';
 
 /// Opens the premium subscription bottom sheet. Plans are loaded live from
 /// the DB; the trial and purchase flows are server- and store-driven.
@@ -131,8 +132,10 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
     return '—';
   }
 
-  /// The currency to display prices in: the user's manual pick, else their
-  /// business's country currency, else the base (BBD).
+  /// The currency to show plan prices in: the user's manual pick, else their
+  /// business's country, else the country saved on their profile, else the
+  /// home currency. Display only -- the real charge comes from the App Store /
+  /// Play in the store's own localized currency.
   String _resolveCurrency() {
     if (_displayCurrency != null) return _displayCurrency!;
     final code = ref
@@ -143,7 +146,7 @@ class _SubscriptionSheetState extends ConsumerState<_SubscriptionSheet>
     if (code != null && code.isNotEmpty) {
       return CurrencyRates.currencyForCountry(code);
     }
-    return 'BBD';
+    return ref.read(userCurrencyProvider);
   }
 
   SubscriptionPackage? _selected(List<SubscriptionPackage> packages) {

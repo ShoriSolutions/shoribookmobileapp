@@ -1,3 +1,5 @@
+import '../core/utils/currency_formatter.dart';
+
 class Business {
   final String id;
   final String ownerId;
@@ -159,7 +161,7 @@ class Business {
     latitude: (json['latitude'] as num?)?.toDouble(),
     longitude: (json['longitude'] as num?)?.toDouble(),
     timezone: json['timezone'] as String? ?? 'America/Barbados',
-    currency: json['currency'] as String? ?? 'BBD',
+    currency: json['currency'] as String? ?? kDefaultCurrency,
     whatsappNumber: json['whatsapp_number'] as String?,
     googleMapsUrl: json['google_maps_url'] as String?,
     instagramUrl: json['instagram_url'] as String?,

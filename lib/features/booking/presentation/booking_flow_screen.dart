@@ -539,7 +539,7 @@ class _PriceDepositSection extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              'Total: ${formatCurrency(state.price, state.currency)}',
+              'Total: ${formatPrice(state.price, state.currency)}',
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: AppColors.muted),

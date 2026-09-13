@@ -1,3 +1,5 @@
+import '../core/utils/currency_formatter.dart';
+
 /// Billing cadence the vendor is viewing/choosing.
 enum BillingPeriod { monthly, yearly }
 
@@ -27,7 +29,7 @@ class SubscriptionPackage {
     this.tagline,
     this.features = const [],
     this.priceAmount,
-    this.currency = 'BBD',
+    this.currency = kDefaultCurrency,
     this.billingPeriod = 'monthly',
     this.trialDays = 14,
     this.storeProductIdIos,
@@ -64,7 +66,7 @@ class SubscriptionPackage {
                 .toList() ??
             const [],
         priceAmount: (json['price_amount'] as num?)?.toDouble(),
-        currency: json['currency'] as String? ?? 'BBD',
+        currency: json['currency'] as String? ?? kDefaultCurrency,
         billingPeriod: json['billing_period'] as String? ?? 'monthly',
         trialDays: (json['trial_days'] as num?)?.toInt() ?? 14,
         storeProductIdIos: json['store_product_id_ios'] as String?,

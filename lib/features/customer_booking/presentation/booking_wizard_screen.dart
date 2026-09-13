@@ -268,7 +268,7 @@ class _ServiceSummaryCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(formatCurrency(service.price, service.currency),
+              Text(formatPrice(service.price, service.currency),
                   style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -368,7 +368,7 @@ class _ServiceRowTile extends StatelessWidget {
                   ],
                 ),
               ),
-              Text(formatCurrency(service.price, service.currency),
+              Text(formatPrice(service.price, service.currency),
                   style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
@@ -1040,7 +1040,7 @@ class _ConfirmScreenState extends ConsumerState<_ConfirmScreen> {
         ),
         _StickyFooter(
           label:
-              'Confirm booking · ${formatCurrency(service.price, business.currency)}',
+              'Confirm booking · ${formatPrice(service.price, business.currency)}',
           busy: state.isSubmitting,
           onPressed: state.canConfirm ? _confirm : null,
         ),
@@ -1118,7 +1118,7 @@ class _ConfirmScreenState extends ConsumerState<_ConfirmScreen> {
             children: [
               const Text('Total · pay in person',
                   style: TextStyle(fontSize: 14, color: AppColors.muted)),
-              Text(formatCurrency(service.price, service.currency),
+              Text(formatPrice(service.price, service.currency),
                   style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
