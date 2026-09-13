@@ -11,10 +11,9 @@ class SupportContent {
   static const supportEmail = 'contact@shorisolutions.com';
 
   /// The number customers can call for help. Shown on the Support tab and
-  /// used for tap-to-call.
-  /// PLACEHOLDER — this is still a fake 555 number. Replace it with the real
-  /// Shori Solutions support line before launch.
-  static const supportPhone = '+1 (246) 555-0100';
+  /// used for tap-to-call (the dialler strips the formatting, so this is
+  /// written the way the rest of the app shows Barbados numbers).
+  static const supportPhone = '+1 (246) 829-6007';
 
   /// Bump this whenever the Terms/Privacy text below materially changes.
   /// Stored on the account at sign-up (terms_version) so you can tell who
